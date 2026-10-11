@@ -14,6 +14,7 @@ import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
 import 'assistant_screen.dart';
 import 'family_screen.dart';
+import 'insights_screen.dart';
 import 'insurance_screen.dart';
 import 'patient_shell.dart';
 import 'records_screen.dart';
@@ -119,6 +120,12 @@ class TodayScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Opens Insights with [vital] selected in the chart.
+void openInsights(BuildContext context, String vital) {
+  insightsVital.value = vital;
+  TabSwitcher.of(context, PatientTab.insights);
 }
 
 String alertStatusText(HealthAlert a) {
@@ -291,6 +298,7 @@ class _HeartCard extends StatelessWidget {
     final ctx = r.ctx == 'rest' ? 'resting' : r.act == 'Cooling down' ? 'cooling down' : r.ctx == 'light' ? 'light activity' : 'active';
     final big = T.largeTitle.copyWith(fontSize: 44, color: c.label, letterSpacing: -1.2);
     return IOSCard(
+      onTap: () => openInsights(context, 'hr'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CardTitle(BeatingHeart(bpm: r.good ? r.r.hr : 70, color: c.pink), 'Heart Rate', c.pink, trailing: 'now'),
         const SizedBox(height: 8),
@@ -318,6 +326,7 @@ class _SpO2Card extends StatelessWidget {
     final c = context.ios;
     final low = r.good && r.z['spo2']! <= -2.5;
     return IOSCard(
+      onTap: () => openInsights(context, 'spo2'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CardTitle(Icon(CupertinoIcons.drop_fill, size: 17, color: c.blue), 'Oxygen', c.blue),
         const SizedBox(height: 8),
@@ -346,6 +355,7 @@ class _TempCard extends StatelessWidget {
     final c = context.ios;
     final v = fahrenheit ? r.r.temp * 9 / 5 + 32 : r.r.temp;
     return IOSCard(
+      onTap: () => openInsights(context, 'temp'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CardTitle(Icon(CupertinoIcons.thermometer, size: 17, color: c.orange), 'Temp', c.orange),
         const SizedBox(height: 8),
@@ -387,6 +397,7 @@ class _BarsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     return IOSCard(
+      onTap: () => openInsights(context, 'hr'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CardTitle(Icon(icon, size: 17, color: color), title, color),
         const SizedBox(height: 8),

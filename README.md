@@ -82,6 +82,28 @@ With no settings, the app runs in **Demo Mode**: pick *Try the patient demo*, *D
 7. **Insights.** Show the live pipeline, the sensitivity gauge, what it learned and the 30-day study chart.
 8. Sign out and open the **Doctor** demo: the ward, a bed, NEWS2 points, and acknowledging and labelling alerts.
 
+## Put it online (Vercel)
+
+`deploy/web` holds a ready-made build of the web app, so Vercel only serves files and doesn't need Flutter. `vercel.json` already points Vercel at it.
+
+1. On https://vercel.com, sign in with GitHub, choose **Add New → Project** and import this repository.
+2. Leave every setting as it is (Vercel reads `vercel.json`) and press **Deploy**.
+3. After a change to the app, run `./tool/build_web.sh`, then commit and push `deploy/web`. Vercel redeploys on every push.
+
+## Run it on an iPhone
+
+You need a Mac with Xcode (free from the App Store) and a free Apple ID.
+
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -runFirstLaunch
+brew install cocoapods
+open ios/Runner.xcworkspace     # Signing & Capabilities: pick your Apple ID as Team
+flutter run                     # with the iPhone plugged in and unlocked
+```
+
+On the iPhone, turn on Settings → Privacy & Security → Developer Mode, and trust your Apple ID under Settings → General → VPN & Device Management. With a free Apple ID the app runs for 7 days, then `flutter run` installs it again.
+
 ## Connect real accounts and the BT39 service (optional)
 
 Pass settings at build time:

@@ -26,6 +26,17 @@ void main() {
     }
     expect(find.text('Heart Rate'), findsOneWidget);
 
+    // Tapping a vital card opens Insights with that vital's chart.
+    await tester.tap(find.text('Oxygen').first);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.textContaining('hours · %'), findsOneWidget);
+    await tester.tap(find.text('Today').last);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+
     await tester.tap(find.text('Care').last);
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 200));

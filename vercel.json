@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "echo 'Prebuilt Flutter web app, nothing to install'",
+  "buildCommand": "echo 'Prebuilt Flutter web app in deploy/web (run tool/build_web.sh to refresh)'",
+  "outputDirectory": "deploy/web",
+  "framework": null,
+  "headers": [
+    { "source": "/(.*)\\.(js|wasm)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }] }
+  ]
+}

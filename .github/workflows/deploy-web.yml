@@ -1,9 +1,9 @@
-# Builds the web app in Demo Mode and publishes it to GitHub Pages on every push to main.
+# Builds the web app in Demo Mode and publishes it to GitHub Pages.
+# Manual only (Actions tab > Run workflow): turn on Settings > Pages > Source: GitHub Actions first.
+# The app is normally hosted on Vercel from deploy/web (see README).
 name: Deploy web app
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -18,8 +18,26 @@ class InsightsScreen extends StatefulWidget {
   State<InsightsScreen> createState() => _InsightsScreenState();
 }
 
+/// Which vital the Insights chart shows. Today's cards set it before switching tabs.
+final insightsVital = ValueNotifier<String>('hr');
+
 class _InsightsScreenState extends State<InsightsScreen> {
-  String _vital = 'hr';
+  String get _vital => insightsVital.value;
+
+  @override
+  void initState() {
+    super.initState();
+    insightsVital.addListener(_onVital);
+  }
+
+  @override
+  void dispose() {
+    insightsVital.removeListener(_onVital);
+    super.dispose();
+  }
+
+  void _onVital() => setState(() {});
+
   int _seed = 7;
   late StudyResult _study = runStudy(seed: _seed);
 
@@ -40,7 +58,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         CupertinoSlidingSegmentedControl<String>(
           groupValue: _vital,
           children: const {'hr': Text('Heart rate'), 'spo2': Text('Oxygen'), 'temp': Text('Temperature')},
-          onValueChanged: (v) => setState(() => _vital = v ?? 'hr'),
+          onValueChanged: (v) => insightsVital.value = v ?? 'hr',
         ),
         const SizedBox(height: 12),
         IOSCard(
