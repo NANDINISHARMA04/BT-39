@@ -1,0 +1,183 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../engine/news2.dart';
+import '../../services/bt39_client.dart';
+import '../../services/session.dart';
+import '../../services/staff_controller.dart';
+import '../../theme/ios_theme.dart';
+import '../../widgets/common.dart';
+import '../../widgets/vitals.dart';
+import 'staff_shell.dart';
+
+/// One bed: live values with NEWS2 points, alerts, and (for doctors) the patient chat.
+class BedScreen extends StatefulWidget {
+  const BedScreen({super.key, required this.bed});
+  final String bed;
+  @override
+  State<BedScreen> createState() => _BedScreenState();
+}
+
+class _BedScreenState extends State<BedScreen> {
+  final _q = TextEditingController();
+  final List<(bool, String)> _chat = [];
+  bool _asking = false;
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  Future<void> _ask(LiveBed b) async {
+    final q = _q.text.trim();
+    if (q.isEmpty || _asking) return;
+    final sc = context.read<StaffController>();
+    _q.clear();
+    setState(() {
+      _chat.add((true, q));
+      _chat.add((false, ''));
+      _asking = true;
+    });
+    if (sc.demo) {
+      final words = sc.demoAnswer(b, q).split(' ');
+      for (var i = 1; i <= words.length; i++) {
+        await Future.delayed(const Duration(milliseconds: 22));
+        if (!mounted) return;
+        setState(() => _chat[_chat.length - 1] = (false, words.sublist(0, i).join(' ')));
+      }
+    } else {
+      await for (final ev in sc.client.chat(b.patientId!, q)) {
+        if (!mounted) return;
+        final sofar = _chat.last.$2;
+        final next = switch (ev) {
+          ChatDelta d => sofar + d.text,
+          ChatError e => '$sofar\n\n⚠️ ${e.message}',
+          ChatDone d => d.sources.isEmpty ? sofar : '$sofar\n\nSources: ${d.sources.join(', ')}',
+        };
+        setState(() => _chat[_chat.length - 1] = (false, next));
+      }
+    }
+    if (mounted) setState(() => _asking = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final sc = context.watch<StaffController>();
+    final s = context.watch<Session>();
+    final b = sc.beds.where((x) => x.bed == widget.bed).firstOrNull;
+    if (b == null || b.empty) {
+      return Scaffold(backgroundColor: c.bg, appBar: CupertinoNavigationBar(previousPageTitle: 'Ward', middle: Text(widget.bed)), body: const Center(child: Text('This bed is empty.')));
+    }
+    final alerts = sc.sortedAlerts.where((a) => a.bed == b.bed).toList();
+    final col = bandColor(context, b.band);
+    Widget vital(String label, String unit, String vital, num? x, {String? sub}) {
+      final pts = vital == 'dbp' ? null : news2Points(vital, x, onOxygen: b.onOxygen ?? false);
+      final vc = (pts ?? 0) >= 3 ? c.red : pts == 2 ? c.orange : pts == 1 ? c.yellow : c.label;
+      return IOSCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(label, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            if (pts != null && x != null) Text('+$pts', style: T.caption.copyWith(color: vc, fontWeight: FontWeight.w800)),
+          ]),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              AnimatedNumber(x?.toDouble(), decimals: vital == 'temp' ? 1 : 0, style: T.title1.copyWith(color: vc)),
+              Padding(padding: const EdgeInsets.only(left: 3, bottom: 4), child: Text(unit, style: T.caption.copyWith(color: c.label2))),
+            ]),
+          ),
+          if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label3)),
+        ]),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      appBar: CupertinoNavigationBar(previousPageTitle: 'Ward', backgroundColor: c.material, middle: Text('${b.bed} · ${b.name}'), trailing: StatusPill(status: sc.status)),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 40), children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(20)),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(b.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+                Text('${b.age}${b.sex} · ${b.onOxygen == true ? 'On oxygen' : 'On air'} · ACVPU ${b.consciousness ?? 'A'}', style: const TextStyle(color: Colors.white70)),
+              ]),
+            ),
+            Column(children: [
+              Text('${b.news2 ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
+              Text('NEWS2 · ${bandLabel[b.band] ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: MediaQuery.of(context).size.width > 700 ? 6 : 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: .8,
+          children: [
+            vital('HR', '/min', 'hr', b.hr),
+            vital('SpO₂', '%', 'spo2', b.spo2),
+            vital('RR', '/min', 'rr', b.rr),
+            vital('Sys BP', 'mmHg', 'sbp', b.sbp, sub: b.nibpAgeS == null ? null : 'cuff ${(b.nibpAgeS! / 60).round()} min ago'),
+            vital('Dia BP', 'mmHg', 'dbp', b.dbp),
+            vital('Temp', '°C', 'temp', b.temp),
+          ],
+        ),
+        const SizedBox(height: 12),
+        IOSCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Heart rate, last 2 minutes', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Sparkline(sc.hrHistory[b.bed]?.toList() ?? const [], color: c.pink, width: double.infinity, height: 60),
+          ]),
+        ),
+        if (sc.demo && s.role == Role.doctor) ...[
+          const SectionHeader('Demo scenario'),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final (id, name) in [('stable', 'Stable'), ('sepsis', 'Sepsis'), ('hypoxia', 'Low oxygen'), ('tachy', 'Fast heart'), ('probe_off', 'Probe off')])
+              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => sc.runScenario(b.bed, id).then((_) => context.mounted ? toast(context, '$name on ${b.bed}') : null), child: Text(name)),
+          ]),
+        ],
+        SectionHeader('Alerts', trailing: '${alerts.where((a) => a.open).length} open'),
+        if (alerts.isEmpty) IOSCard(child: Text('No alerts for this patient.', style: T.sub.copyWith(color: c.label2))),
+        for (final a in alerts) StaffAlertCard(a: a, showPatient: false),
+        if (s.role == Role.doctor) ...[
+          const SectionHeader('Ask about this patient'),
+          IOSCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_chat.isEmpty) Text(sc.demo ? 'Ask anything about this bed. Demo answers are built on the device from the live data.' : 'Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.', style: T.footnote.copyWith(color: c.label2)),
+              for (final (mine, text) in _chat)
+                Align(
+                  alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(color: mine ? c.blue : c.card2, borderRadius: BorderRadius.circular(16)),
+                    child: text.isEmpty ? const CupertinoActivityIndicator() : Text(text, style: T.sub.copyWith(color: mine ? Colors.white : c.label, height: 1.35)),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: CupertinoTextField(controller: _q, placeholder: 'e.g. What changed in the last hour?', onSubmitted: (_) => _ask(b), padding: const EdgeInsets.all(10))),
+                const SizedBox(width: 6),
+                CupertinoButton(padding: EdgeInsets.zero, onPressed: _asking ? null : () => _ask(b), child: const Icon(CupertinoIcons.arrow_up_circle_fill, size: 32)),
+              ]),
+            ]),
+          ),
+        ],
+      ]),
+    );
+  }
+}

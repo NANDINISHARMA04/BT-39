@@ -1,0 +1,288 @@
+import 'dart:async';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../../engine/adapt_alert.dart';
+import '../../engine/simulator.dart';
+import '../../services/monitor.dart';
+import '../../services/patient_store.dart';
+import '../../theme/ios_theme.dart';
+import '../../widgets/common.dart';
+import 'alerts_screen.dart';
+import 'care_screen.dart';
+import 'insights_screen.dart';
+import 'me_screen.dart';
+import 'sos_screen.dart';
+import 'today_screen.dart';
+
+/// Lets any screen switch tabs (e.g. "Reply to alerts" on Today).
+class TabSwitcher extends InheritedWidget {
+  const TabSwitcher({super.key, required this.go, required super.child});
+  final void Function(int index) go;
+  static void of(BuildContext context, int index) => context.dependOnInheritedWidgetOfExactType<TabSwitcher>()?.go(index);
+  @override
+  bool updateShouldNotify(TabSwitcher old) => false;
+}
+
+class PatientTab {
+  static const today = 0, alerts = 1, insights = 2, care = 3, me = 4;
+}
+
+class PatientShell extends StatefulWidget {
+  const PatientShell({super.key});
+  @override
+  State<PatientShell> createState() => _PatientShellState();
+}
+
+class _PatientShellState extends State<PatientShell> {
+  int _tab = 0;
+  HealthAlert? _banner;
+  Timer? _bannerTimer;
+  late final MonitorController _m = context.read<MonitorController>();
+
+  @override
+  void initState() {
+    super.initState();
+    _m.alertEvents.addListener(_onAlert);
+    _m.heldEvents.addListener(_onHeld);
+    _m.badSignal.addListener(_onBad);
+    _m.scenarioEnded.addListener(_onScenarioEnded);
+  }
+
+  @override
+  void dispose() {
+    _m.alertEvents.removeListener(_onAlert);
+    _m.heldEvents.removeListener(_onHeld);
+    _m.badSignal.removeListener(_onBad);
+    _m.scenarioEnded.removeListener(_onScenarioEnded);
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onAlert() {
+    final a = _m.alertEvents.value;
+    if (a == null || !mounted) return;
+    HapticFeedback.heavyImpact();
+    setState(() => _banner = a);
+    _bannerTimer?.cancel();
+    _bannerTimer = Timer(const Duration(seconds: 6), () => mounted ? setState(() => _banner = null) : null);
+    final store = context.read<PatientStore>();
+    if (a.level >= 4 && store.prefs.autoSos) {
+      Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => SosScreen(trigger: a)));
+    }
+  }
+
+  void _onHeld() {
+    final h = _m.heldEvents.value;
+    if (h == null || !mounted) return;
+    toast(context, 'Alert held back', 'Looks like a pattern you and your doctor marked harmless (${pct(h.p)} likely real).');
+  }
+
+  void _onBad() {
+    if (mounted) toast(context, 'Please adjust your band', 'Readings were unreliable for 4 minutes, so no alerts were sent.');
+  }
+
+  void _onScenarioEnded() {
+    if (mounted && _m.scenarioEnded.value != null) toast(context, 'Back to resting', 'The scenario finished.');
+  }
+
+  void go(int i) {
+    if (i == _tab) return;
+    HapticFeedback.selectionClick();
+    setState(() => _tab = i);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final m = context.watch<MonitorController>();
+    final pages = const [TodayScreen(), AlertsScreen(), InsightsScreen(), CareScreen(), MeScreen()];
+    final items = [
+      (CupertinoIcons.heart, CupertinoIcons.heart_fill, 'Today', 0),
+      (CupertinoIcons.bell, CupertinoIcons.bell_fill, 'Alerts', m.needsReply),
+      (CupertinoIcons.chart_bar_alt_fill, CupertinoIcons.chart_bar_alt_fill, 'Insights', 0),
+      (CupertinoIcons.calendar, CupertinoIcons.calendar_today, 'Care', 0),
+      (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, 'Me', 0),
+    ];
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return TabSwitcher(
+      go: go,
+      child: Scaffold(
+        backgroundColor: c.bg,
+        body: Stack(children: [
+          for (var i = 0; i < pages.length; i++) _TabPage(active: i == _tab, child: pages[i]),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Glass(
+              child: Container(
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: c.sep, width: .5))),
+                padding: EdgeInsets.only(top: 6, bottom: bottom > 0 ? bottom : 10),
+                child: Row(children: [
+                  for (var i = 0; i < items.length; i++)
+                    Expanded(
+                      child: Semantics(
+                        selected: i == _tab,
+                        button: true,
+                        label: items[i].$3,
+                        child: Pressable(
+                          scale: .86,
+                          onTap: () => go(i),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Stack(clipBehavior: Clip.none, children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 250),
+                                transitionBuilder: (ch, a) => ScaleTransition(scale: a, child: ch),
+                                child: Icon(i == _tab ? items[i].$2 : items[i].$1, key: ValueKey(i == _tab), size: 26, color: i == _tab ? c.blue : c.gray),
+                              ),
+                              if (items[i].$4 > 0)
+                                Positioned(
+                                  right: -10,
+                                  top: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    constraints: const BoxConstraints(minWidth: 18),
+                                    decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
+                                    child: Text('${items[i].$4}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                  ),
+                                ),
+                            ]),
+                            const SizedBox(height: 2),
+                            Text(items[i].$3, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: i == _tab ? c.blue : c.gray)),
+                          ]),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+            ),
+          ),
+          _AlertBanner(alert: _banner, onTap: () {
+            setState(() => _banner = null);
+            go(PatientTab.alerts);
+          }),
+        ]),
+      ),
+    );
+  }
+}
+
+class _TabPage extends StatelessWidget {
+  const _TabPage({required this.active, required this.child});
+  final bool active;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        ignoring: !active,
+        child: TickerMode(
+          enabled: active,
+          child: AnimatedOpacity(
+            opacity: active ? 1 : 0,
+            duration: const Duration(milliseconds: 260),
+            child: AnimatedSlide(
+              offset: active ? Offset.zero : const Offset(.03, 0),
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              child: ExcludeSemantics(excluding: !active, child: child),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A Dynamic-Island-style banner that drops in when an alert is sent.
+class _AlertBanner extends StatelessWidget {
+  const _AlertBanner({required this.alert, required this.onTap});
+  final HealthAlert? alert;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final a = alert;
+    final top = MediaQuery.of(context).padding.top;
+    final col = a == null ? c.red : levelColor(context, a.level);
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeOutBack,
+      left: 10,
+      right: 10,
+      top: a == null ? -140 : top + 6,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Pressable(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(30), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))]),
+              child: Row(children: [
+                Container(width: 44, height: 44, decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(12)), child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Colors.white)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(a == null ? '' : '${a.levelLabel} · ${a.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(a?.reasons.first ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xB3FFFFFF), fontSize: 13)),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                const Text('now', style: TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color levelColor(BuildContext context, int level) {
+  final c = context.ios;
+  return switch (level) { 1 => c.teal, 2 => c.orange, _ => c.red };
+}
+
+Color scenarioColor(BuildContext context, Scenario s) {
+  final c = context.ios;
+  return switch (s.color) { 'green' => c.green, 'blue' => c.blue, 'gray' => c.gray, 'orange' => c.orange, 'red' => c.red, 'purple' => c.purple, _ => c.pink };
+}
+
+/// The sheet that drives the simulated band.
+void showSimulator(BuildContext context) {
+  showSheet(context, (ctx) {
+    return Consumer<MonitorController>(builder: (ctx, m, _) {
+      final c = ctx.ios;
+      return ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
+        Text('Simulate', style: T.title2.copyWith(color: c.label)),
+        const SizedBox(height: 6),
+        Text('Pick what happens next. Each scenario runs for a few simulated minutes (one per second), then returns to resting.', style: T.footnote.copyWith(color: c.label2)),
+        const SizedBox(height: 14),
+        GroupedList(children: [
+          for (final s in scenarios)
+            IOSRow(
+              icon: s.icon,
+              iconColor: scenarioColor(ctx, s),
+              title: s.name,
+              subtitle: m.scenarioId == s.id && s.id != 'rest' ? 'Running · ${m.scenarioMinutesLeft} min left' : s.desc,
+              trailing: m.scenarioId == s.id ? Pill('Now', color: c.blue) : null,
+              chevron: m.scenarioId != s.id,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                m.runScenario(s.id);
+                Navigator.pop(ctx);
+                toast(context, s.name, s.desc);
+              },
+            ),
+        ]),
+        const SizedBox(height: 18),
+        GroupedList(children: [
+          IOSRow(icon: CupertinoIcons.pause_fill, iconColor: c.gray, title: 'Pause the band', trailing: CupertinoSwitch(value: m.paused, onChanged: m.setPaused), chevron: false),
+          IOSRow(icon: CupertinoIcons.forward_fill, iconColor: c.orange, title: 'Fast forward', subtitle: '4 simulated minutes per second', trailing: CupertinoSwitch(value: m.fast, onChanged: m.setFast), chevron: false),
+        ]),
+      ]);
+    });
+  });
+}
