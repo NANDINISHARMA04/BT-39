@@ -81,6 +81,25 @@ void main() {
     });
   }
 
+  testWidgets('laptop layout: sidebar navigation and pages open beside it', (t) async {
+    t.view.physicalSize = const Size(1440, 900);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.text('Try the patient demo'));
+    await settle(t, 10);
+    expect(find.text('Simulate a scenario'), findsOneWidget);
+    for (final tab in ['Alerts', 'Insights', 'Care', 'Me', 'Today']) {
+      await t.tap(find.text(tab).first);
+      await settle(t);
+    }
+    await t.tap(find.text('Care').first);
+    await settle(t);
+    await openAndBack(t, find.text('Search doctors, specialities, hospitals'));
+    expect(find.text('Simulate a scenario'), findsOneWidget);
+  });
+
   testWidgets('nurse screens render', (t) async {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;

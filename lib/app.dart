@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/auth/welcome_screen.dart';
 import 'screens/patient/patient_shell.dart';
+import 'screens/patient/sos_screen.dart';
 import 'screens/staff/staff_shell.dart';
 import 'services/monitor.dart';
 import 'services/patient_store.dart';
@@ -75,11 +76,20 @@ class _PatientRoot extends StatefulWidget {
 }
 
 class _PatientRootState extends State<_PatientRoot> {
+  final _nav = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
+    patientTab.value = PatientTab.today;
     final s = context.read<Session>();
     context.read<PatientStore>().load(s.accountId, name: s.name, email: s.email);
+  }
+
+  /// Sidebar tap: close any open page, then show the tab.
+  void _select(int tab) {
+    _nav.currentState?.popUntil((r) => r.isFirst);
+    patientTab.value = tab;
   }
 
   @override
@@ -88,12 +98,27 @@ class _PatientRootState extends State<_PatientRoot> {
     if (!store.loaded) return const _Splash();
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
+    final navigator = HeroControllerScope(
+      controller: MaterialApp.createMaterialHeroController(),
+      child: Navigator(key: _nav, onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const PatientShell())),
+    );
     return ChangeNotifierProvider(
       create: (_) => MonitorController()..start(),
-      child: HeroControllerScope(
-        controller: MaterialApp.createMaterialHeroController(),
-        child: Navigator(onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const PatientShell())),
-      ),
+      child: Builder(builder: (context) {
+        if (!isWide(context)) return navigator;
+        // Laptop layout: sidebar on the left, content in a readable column.
+        return ColoredBox(
+          color: context.ios.bg,
+          child: Row(children: [
+            PatientSidebar(
+              onSelect: _select,
+              onSos: () => _nav.currentState?.push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen())),
+              onSimulate: () => showSimulator(_nav.currentContext!),
+            ),
+            Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 860), child: navigator))),
+          ]),
+        );
+      }),
     );
   }
 }

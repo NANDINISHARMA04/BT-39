@@ -31,6 +31,139 @@ class PatientTab {
   static const today = 0, alerts = 1, insights = 2, care = 3, me = 4;
 }
 
+/// The selected patient tab. Shared by the bottom tab bar (phones) and the
+/// sidebar (laptops), so both always agree.
+final patientTab = ValueNotifier<int>(0);
+
+/// Laptop and tablet-landscape widths get a sidebar instead of a tab bar.
+bool isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
+
+const _tabItems = [
+  (CupertinoIcons.heart, CupertinoIcons.heart_fill, 'Today'),
+  (CupertinoIcons.bell, CupertinoIcons.bell_fill, 'Alerts'),
+  (CupertinoIcons.chart_bar_alt_fill, CupertinoIcons.chart_bar_alt_fill, 'Insights'),
+  (CupertinoIcons.calendar, CupertinoIcons.calendar_today, 'Care'),
+  (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, 'Me'),
+];
+
+/// Left-hand navigation for wide screens.
+class PatientSidebar extends StatelessWidget {
+  const PatientSidebar({super.key, required this.onSelect, required this.onSos, required this.onSimulate});
+  final void Function(int tab) onSelect;
+  final VoidCallback onSos, onSimulate;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final m = context.watch<MonitorController>();
+    final store = context.watch<PatientStore>();
+    return Material(
+      color: c.card,
+      child: Container(
+        width: 260,
+        decoration: BoxDecoration(
+          color: c.card,
+          border: Border(right: BorderSide(color: c.sep, width: .5)),
+        ),
+        child: SafeArea(
+          right: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
+            child: ValueListenableBuilder<int>(
+              valueListenable: patientTab,
+              builder: (context, tab, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          gradient: LinearGradient(colors: [c.pink, c.red]),
+                        ),
+                        child: const Icon(CupertinoIcons.waveform_path_ecg, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('AdaptAlert', style: T.headline.copyWith(color: c.label)),
+                            Text(
+                              store.profile.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: T.caption.copyWith(color: c.label2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  for (var i = 0; i < _tabItems.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Material(
+                        color: i == tab ? c.blue.withValues(alpha: .12) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => onSelect(i),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                Icon(i == tab ? _tabItems[i].$2 : _tabItems[i].$1, size: 21, color: i == tab ? c.blue : c.label2),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _tabItems[i].$3,
+                                    style: T.callout.copyWith(color: i == tab ? c.blue : c.label, fontWeight: i == tab ? FontWeight.w600 : FontWeight.w400),
+                                  ),
+                                ),
+                                if (i == PatientTab.alerts && m.needsReply > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                                    decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
+                                    child: Text(
+                                      '${m.needsReply}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: onSimulate, child: const Text('Simulate a scenario')),
+                  const SizedBox(height: 8),
+                  CupertinoButton.filled(
+                    sizeStyle: CupertinoButtonSize.medium,
+                    color: c.red,
+                    onPressed: onSos,
+                    child: const Text('SOS', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Research prototype. Not a medical device.',
+                    textAlign: TextAlign.center,
+                    style: T.caption.copyWith(color: c.label3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class PatientShell extends StatefulWidget {
   const PatientShell({super.key});
   @override
@@ -38,7 +171,7 @@ class PatientShell extends StatefulWidget {
 }
 
 class _PatientShellState extends State<PatientShell> {
-  int _tab = 0;
+  int get _tab => patientTab.value;
   HealthAlert? _banner;
   Timer? _bannerTimer;
   late final MonitorController _m = context.read<MonitorController>();
@@ -46,6 +179,7 @@ class _PatientShellState extends State<PatientShell> {
   @override
   void initState() {
     super.initState();
+    patientTab.addListener(_onTab);
     _m.alertEvents.addListener(_onAlert);
     _m.heldEvents.addListener(_onHeld);
     _m.badSignal.addListener(_onBad);
@@ -54,6 +188,7 @@ class _PatientShellState extends State<PatientShell> {
 
   @override
   void dispose() {
+    patientTab.removeListener(_onTab);
     _m.alertEvents.removeListener(_onAlert);
     _m.heldEvents.removeListener(_onHeld);
     _m.badSignal.removeListener(_onBad);
@@ -61,6 +196,8 @@ class _PatientShellState extends State<PatientShell> {
     _bannerTimer?.cancel();
     super.dispose();
   }
+
+  void _onTab() => setState(() {});
 
   void _onAlert() {
     final a = _m.alertEvents.value;
@@ -92,7 +229,7 @@ class _PatientShellState extends State<PatientShell> {
   void go(int i) {
     if (i == _tab) return;
     HapticFeedback.selectionClick();
-    setState(() => _tab = i);
+    patientTab.value = i;
   }
 
   @override
@@ -112,60 +249,83 @@ class _PatientShellState extends State<PatientShell> {
       go: go,
       child: Scaffold(
         backgroundColor: c.bg,
-        body: Stack(children: [
-          for (var i = 0; i < pages.length; i++) _TabPage(active: i == _tab, child: pages[i]),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Glass(
-              child: Container(
-                decoration: BoxDecoration(border: Border(top: BorderSide(color: c.sep, width: .5))),
-                padding: EdgeInsets.only(top: 6, bottom: bottom > 0 ? bottom : 10),
-                child: Row(children: [
-                  for (var i = 0; i < items.length; i++)
-                    Expanded(
-                      child: Semantics(
-                        selected: i == _tab,
-                        button: true,
-                        label: items[i].$3,
-                        child: Pressable(
-                          scale: .86,
-                          onTap: () => go(i),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Stack(clipBehavior: Clip.none, children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
-                                transitionBuilder: (ch, a) => ScaleTransition(scale: a, child: ch),
-                                child: Icon(i == _tab ? items[i].$2 : items[i].$1, key: ValueKey(i == _tab), size: 26, color: i == _tab ? c.blue : c.gray),
-                              ),
-                              if (items[i].$4 > 0)
-                                Positioned(
-                                  right: -10,
-                                  top: -4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                    constraints: const BoxConstraints(minWidth: 18),
-                                    decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
-                                    child: Text('${items[i].$4}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                                  ),
-                                ),
-                            ]),
-                            const SizedBox(height: 2),
-                            Text(items[i].$3, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: i == _tab ? c.blue : c.gray)),
-                          ]),
-                        ),
-                      ),
+        body: Stack(
+          children: [
+            for (var i = 0; i < pages.length; i++) _TabPage(active: i == _tab, child: pages[i]),
+            if (!isWide(context))
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Glass(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: c.sep, width: .5)),
                     ),
-                ]),
+                    padding: EdgeInsets.only(top: 6, bottom: bottom > 0 ? bottom : 10),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < items.length; i++)
+                          Expanded(
+                            child: Semantics(
+                              selected: i == _tab,
+                              button: true,
+                              label: items[i].$3,
+                              child: Pressable(
+                                scale: .86,
+                                onTap: () => go(i),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 250),
+                                          transitionBuilder: (ch, a) => ScaleTransition(scale: a, child: ch),
+                                          child: Icon(i == _tab ? items[i].$2 : items[i].$1, key: ValueKey(i == _tab), size: 26, color: i == _tab ? c.blue : c.gray),
+                                        ),
+                                        if (items[i].$4 > 0)
+                                          Positioned(
+                                            right: -10,
+                                            top: -4,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                              constraints: const BoxConstraints(minWidth: 18),
+                                              decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
+                                              child: Text(
+                                                '${items[i].$4}',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      items[i].$3,
+                                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: i == _tab ? c.blue : c.gray),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
+            _AlertBanner(
+              alert: _banner,
+              onTap: () {
+                setState(() => _banner = null);
+                go(PatientTab.alerts);
+              },
             ),
-          ),
-          _AlertBanner(alert: _banner, onTap: () {
-            setState(() => _banner = null);
-            go(PatientTab.alerts);
-          }),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -177,21 +337,21 @@ class _TabPage extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => IgnorePointer(
-        ignoring: !active,
-        child: TickerMode(
-          enabled: active,
-          child: AnimatedOpacity(
-            opacity: active ? 1 : 0,
-            duration: const Duration(milliseconds: 260),
-            child: AnimatedSlide(
-              offset: active ? Offset.zero : const Offset(.03, 0),
-              duration: const Duration(milliseconds: 420),
-              curve: Curves.easeOutCubic,
-              child: ExcludeSemantics(excluding: !active, child: child),
-            ),
-          ),
+    ignoring: !active,
+    child: TickerMode(
+      enabled: active,
+      child: AnimatedOpacity(
+        opacity: active ? 1 : 0,
+        duration: const Duration(milliseconds: 260),
+        child: AnimatedSlide(
+          offset: active ? Offset.zero : const Offset(.03, 0),
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
+          child: ExcludeSemantics(excluding: !active, child: child),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// A Dynamic-Island-style banner that drops in when an alert is sent.
@@ -218,20 +378,44 @@ class _AlertBanner extends StatelessWidget {
             onTap: onTap,
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(30), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))]),
-              child: Row(children: [
-                Container(width: 44, height: 44, decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(12)), child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Colors.white)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(a == null ? '' : '${a.levelLabel} · ${a.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(a?.reasons.first ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xB3FFFFFF), fontSize: 13)),
-                  ]),
-                ),
-                const SizedBox(width: 8),
-                const Text('now', style: TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
-              ]),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          a == null ? '' : '${a.levelLabel} · ${a.title}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          a?.reasons.first ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xB3FFFFFF), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('now', style: TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
+                ],
+              ),
             ),
           ),
         ),
@@ -242,47 +426,82 @@ class _AlertBanner extends StatelessWidget {
 
 Color levelColor(BuildContext context, int level) {
   final c = context.ios;
-  return switch (level) { 1 => c.teal, 2 => c.orange, _ => c.red };
+  return switch (level) {
+    1 => c.teal,
+    2 => c.orange,
+    _ => c.red,
+  };
 }
 
 Color scenarioColor(BuildContext context, Scenario s) {
   final c = context.ios;
-  return switch (s.color) { 'green' => c.green, 'blue' => c.blue, 'gray' => c.gray, 'orange' => c.orange, 'red' => c.red, 'purple' => c.purple, _ => c.pink };
+  return switch (s.color) {
+    'green' => c.green,
+    'blue' => c.blue,
+    'gray' => c.gray,
+    'orange' => c.orange,
+    'red' => c.red,
+    'purple' => c.purple,
+    _ => c.pink,
+  };
 }
 
 /// The sheet that drives the simulated band.
 void showSimulator(BuildContext context) {
   showSheet(context, (ctx) {
-    return Consumer<MonitorController>(builder: (ctx, m, _) {
-      final c = ctx.ios;
-      return ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
-        Text('Simulate', style: T.title2.copyWith(color: c.label)),
-        const SizedBox(height: 6),
-        Text('Pick what happens next. Each scenario runs for a few simulated minutes (one per second), then returns to resting.', style: T.footnote.copyWith(color: c.label2)),
-        const SizedBox(height: 14),
-        GroupedList(children: [
-          for (final s in scenarios)
-            IOSRow(
-              icon: s.icon,
-              iconColor: scenarioColor(ctx, s),
-              title: s.name,
-              subtitle: m.scenarioId == s.id && s.id != 'rest' ? 'Running · ${m.scenarioMinutesLeft} min left' : s.desc,
-              trailing: m.scenarioId == s.id ? Pill('Now', color: c.blue) : null,
-              chevron: m.scenarioId != s.id,
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                m.runScenario(s.id);
-                Navigator.pop(ctx);
-                toast(context, s.name, s.desc);
-              },
+    return Consumer<MonitorController>(
+      builder: (ctx, m, _) {
+        final c = ctx.ios;
+        return ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          children: [
+            Text('Simulate', style: T.title2.copyWith(color: c.label)),
+            const SizedBox(height: 6),
+            Text('Pick what happens next. Each scenario runs for a few simulated minutes (one per second), then returns to resting.', style: T.footnote.copyWith(color: c.label2)),
+            const SizedBox(height: 14),
+            GroupedList(
+              children: [
+                for (final s in scenarios)
+                  IOSRow(
+                    icon: s.icon,
+                    iconColor: scenarioColor(ctx, s),
+                    title: s.name,
+                    subtitle: m.scenarioId == s.id && s.id != 'rest' ? 'Running · ${m.scenarioMinutesLeft} min left' : s.desc,
+                    trailing: m.scenarioId == s.id ? Pill('Now', color: c.blue) : null,
+                    chevron: m.scenarioId != s.id,
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      m.runScenario(s.id);
+                      Navigator.pop(ctx);
+                      toast(context, s.name, s.desc);
+                    },
+                  ),
+              ],
             ),
-        ]),
-        const SizedBox(height: 18),
-        GroupedList(children: [
-          IOSRow(icon: CupertinoIcons.pause_fill, iconColor: c.gray, title: 'Pause the band', trailing: CupertinoSwitch(value: m.paused, onChanged: m.setPaused), chevron: false),
-          IOSRow(icon: CupertinoIcons.forward_fill, iconColor: c.orange, title: 'Fast forward', subtitle: '4 simulated minutes per second', trailing: CupertinoSwitch(value: m.fast, onChanged: m.setFast), chevron: false),
-        ]),
-      ]);
-    });
+            const SizedBox(height: 18),
+            GroupedList(
+              children: [
+                IOSRow(
+                  icon: CupertinoIcons.pause_fill,
+                  iconColor: c.gray,
+                  title: 'Pause the band',
+                  trailing: CupertinoSwitch(value: m.paused, onChanged: m.setPaused),
+                  chevron: false,
+                ),
+                IOSRow(
+                  icon: CupertinoIcons.forward_fill,
+                  iconColor: c.orange,
+                  title: 'Fast forward',
+                  subtitle: '4 simulated minutes per second',
+                  trailing: CupertinoSwitch(value: m.fast, onChanged: m.setFast),
+                  chevron: false,
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   });
 }
