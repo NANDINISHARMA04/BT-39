@@ -92,7 +92,7 @@ extension IOSContext on BuildContext {
   IOS get ios => Theme.of(this).extension<IOS>()!;
 }
 
-const _fontFallback = ['SF Pro Text', 'SF Pro Display', '.SF UI Text', 'Helvetica Neue', 'Roboto', 'Segoe UI'];
+const _fontFallback = ['SF Pro Text', 'SF Pro Display', '.SF UI Text', 'Helvetica Neue', 'Roboto', 'Segoe UI', 'NotoSansDevanagari'];
 
 /// Apple platforms use the system font (SF Pro). Everywhere else Roboto is the
 /// system font already; naming it also gives widget tests real font metrics.

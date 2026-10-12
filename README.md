@@ -19,7 +19,8 @@ There are two apps in one, chosen at sign-in.
 | Feature | Where |
 |---|---|
 | Secure authentication: separate **log in and sign up for patients, doctors and nurses** (role-specific fields such as registration number, speciality, ward and shift), salted SHA-256 password hashes on the device, Supabase when a key is set, plus **Demo Mode** that needs no account | Welcome › Log in / Sign up |
-| **Guided demo with a voice guide**: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions read aloud by the browser, then asks you to log in or sign up | Welcome › Watch the demo with voice |
+| **Guided demo with a voice-over** in English or Hindi: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions and a recorded natural voice, then asks you to log in or sign up | Welcome › Watch the demo with voice |
+| **English and हिन्दी** everywhere: every screen, the AdaptAlert explanations, the health assistant (which also understands simple Hindi questions) and the demo voice. Switch on the welcome page or in Me | Welcome, Me |
 | **Alert detail "How AdaptAlert decided"**: what the band saw, which signals drove it (SDs from your normal), model vs your history with a confidence interval, the blend formula and threshold, counterfactuals (what would have changed the decision) and who was told | Alerts › See how AdaptAlert decided |
 | **How it works** explainer and the AdaptAlert hero card (fixed monitor vs sent vs held back) | Alerts |
 | **Research Lab**: run the 5-system experiment with your own settings, ablation, label-noise and alarm-fatigue sweeps, bootstrap CIs, copy results as Markdown for the paper | Welcome › Research Lab, Insights |
@@ -75,7 +76,7 @@ You need Flutter 3.41 or newer. It was built and tested with Flutter 3.47.7.
 flutter pub get
 flutter run                 # phone or emulator
 flutter run -d chrome       # web
-flutter test                # 22 tests: engine, NEWS2, storage, auth, guided demo, every screen
+flutter test                # 29 tests: engine, NEWS2, storage, auth, guided demo, every screen, Hindi
 dart run tool/run_study.dart # prints the research results as Markdown
 flutter build apk --release
 flutter build web --release --no-web-resources-cdn   # works offline, good for a viva
@@ -140,6 +141,12 @@ flutter run \
 - For the web build, add its exact origin to the service's `APP_ORIGIN` and to Supabase's Site URL and Redirect URLs (see the BT39 README, sections 2 and 5).
 - The free Render plan sleeps after 15 minutes. The ward shows "Connecting…" for about a minute while it wakes.
 
+## Languages and voice-over
+
+- Text goes through `tr()` in `lib/l10n/l10n.dart`; Hindi lives in `lib/l10n/hi/*.dart`, keyed by the English text. `python3 tool/check_hi.py <files>` lists text without a Hindi translation, and `test/hindi_test.dart` opens every screen in Hindi and fails on any missing translation or overflow.
+- The demo voice-over (`assets/voice/en`, `assets/voice/hi`) was recorded with the open-source Kokoro text-to-speech model. Edit `tool/voice_script.json` and run `tool/make_voice.py` to record it again (instructions at the top of the script).
+- Hindi text uses the bundled Noto Sans Devanagari font, so it works offline.
+
 ## Research paper
 
 `docs/RESEARCH.md` has the problem, the research gaps it addresses, the method, the simulation design, results tables, limitations and a paper outline. The numbers come from `lib/engine/study.dart`; rerun them with `dart run tool/run_study.dart` or the Research Lab. They are from simulated patients, and the references must be checked before submission.
@@ -157,12 +164,13 @@ flutter run \
 ```
 lib/
   engine/      adapt_alert.dart (7-stage engine), simulator.dart (band), study.dart (30-day study), news2.dart
-  services/    session.dart (auth), tour.dart (guided demo), narrator.dart (voice), clinical_store.dart (doctor and nurse data), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
+  l10n/        l10n.dart (tr, language switch), hi/ (Hindi strings)
+  services/    session.dart (auth), tour.dart (guided demo), narrator.dart (voice-over), clinical_store.dart (doctor and nurse data), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
   models/      patient_models.dart
   screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
   widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart
   theme/       ios_theme.dart (iOS colours, light and dark)
-test/          engine, NEWS2, storage, monitor story, and a test that opens every screen
+test/          engine, NEWS2, storage, monitor story, auth, guided demo, every screen, and every screen in Hindi
 ```
 
 ## Credits
