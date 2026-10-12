@@ -125,7 +125,7 @@ class MeScreen extends StatelessWidget {
           ),
         ]),
         FormGroup(header: 'About', children: [
-          IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'AdaptAlert', subtitle: 'Version 1.0 · student research prototype, not a medical device', chevron: false),
+          IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'PulseOS', subtitle: 'Version 1.0 · AdaptAlert engine · student research prototype, not a medical device', chevron: false),
           IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: 'Privacy', subtitle: switch (s.mode) { AuthMode.demo => 'Demo Mode: all data stays on this device', AuthMode.local => 'Account stored on this device; the password is kept only as a salted hash', AuthMode.cloud => 'Signed in with Supabase. Health data in this build stays on this device.' }, chevron: false),
         ]),
         const SizedBox(height: 20),

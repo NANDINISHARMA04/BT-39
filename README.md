@@ -1,6 +1,6 @@
-# AdaptAlert
+# PulseOS
 
-**Smart health monitoring that learns.** A Flutter app (Android, iOS and web) with an iOS-style design, built around a self-learning, explainable alert engine that cuts false alarms without missing real emergencies.
+**Smart health monitoring that learns.** Powered by **AdaptAlert**, its self-learning alert engine. A Flutter app (Android, iOS and web) with an iOS-style design, built around a self-learning, explainable alert engine that cuts false alarms without missing real emergencies.
 
 > Student research prototype (B.Tech CSE major project). Not a medical device. Patients, doctors and clinics in the app are fictional.
 
@@ -79,9 +79,9 @@ With no settings, accounts are stored on the device. Three demo accounts always 
 
 | Role | Email | Password |
 |---|---|---|
-| Patient | patient@adaptalert.app | patient123 |
-| Doctor | doctor@adaptalert.app | doctor123 |
-| Nurse | nurse@adaptalert.app | nurse123 |
+| Patient | patient@pulseos.app | patient123 |
+| Doctor | doctor@pulseos.app | doctor123 |
+| Nurse | nurse@pulseos.app | nurse123 |
 
 You can also sign up as any role, or tap *Try without an account*.
 

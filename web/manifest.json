@@ -1,6 +1,6 @@
 {
-    "name": "AdaptAlert",
-    "short_name": "AdaptAlert",
+    "name": "PulseOS",
+    "short_name": "PulseOS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F2F2F7",

@@ -92,7 +92,7 @@ class PatientSidebar extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('AdaptAlert', style: T.headline.copyWith(color: c.label)),
+                            Text('PulseOS', style: T.headline.copyWith(color: c.label)),
                             Text(
                               store.profile.name,
                               maxLines: 1,

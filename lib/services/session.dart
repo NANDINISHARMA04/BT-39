@@ -17,9 +17,9 @@ const roleLabel = {Role.patient: 'Patient', Role.doctor: 'Doctor', Role.nurse: '
 
 /// Accounts that exist on every device, so anyone can try each role.
 const demoAccounts = {
-  Role.patient: ('patient@adaptalert.app', 'patient123', 'Aarav Mehta'),
-  Role.doctor: ('doctor@adaptalert.app', 'doctor123', 'Dr. Kavya Rao'),
-  Role.nurse: ('nurse@adaptalert.app', 'nurse123', 'Nurse Anjali Singh'),
+  Role.patient: ('patient@pulseos.app', 'patient123', 'Aarav Mehta'),
+  Role.doctor: ('doctor@pulseos.app', 'doctor123', 'Dr. Kavya Rao'),
+  Role.nurse: ('nurse@pulseos.app', 'nurse123', 'Nurse Anjali Singh'),
 };
 
 /// Who is signed in, and how.

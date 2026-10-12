@@ -28,7 +28,7 @@ class BT39App extends StatelessWidget {
         builder: (context, s, store, _) {
           final pref = s.role == Role.patient && store.loaded ? store.prefs.theme : 'system';
           return MaterialApp(
-            title: 'AdaptAlert',
+            title: 'PulseOS',
             debugShowCheckedModeBanner: false,
             theme: buildTheme(IOS.light),
             darkTheme: buildTheme(IOS.darkTheme),

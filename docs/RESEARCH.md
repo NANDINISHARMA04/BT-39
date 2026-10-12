@@ -1,6 +1,6 @@
 # AdaptAlert: research notes
 
-Material for the project report and a research paper. Numbers here come from `dart run tool/run_study.dart` (the same code as the in-app **Research Lab**), so they can be regenerated exactly.
+AdaptAlert is the alert engine inside the **PulseOS** app. Material for the project report and a research paper. Numbers here come from `dart run tool/run_study.dart` (the same code as the in-app **Research Lab**), so they can be regenerated exactly.
 
 ## 1. Problem
 

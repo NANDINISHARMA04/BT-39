@@ -40,7 +40,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const _AppIcon(size: 44),
           const SizedBox(width: 10),
-          Text('AdaptAlert', style: T.title2.copyWith(color: c.label)),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('PulseOS', style: T.title2.copyWith(color: c.label)),
+            Text('powered by AdaptAlert', style: T.caption.copyWith(color: c.label2)),
+          ]),
         ]),
       ),
       const SizedBox(height: 22),
