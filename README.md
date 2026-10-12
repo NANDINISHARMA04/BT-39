@@ -90,7 +90,7 @@ With no settings, accounts are stored on the device. Three demo accounts always 
 | Doctor | doctor@pulseos.app | doctor123 |
 | Nurse | nurse@pulseos.app | nurse123 |
 
-You can also sign up as any role, or tap *Try without an account*. The demo patient is **Nandini Sharma**. A demo session is not remembered: reopening the site starts at the welcome page.
+You can also sign up as any role, or tap *Try without an account*. The demo patient is **Jai**. A demo session is not remembered: reopening the site starts at the welcome page.
 
 ### Demo script (5 minutes)
 

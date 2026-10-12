@@ -14,6 +14,7 @@ import '../../services/session.dart';
 import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import '../auth/login_now_screen.dart';
 import 'alerts_screen.dart';
 import 'care_screen.dart';
 import 'insights_screen.dart';
@@ -183,6 +184,7 @@ class _PatientShellState extends State<PatientShell> {
   void initState() {
     super.initState();
     patientTab.addListener(_onTab);
+    _tour = context.read<TourController>()..addListener(_onTour);
     // Start the guided demo if the person asked for it on the welcome screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final s = context.read<Session>();
@@ -200,6 +202,7 @@ class _PatientShellState extends State<PatientShell> {
   @override
   void dispose() {
     patientTab.removeListener(_onTab);
+    _tour.removeListener(_onTour);
     _m.alertEvents.removeListener(_onAlert);
     _m.heldEvents.removeListener(_onHeld);
     _m.badSignal.removeListener(_onBad);
@@ -209,6 +212,17 @@ class _PatientShellState extends State<PatientShell> {
   }
 
   void _onTab() => setState(() {});
+
+  late final TourController _tour;
+  bool _loginShown = false;
+
+  /// The demo is over: ask the person to log in straight away.
+  void _onTour() {
+    if (!_tour.ended || _loginShown || !mounted) return;
+    _loginShown = true;
+    _tour.finish();
+    showLoginNow(context);
+  }
 
   void _onAlert() {
     final a = _m.alertEvents.value;
@@ -348,19 +362,19 @@ class _TabPage extends StatelessWidget {
   final bool active;
   final Widget child;
   @override
+  // The fade must keep running when a tab is left, so only the page's own
+  // animations are paused, not the fade itself. Otherwise a page that is
+  // left half-faded stays drawn over the tab below it.
   Widget build(BuildContext context) => IgnorePointer(
     ignoring: !active,
-    child: TickerMode(
-      enabled: active,
-      child: AnimatedOpacity(
-        opacity: active ? 1 : 0,
-        duration: const Duration(milliseconds: 260),
-        child: AnimatedSlide(
-          offset: active ? Offset.zero : const Offset(.03, 0),
-          duration: const Duration(milliseconds: 420),
-          curve: Curves.easeOutCubic,
-          child: ExcludeSemantics(excluding: !active, child: child),
-        ),
+    child: AnimatedOpacity(
+      opacity: active ? 1 : 0,
+      duration: const Duration(milliseconds: 260),
+      child: AnimatedSlide(
+        offset: active ? Offset.zero : const Offset(.03, 0),
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+        child: TickerMode(enabled: active, child: ExcludeSemantics(excluding: !active, child: child)),
       ),
     ),
   );
@@ -583,7 +597,7 @@ class TourOverlay extends StatelessWidget {
                               sizeStyle: CupertinoButtonSize.medium,
                               onPressed: () {
                                 tour.finish();
-                                context.read<Session>().signOut();
+                                showLoginNow(context);
                               },
                               child: Text(tr('Log in or sign up'), maxLines: 1),
                             ),

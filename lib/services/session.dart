@@ -18,7 +18,7 @@ const roleLabel = {Role.patient: 'Patient', Role.doctor: 'Doctor', Role.nurse: '
 
 /// Accounts that exist on every device, so anyone can try each role.
 const demoAccounts = {
-  Role.patient: ('patient@pulseos.app', 'patient123', 'Nandini Sharma'),
+  Role.patient: ('patient@pulseos.app', 'patient123', 'Jai'),
   Role.doctor: ('doctor@pulseos.app', 'doctor123', 'Dr. Kavya Rao'),
   Role.nurse: ('nurse@pulseos.app', 'nurse123', 'Nurse Anjali Singh'),
 };
@@ -48,6 +48,15 @@ class Session extends ChangeNotifier {
 
   /// Set when the person asked for the guided demo; the patient app starts it.
   bool pendingTour = false;
+
+  /// Set when someone leaves the demo to log in; the welcome page opens that
+  /// role's log-in (or sign-up) form straight away.
+  ({Role role, bool signUp})? pendingAuth;
+
+  Future<void> leaveDemoToLogIn(Role r, {bool signUp = false}) async {
+    pendingAuth = (role: r, signUp: signUp);
+    await signOut();
+  }
 
   bool get signedIn => role != null;
   bool get isStaff => role == Role.doctor || role == Role.nurse;
@@ -83,7 +92,7 @@ class Session extends ChangeNotifier {
     mode = AuthMode.demo;
     details = {};
     wardId = null;
-    name = switch (r) { Role.patient => 'Nandini Sharma', Role.doctor => 'Dr. Kavya Rao', Role.nurse => 'Nurse Anjali Singh' };
+    name = switch (r) { Role.patient => 'Jai', Role.doctor => 'Dr. Kavya Rao', Role.nurse => 'Nurse Anjali Singh' };
     email = switch (r) { Role.patient => 'patient@pulseos.app', Role.doctor => 'doctor@pulseos.app', Role.nurse => 'nurse@pulseos.app' };
   }
 

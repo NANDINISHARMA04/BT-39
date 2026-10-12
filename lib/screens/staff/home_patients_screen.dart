@@ -42,11 +42,11 @@ class HomePatientsScreen extends StatelessWidget {
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Avatar('Nandini Sharma', size: 48, colors: [c.orange, c.pink]),
+              Avatar('Jai', size: 48, colors: [c.orange, c.pink]),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Nandini Sharma, 24', style: T.headline.copyWith(color: c.label)),
+                  Text('Jai, 24', style: T.headline.copyWith(color: c.label)),
                   Text(tr('Heart valve repair, day 6 at home · band live'), style: T.footnote.copyWith(color: c.label2)),
                 ]),
               ),

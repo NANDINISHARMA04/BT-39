@@ -172,7 +172,7 @@ const hiStaff = <String, String>{
   'Morning medicines': 'सुबह की दवाइयाँ',
   '{a}: metoprolol 25 mg · {b}: insulin before breakfast': '{a}: मेटोप्रोलोल 25 mg · {b}: नाश्ते से पहले इंसुलिन',
   'Home check by video': 'वीडियो से घर पर जाँच',
-  '{name}: band fit, wound and how she feels': '{name}: बैंड ठीक से लगा है या नहीं, घाव, और वह कैसा महसूस कर रही हैं',
+  '{name}: band fit, wound and how he feels': '{name}: बैंड ठीक से लगा है या नहीं, घाव, और वे कैसा महसूस कर रहे हैं',
   'All occupied beds': 'सभी भरे बेड',
   'Fluid balance chart': 'फ़्लूइड बैलेंस चार्ट',
   'Afternoon medicines': 'दोपहर की दवाइयाँ',

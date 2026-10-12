@@ -107,7 +107,7 @@ void main() {
       await settle(t, 2);
     }
     await tab(t, 'Patients');
-    await tapScrolled(t, find.text('Nandini Sharma'));
+    await tapScrolled(t, find.text('Jai'));
     await settle(t);
     for (final seg in ['Alerts', 'Records', 'Notes', 'Overview']) {
       await t.tap(find.text(tr(seg)).last);

@@ -347,7 +347,7 @@ class ClinicalStore extends ChangeNotifier {
     return [
       NurseTask('v08', 8, tr('Vitals round'), tr('All occupied beds: NEWS2 for each'), 'vitals'),
       NurseTask('m09', 9, tr('Morning medicines'), tr('{a}: metoprolol 25 mg · {b}: insulin before breakfast', {'a': bed(0), 'b': bed(1)}), 'meds'),
-      NurseTask('h10', 10, tr('Home check by video'), tr('{name}: band fit, wound and how she feels', {'name': live}), 'check'),
+      NurseTask('h10', 10, tr('Home check by video'), tr('{name}: band fit, wound and how he feels', {'name': live}), 'check'),
       NurseTask('v12', 12, tr('Vitals round'), tr('All occupied beds'), 'vitals'),
       NurseTask('c13', 13, tr('Fluid balance chart'), bed(2), 'care'),
       NurseTask('m14', 14, tr('Afternoon medicines'), tr('{a}: antibiotics IV · {b}: aspirin', {'a': bed(3), 'b': bed(0)}), 'meds'),

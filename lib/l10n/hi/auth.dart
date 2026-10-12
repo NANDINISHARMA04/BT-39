@@ -1,5 +1,9 @@
 // Hindi strings for this part of the app. Keys are the exact English text.
 const hiAuth = <String, String>{
+  'Demo complete': 'डेमो पूरा हुआ',
+  'Log in now to use PulseOS with your own account.': 'अपने अकाउंट से PulseOS इस्तेमाल करने के लिए अभी लॉग इन करें।',
+  'New here? Create an account': 'नए हैं? अकाउंट बनाएँ',
+  'Keep exploring the demo': 'डेमो देखते रहें',
   // Roles (roleLabel values)
   'Patient': 'मरीज़',
   'Doctor': 'डॉक्टर',

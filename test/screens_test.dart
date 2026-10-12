@@ -130,6 +130,27 @@ void main() {
     expect(find.text('Heart Rate'), findsOneWidget, reason: 'second back goes to Today');
   });
 
+  testWidgets('a tab that is left fades out completely', (t) async {
+    t.view.physicalSize = const Size(1179, 2556);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
+    await settle(t, 10);
+    double opacityOf(String text) {
+      final tabFade = find.ancestor(of: find.text(text).first, matching: find.byType(AnimatedOpacity)).first;
+      return t.widget<FadeTransition>(find.descendant(of: tabFade, matching: find.byType(FadeTransition)).first).opacity.value;
+    }
+
+    await t.tap(find.text('Care').last);
+    await settle(t);
+    expect(opacityOf('Search doctors, specialities, hospitals'), 1);
+    await t.tap(find.text('Alerts').last);
+    await settle(t);
+    expect(opacityOf('Search doctors, specialities, hospitals'), 0, reason: 'Care must not stay drawn over Alerts');
+  });
+
   testWidgets('back returns to the previously visited tab', (t) async {
     t.view.physicalSize = const Size(1179, 2556);
     t.view.devicePixelRatio = 3;
@@ -190,10 +211,10 @@ void main() {
 
     await t.tap(find.text('Patients').last);
     await settle(t);
-    await t.enterText(find.byType(CupertinoSearchTextField), 'nandini');
+    await t.enterText(find.byType(CupertinoSearchTextField), 'jai');
     await settle(t);
     expect(find.text('Farhan Ali'), findsNothing);
-    await t.tap(find.text('Nandini Sharma').hitTestable().first);
+    await t.tap(find.text('Jai').hitTestable().first);
     await settle(t);
     expect(find.text('Heart valve repair surgery, day 6 at home'), findsWidgets);
     for (final seg in ['Alerts', 'Records', 'Notes']) {

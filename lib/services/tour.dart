@@ -35,6 +35,9 @@ class TourController extends ChangeNotifier {
   final void Function(int tab) showTab;
 
   bool running = false;
+
+  /// True once the last step has been said: time to log in.
+  bool ended = false;
   int index = 0;
   TourStep? step;
   bool _cancel = false;
@@ -71,6 +74,7 @@ class TourController extends ChangeNotifier {
     running = true;
     _cancel = false;
     index = 0;
+    ended = false;
     final wasFast = m.fast;
     m.setPaused(false);
     m.setFast(true);
@@ -130,20 +134,20 @@ class TourController extends ChangeNotifier {
 
   Future<void> _run() async {
     final e = m.engine;
-    await _next(const TourStep('Meet Nandini', 'Nandini Sharma is recovering at home after heart valve surgery. Her wrist band sends heart rate, oxygen, temperature and movement every minute.', tab: 0));
+    await _next(const TourStep('Meet Jai', 'Jai is recovering at home after heart valve surgery. His wrist band sends heart rate, oxygen, temperature and movement every minute.', tab: 0));
     await _wait(5000);
 
-    await _next(const TourStep('She goes for a walk', 'Her heart rate climbs past 100. A fixed-threshold monitor would alarm now. AdaptAlert sees she is moving and stays quiet.', tab: 0));
+    await _next(const TourStep('He goes for a walk', 'His heart rate climbs past 100. A fixed-threshold monitor would alarm now. AdaptAlert sees he is moving and stays quiet.', tab: 0));
     m.runScenario('walk');
     await _until(() => m.scenarioId == 'rest', minutes: 20);
     await _minutes(6);
 
-    await _next(const TourStep('The band slips', 'Readings jump all over the place. The signal-quality check marks them unreliable, so they can\'t cause an alarm or change her normal.', tab: 0));
+    await _next(const TourStep('The band slips', 'Readings jump all over the place. The signal-quality check marks them unreliable, so they can\'t cause an alarm or change his normal.', tab: 0));
     m.runScenario('loose');
     await _until(() => m.scenarioId == 'rest', minutes: 12);
     await _minutes(6);
 
-    await _next(const TourStep('Coffee, sitting down', 'Her heart rate rises for several minutes while she rests. AdaptAlert isn\'t sure it matters, so it sends an alert and says exactly why.', tab: 0));
+    await _next(const TourStep('Coffee, sitting down', 'His heart rate rises for several minutes while he rests. AdaptAlert isn\'t sure it matters, so it sends an alert and says exactly why.', tab: 0));
     final before = e.alerts.length;
     m.runScenario('stress');
     await _until(() => e.alerts.length > before, minutes: 14);
@@ -152,7 +156,7 @@ class TourController extends ChangeNotifier {
     await _wait(5500);
 
     final coffee = e.alerts.length > before ? e.alerts.first : null;
-    await _next(const TourStep('The doctor gives feedback', 'Dr. Rao marks it a false alarm. AdaptAlert updates what it knows about this pattern, for Nandini only.', tab: 1));
+    await _next(const TourStep('The doctor gives feedback', 'Dr. Rao marks it a false alarm. AdaptAlert updates what it knows about this pattern, for Jai only.', tab: 1));
     if (coffee != null) m.doctorLabel(coffee, false, by: 'Dr. Kavya Rao');
     await _until(() => m.scenarioId == 'rest', minutes: 14);
     await _minutes(12);
@@ -166,7 +170,7 @@ class TourController extends ChangeNotifier {
     await _until(() => m.scenarioId == 'rest', minutes: 14);
     await _minutes(10);
 
-    await _next(const TourStep('Now a real problem', 'Heart racing at rest while oxygen falls. Two vitals moving together means an urgent alert to Nandini, her mother Sunita and Dr. Rao.', tab: 0));
+    await _next(const TourStep('Now a real problem', 'Heart racing at rest while oxygen falls. Two vitals moving together means an urgent alert to Jai, his mother Sunita and Dr. Rao.', tab: 0));
     final beforeReal = e.alerts.length;
     m.runScenario('tachy');
     await _until(() => e.alerts.length > beforeReal, minutes: 14);
@@ -194,5 +198,9 @@ class TourController extends ChangeNotifier {
       'That was PulseOS. To use it yourself, log in or create your own account as a patient, a doctor or a nurse.',
       last: true,
     ));
+    await _speechDone();
+    if (_cancel) return;
+    ended = true;
+    notifyListeners();
   }
 }

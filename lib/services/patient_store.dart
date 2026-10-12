@@ -128,7 +128,7 @@ class PatientStore extends ChangeNotifier {
     final now = DateTime.now();
     DateTime day(int d, int h, [int m = 0]) => DateTime(now.year, now.month, now.day + d, h, m);
     profile = UserProfile(
-      name: name, email: email, phone: '+91 98100 12345', age: 24, sex: 'F', bloodGroup: 'B+', heightCm: 160, weightKg: 54, city: 'Noida',
+      name: name, email: email, phone: '+91 98100 12345', age: 24, sex: 'M', bloodGroup: 'B+', heightCm: 174, weightKg: 66, city: 'Noida',
       conditions: ['Heart valve repair surgery, day 6 at home', 'Mild asthma'],
       allergies: ['Penicillin'],
       medications: [

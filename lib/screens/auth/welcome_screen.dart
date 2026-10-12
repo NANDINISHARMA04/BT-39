@@ -30,6 +30,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Coming from the end of the demo: go straight to the chosen form.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final s = context.read<Session>();
+      final p = s.pendingAuth;
+      if (p != null) {
+        s.pendingAuth = null;
+        _auth(p.role, signUp: p.signUp);
+      }
+    });
+  }
+
   void _auth(Role r, {bool signUp = false}) => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => RoleAuthScreen(role: r, signUp: signUp)));
 
   @override
