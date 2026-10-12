@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/news2.dart';
+import '../../l10n/l10n.dart';
 import '../../services/bt39_client.dart';
 import '../../services/session.dart';
 import '../../services/staff_controller.dart';
@@ -54,7 +55,7 @@ class _BedScreenState extends State<BedScreen> {
         final next = switch (ev) {
           ChatDelta d => sofar + d.text,
           ChatError e => '$sofar\n\n⚠️ ${e.message}',
-          ChatDone d => d.sources.isEmpty ? sofar : '$sofar\n\nSources: ${d.sources.join(', ')}',
+          ChatDone d => d.sources.isEmpty ? sofar : '$sofar\n\n${tr('Sources: {list}', {'list': d.sources.join(', ')})}',
         };
         setState(() => _chat[_chat.length - 1] = (false, next));
       }
@@ -69,7 +70,7 @@ class _BedScreenState extends State<BedScreen> {
     final s = context.watch<Session>();
     final b = sc.beds.where((x) => x.bed == widget.bed).firstOrNull;
     if (b == null || b.empty) {
-      return Scaffold(backgroundColor: c.bg, appBar: CupertinoNavigationBar(previousPageTitle: 'Ward', middle: Text(widget.bed)), body: const Center(child: Text('This bed is empty.')));
+      return Scaffold(backgroundColor: c.bg, appBar: CupertinoNavigationBar(previousPageTitle: tr('Ward'), middle: Text(widget.bed)), body: Center(child: Text(tr('This bed is empty.'))));
     }
     final alerts = sc.sortedAlerts.where((a) => a.bed == b.bed).toList();
     final col = bandColor(context, b.band);
@@ -80,8 +81,7 @@ class _BedScreenState extends State<BedScreen> {
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text(label, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
-            const Spacer(),
+            Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))),
             if (pts != null && x != null) Text('+$pts', style: T.caption.copyWith(color: vc, fontWeight: FontWeight.w800)),
           ]),
           const SizedBox(height: 4),
@@ -100,7 +100,7 @@ class _BedScreenState extends State<BedScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: 'Ward', backgroundColor: c.material, middle: Text('${b.bed} · ${b.name}'), trailing: StatusPill(status: sc.status)),
+      appBar: CupertinoNavigationBar(previousPageTitle: tr('Ward'), backgroundColor: c.material, middle: Text('${b.bed} · ${b.name}'), trailing: StatusPill(status: sc.status)),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 40), children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -109,12 +109,12 @@ class _BedScreenState extends State<BedScreen> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(b.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
-                Text('${b.age}${b.sex} · ${b.onOxygen == true ? 'On oxygen' : 'On air'} · ACVPU ${b.consciousness ?? 'A'}', style: const TextStyle(color: Colors.white70)),
+                Text('${b.age}${b.sex} · ${b.onOxygen == true ? tr('On oxygen') : tr('On air')} · ACVPU ${b.consciousness ?? 'A'}', style: const TextStyle(color: Colors.white70)),
               ]),
             ),
             Column(children: [
               Text('${b.news2 ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
-              Text('NEWS2 · ${bandLabel[b.band] ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('NEWS2 · ${b.band == null ? '—' : tr(bandLabel[b.band] ?? '—')}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
             ]),
           ]),
         ),
@@ -130,34 +130,34 @@ class _BedScreenState extends State<BedScreen> {
             vital('HR', '/min', 'hr', b.hr),
             vital('SpO₂', '%', 'spo2', b.spo2),
             vital('RR', '/min', 'rr', b.rr),
-            vital('Sys BP', 'mmHg', 'sbp', b.sbp, sub: b.nibpAgeS == null ? null : 'cuff ${(b.nibpAgeS! / 60).round()} min ago'),
-            vital('Dia BP', 'mmHg', 'dbp', b.dbp),
-            vital('Temp', '°C', 'temp', b.temp),
+            vital(tr('Sys BP'), 'mmHg', 'sbp', b.sbp, sub: b.nibpAgeS == null ? null : tr('cuff {n} min ago', {'n': (b.nibpAgeS! / 60).round()})),
+            vital(tr('Dia BP'), 'mmHg', 'dbp', b.dbp),
+            vital(tr('Temp'), '°C', 'temp', b.temp),
           ],
         ),
         const SizedBox(height: 12),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Heart rate, last 2 minutes', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+            Text(tr('Heart rate, last 2 minutes'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Sparkline(sc.hrHistory[b.bed]?.toList() ?? const [], color: c.pink, width: double.infinity, height: 60),
           ]),
         ),
         if (sc.demo && s.role == Role.doctor) ...[
-          const SectionHeader('Demo scenario'),
+          SectionHeader(tr('Demo scenario')),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final (id, name) in [('stable', 'Stable'), ('sepsis', 'Sepsis'), ('hypoxia', 'Low oxygen'), ('tachy', 'Fast heart'), ('probe_off', 'Probe off')])
-              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => sc.runScenario(b.bed, id).then((_) => context.mounted ? toast(context, '$name on ${b.bed}') : null), child: Text(name)),
+              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => sc.runScenario(b.bed, id).then((_) => context.mounted ? toast(context, tr('{name} on {bed}', {'name': tr(name), 'bed': b.bed})) : null), child: Text(tr(name))),
           ]),
         ],
-        SectionHeader('Alerts', trailing: '${alerts.where((a) => a.open).length} open'),
-        if (alerts.isEmpty) IOSCard(child: Text('No alerts for this patient.', style: T.sub.copyWith(color: c.label2))),
+        SectionHeader(tr('Alerts'), trailing: tr('{n} open', {'n': alerts.where((a) => a.open).length})),
+        if (alerts.isEmpty) IOSCard(child: Text(tr('No alerts for this patient.'), style: T.sub.copyWith(color: c.label2))),
         for (final a in alerts) StaffAlertCard(a: a, showPatient: false),
         if (s.role == Role.doctor) ...[
-          const SectionHeader('Ask about this patient'),
+          SectionHeader(tr('Ask about this patient')),
           IOSCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_chat.isEmpty) Text(sc.demo ? 'Ask anything about this bed. Demo answers are built on the device from the live data.' : 'Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.', style: T.footnote.copyWith(color: c.label2)),
+              if (_chat.isEmpty) Text(sc.demo ? tr('Ask anything about this bed. Demo answers are built on the device from the live data.') : tr('Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.'), style: T.footnote.copyWith(color: c.label2)),
               for (final (mine, text) in _chat)
                 Align(
                   alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -170,7 +170,7 @@ class _BedScreenState extends State<BedScreen> {
                 ),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: CupertinoTextField(controller: _q, placeholder: 'e.g. What changed in the last hour?', onSubmitted: (_) => _ask(b), padding: const EdgeInsets.all(10))),
+                Expanded(child: CupertinoTextField(controller: _q, placeholder: tr('e.g. What changed in the last hour?'), onSubmitted: (_) => _ask(b), padding: const EdgeInsets.all(10))),
                 const SizedBox(width: 6),
                 CupertinoButton(padding: EdgeInsets.zero, onPressed: _asking ? null : () => _ask(b), child: const Icon(CupertinoIcons.arrow_up_circle_fill, size: 32)),
               ]),

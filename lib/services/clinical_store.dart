@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/l10n.dart';
 import '../models/patient_models.dart';
 import 'patient_store.dart';
 import 'session.dart';
@@ -341,18 +342,18 @@ class ClinicalStore extends ChangeNotifier {
 
   /// The shift's tasks, built from the ward's beds and the home patient.
   List<NurseTask> tasksFor(List<String> bedNames) {
-    String bed(int i) => bedNames.isEmpty ? 'Bed A${i + 1}' : bedNames[i % bedNames.length];
-    final live = byId(livePatientId)?.name ?? 'home patient';
+    String bed(int i) => bedNames.isEmpty ? tr('Bed A{n}', {'n': i + 1}) : bedNames[i % bedNames.length];
+    final live = byId(livePatientId)?.name ?? tr('home patient');
     return [
-      const NurseTask('v08', 8, 'Vitals round', 'All occupied beds: NEWS2 for each', 'vitals'),
-      NurseTask('m09', 9, 'Morning medicines', '${bed(0)}: metoprolol 25 mg · ${bed(1)}: insulin before breakfast', 'meds'),
-      NurseTask('h10', 10, 'Home check by video', '$live: band fit, wound and how she feels', 'check'),
-      const NurseTask('v12', 12, 'Vitals round', 'All occupied beds', 'vitals'),
-      NurseTask('c13', 13, 'Fluid balance chart', bed(2), 'care'),
-      NurseTask('m14', 14, 'Afternoon medicines', '${bed(3)}: antibiotics IV · ${bed(0)}: aspirin', 'meds'),
-      const NurseTask('v16', 16, 'Vitals round', 'All occupied beds', 'vitals'),
-      NurseTask('c18', 18, 'Wound dressing', bed(4), 'care'),
-      const NurseTask('h20', 20, 'Handover to the next shift', 'Write the handover note below', 'handover'),
+      NurseTask('v08', 8, tr('Vitals round'), tr('All occupied beds: NEWS2 for each'), 'vitals'),
+      NurseTask('m09', 9, tr('Morning medicines'), tr('{a}: metoprolol 25 mg · {b}: insulin before breakfast', {'a': bed(0), 'b': bed(1)}), 'meds'),
+      NurseTask('h10', 10, tr('Home check by video'), tr('{name}: band fit, wound and how she feels', {'name': live}), 'check'),
+      NurseTask('v12', 12, tr('Vitals round'), tr('All occupied beds'), 'vitals'),
+      NurseTask('c13', 13, tr('Fluid balance chart'), bed(2), 'care'),
+      NurseTask('m14', 14, tr('Afternoon medicines'), tr('{a}: antibiotics IV · {b}: aspirin', {'a': bed(3), 'b': bed(0)}), 'meds'),
+      NurseTask('v16', 16, tr('Vitals round'), tr('All occupied beds'), 'vitals'),
+      NurseTask('c18', 18, tr('Wound dressing'), bed(4), 'care'),
+      NurseTask('h20', 20, tr('Handover to the next shift'), tr('Write the handover note below'), 'handover'),
     ];
   }
 

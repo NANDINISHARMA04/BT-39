@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import '../l10n/l10n.dart';
 
 /// One bed in a live frame of `GET /v1/live`. Patient fields are null for an empty bed.
 class LiveBed {
@@ -79,7 +80,7 @@ class Bt39Client {
 
   Future<ApiResult> call(String method, String path, [Object? body]) async {
     final t = await token();
-    if (t == null) return ApiResult.fail(401, 'unauthorized', 'Please sign in.');
+    if (t == null) return ApiResult.fail(401, 'unauthorized', tr('Please sign in.'));
     try {
       final req = http.Request(method, Uri.parse('$base$path'))..headers['Authorization'] = 'Bearer $t';
       if (body != null) {
@@ -93,9 +94,9 @@ class Bt39Client {
       } catch (_) {}
       if (res.statusCode >= 200 && res.statusCode < 300) return ApiResult.ok(j);
       final m = j is Map ? j : const {};
-      return ApiResult.fail(res.statusCode, m['error'] as String? ?? 'unavailable', m['message'] as String? ?? 'The service is not answering. It may be waking up. Try again in a minute.');
+      return ApiResult.fail(res.statusCode, m['error'] as String? ?? 'unavailable', m['message'] as String? ?? tr('The service is not answering. It may be waking up. Try again in a minute.'));
     } catch (_) {
-      return ApiResult.fail(0, 'unreachable', 'The service could not be reached. It may be waking up. Try again in a minute.');
+      return ApiResult.fail(0, 'unreachable', tr('The service could not be reached. It may be waking up. Try again in a minute.'));
     }
   }
 
@@ -126,7 +127,7 @@ class Bt39Client {
   Stream<ChatEvent> chat(String patientId, String question) async* {
     final t = await token();
     if (t == null) {
-      yield ChatError('Please sign in.');
+      yield ChatError(tr('Please sign in.'));
       return;
     }
     final client = http.Client();
@@ -142,7 +143,7 @@ class Bt39Client {
         try {
           m = (jsonDecode(body) as Map)['message'] as String?;
         } catch (_) {}
-        yield ChatError(m ?? 'The question failed (${res.statusCode}).');
+        yield ChatError(m ?? tr('The question failed ({code}).', {'code': res.statusCode}));
         return;
       }
       await for (final ev in _ndjson(res)) {
@@ -155,7 +156,7 @@ class Bt39Client {
         }
       }
     } catch (_) {
-      yield ChatError('The service could not be reached. Try again in a minute.');
+      yield ChatError(tr('The service could not be reached. Try again in a minute.'));
     } finally {
       client.close();
     }

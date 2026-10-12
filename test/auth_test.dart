@@ -46,6 +46,11 @@ void main() {
     addTearDown(t.view.reset);
     await t.pumpWidget(const BT39App());
     await settle(t, 3);
+    // The welcome page is a lazy list: scroll until the nurse card (the third) is built.
+    await t.scrollUntilVisible(find.text('Nurse').first, 200, scrollable: find.byType(Scrollable).first);
+    await settle(t, 2);
+    await t.ensureVisible(find.text('Sign up').at(1));
+    await settle(t, 2);
     await t.tap(find.text('Sign up').at(1)); // second role card is Doctor
     await settle(t);
     expect(find.text('Create your Doctor account'), findsOneWidget);

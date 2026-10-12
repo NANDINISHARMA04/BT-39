@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config.dart';
+import '../../l10n/l10n.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
@@ -57,7 +58,7 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
     if (_signUp && role == Role.patient && !_consent) {
-      setState(() => _error = 'Please agree to share your vitals with your care team. AdaptAlert needs this to alert them.');
+      setState(() => _error = tr('Please agree to share your vitals with your care team. AdaptAlert needs this to alert them.'));
       return;
     }
     setState(() {
@@ -68,7 +69,7 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
     String? err;
     if (AppConfig.supabaseEnabled) {
       err = _signUp ? await s.signUp(_name.text, _email.text, _pw.text) : await s.signIn(_email.text, _pw.text);
-      if (err == 'CHECK_EMAIL') err = 'Check your email to confirm your account, then log in.';
+      if (err == 'CHECK_EMAIL') err = tr('Check your email to confirm your account, then log in.');
     } else if (_signUp) {
       final name = role == Role.doctor && !_name.text.trim().toLowerCase().startsWith('dr') ? 'Dr. ${_name.text.trim()}' : _name.text.trim();
       err = await s.localSignUp(
@@ -108,11 +109,10 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final col = roleColor(context, role);
-    final label = roleLabel[role]!;
-    String? required(String? v, String what) => (v ?? '').trim().isEmpty ? 'Enter $what' : null;
+    final label = tr(roleLabel[role]!);
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: 'Welcome', middle: Text('$label ${_signUp ? 'sign up' : 'log in'}'), backgroundColor: c.material),
+      appBar: CupertinoNavigationBar(previousPageTitle: tr('Welcome'), middle: Text(_signUp ? tr('{role} sign up', {'role': label}) : tr('{role} log in', {'role': label})), backgroundColor: c.material),
       body: Form(
         key: _form,
         child: Center(
@@ -130,12 +130,12 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(_signUp ? 'Create your $label account' : 'Welcome back', style: T.title2.copyWith(color: c.label)),
+                      Text(_signUp ? tr('Create your {role} account', {'role': label}) : tr('Welcome back'), style: T.title2.copyWith(color: c.label)),
                       Text(
                         switch (role) {
-                          Role.patient => 'Your vitals, your alerts and your care in one place.',
-                          Role.doctor => 'Review alerts, see your ward and teach AdaptAlert.',
-                          Role.nurse => 'Ward alerts, acknowledgements and triage.',
+                          Role.patient => tr('Your vitals, your alerts and your care in one place.'),
+                          Role.doctor => tr('Review alerts, see your ward and teach AdaptAlert.'),
+                          Role.nurse => tr('Ward alerts, acknowledgements and triage.'),
                         },
                         style: T.footnote.copyWith(color: c.label2),
                       ),
@@ -146,7 +146,7 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
               const SizedBox(height: 18),
               CupertinoSlidingSegmentedControl<bool>(
                 groupValue: _signUp,
-                children: const {false: Text('Log in'), true: Text('Sign up')},
+                children: {false: Text(tr('Log in')), true: Text(tr('Sign up'))},
                 onValueChanged: (v) => setState(() {
                   _signUp = v ?? false;
                   _error = null;
@@ -155,56 +155,56 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
               AutofillGroup(
                 child: Column(children: [
                   if (_signUp)
-                    FormGroup(header: 'About you', children: [
-                      FormField2(label: 'Full name', controller: _name, hint: role == Role.doctor ? 'e.g. Kavya Rao' : 'Your name', autofill: const [AutofillHints.name], validator: (v) => required(v, 'your name')),
+                    FormGroup(header: tr('About you'), children: [
+                      FormField2(label: tr('Full name'), controller: _name, hint: role == Role.doctor ? tr('e.g. Kavya Rao') : tr('Your name'), autofill: const [AutofillHints.name], validator: (v) => (v ?? '').trim().isEmpty ? tr('Enter your name') : null),
                       if (role == Role.patient) ...[
-                        FormField2(label: 'Age', controller: _age, hint: 'Years', keyboard: TextInputType.number, validator: (v) => (int.tryParse(v ?? '') ?? 0) < 1 ? 'Enter your age' : null),
-                        FormField2(label: 'Phone', controller: _phone, hint: '+91', keyboard: TextInputType.phone, autofill: const [AutofillHints.telephoneNumber]),
+                        FormField2(label: tr('Age'), controller: _age, hint: tr('Years'), keyboard: TextInputType.number, validator: (v) => (int.tryParse(v ?? '') ?? 0) < 1 ? tr('Enter your age') : null),
+                        FormField2(label: tr('Phone'), controller: _phone, hint: '+91', keyboard: TextInputType.phone, autofill: const [AutofillHints.telephoneNumber]),
                         Padding(
                           padding: const EdgeInsets.all(12),
-                          child: CupertinoSlidingSegmentedControl<String>(groupValue: _sex, children: const {'F': Text('Female'), 'M': Text('Male'), 'O': Text('Other')}, onValueChanged: (v) => setState(() => _sex = v ?? 'F')),
+                          child: CupertinoSlidingSegmentedControl<String>(groupValue: _sex, children: {'F': Text(tr('Female')), 'M': Text(tr('Male')), 'O': Text(tr('Other'))}, onValueChanged: (v) => setState(() => _sex = v ?? 'F')),
                         ),
                       ],
                       if (role != Role.patient)
                         FormField2(
-                          label: role == Role.doctor ? 'Medical reg. no.' : 'Nursing reg. no.',
+                          label: role == Role.doctor ? tr('Medical reg. no.') : tr('Nursing reg. no.'),
                           controller: _reg,
-                          hint: role == Role.doctor ? 'e.g. DMC/R/12345' : 'e.g. DNC-45678',
-                          validator: (v) => (v ?? '').trim().length < 4 ? 'Enter your registration number' : null,
+                          hint: role == Role.doctor ? tr('e.g. DMC/R/12345') : tr('e.g. DNC-45678'),
+                          validator: (v) => (v ?? '').trim().length < 4 ? tr('Enter your registration number') : null,
                         ),
                       if (role == Role.doctor) ...[
-                        _Picker(label: 'Speciality', value: _specialty, options: specialties, onChanged: (v) => setState(() => _specialty = v)),
-                        FormField2(label: 'Hospital', controller: _hospital, hint: 'Where you practise'),
+                        _Picker(label: tr('Speciality'), value: _specialty, options: specialties, onChanged: (v) => setState(() => _specialty = v)),
+                        FormField2(label: tr('Hospital'), controller: _hospital, hint: tr('Where you practise')),
                       ],
                       if (role == Role.nurse) ...[
-                        _Picker(label: 'Ward', value: _ward, options: const ['Ward A', 'Ward B', 'ICU', 'Cardiac care unit', 'Home care team'], onChanged: (v) => setState(() => _ward = v)),
-                        _Picker(label: 'Shift', value: _shift, options: const ['Morning', 'Evening', 'Night'], onChanged: (v) => setState(() => _shift = v)),
+                        _Picker(label: tr('Ward'), value: _ward, options: const ['Ward A', 'Ward B', 'ICU', 'Cardiac care unit', 'Home care team'], onChanged: (v) => setState(() => _ward = v)),
+                        _Picker(label: tr('Shift'), value: _shift, options: const ['Morning', 'Evening', 'Night'], onChanged: (v) => setState(() => _shift = v)),
                       ],
                     ]),
-                  FormGroup(header: 'Account', children: [
+                  FormGroup(header: tr('Account'), children: [
                     FormField2(
-                      label: 'Email',
+                      label: tr('Email'),
                       controller: _email,
                       hint: 'you@example.com',
                       keyboard: TextInputType.emailAddress,
                       autofill: const [AutofillHints.email],
-                      validator: (v) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((v ?? '').trim()) ? null : 'Enter a valid email',
+                      validator: (v) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((v ?? '').trim()) ? null : tr('Enter a valid email'),
                     ),
                     Row(children: [
                       Expanded(
                         child: FormField2(
-                          label: 'Password',
+                          label: tr('Password'),
                           controller: _pw,
-                          hint: _signUp ? 'At least 8 characters' : 'Password',
+                          hint: _signUp ? tr('At least 8 characters') : tr('Password'),
                           obscure: !_showPw,
                           autofill: [_signUp ? AutofillHints.newPassword : AutofillHints.password],
-                          validator: (v) => _signUp && (v ?? '').length < 8 ? 'Use at least 8 characters' : ((v ?? '').isEmpty ? 'Enter your password' : null),
+                          validator: (v) => _signUp && (v ?? '').length < 8 ? tr('Use at least 8 characters') : ((v ?? '').isEmpty ? tr('Enter your password') : null),
                         ),
                       ),
                       CupertinoButton(padding: const EdgeInsets.only(right: 12), onPressed: () => setState(() => _showPw = !_showPw), child: Icon(_showPw ? CupertinoIcons.eye_slash : CupertinoIcons.eye, size: 20, color: c.label2)),
                     ]),
                     if (_signUp)
-                      FormField2(label: 'Confirm', controller: _pw2, hint: 'Type it again', obscure: !_showPw, validator: (v) => v != _pw.text ? 'Passwords don\'t match' : null),
+                      FormField2(label: tr('Confirm'), controller: _pw2, hint: tr('Type it again'), obscure: !_showPw, validator: (v) => v != _pw.text ? tr('Passwords don\'t match') : null),
                   ]),
                 ]),
               ),
@@ -213,7 +213,7 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
                   valueListenable: _pw,
                   builder: (_, v, _) {
                     final s = _strength(v.text);
-                    final (text, colr) = s <= 1 ? ('Weak', c.red) : s <= 3 ? ('Okay', c.orange) : ('Strong', c.green);
+                    final (text, colr) = s <= 1 ? (tr('Weak'), c.red) : s <= 3 ? (tr('Okay'), c.orange) : (tr('Strong'), c.green);
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                       child: Row(children: [
@@ -229,7 +229,7 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
                   padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
                   child: Row(children: [
                     CupertinoCheckbox(value: _consent, onChanged: (v) => setState(() => _consent = v ?? false)),
-                    Expanded(child: Text('I agree to share my vitals and alerts with my care team.', style: T.footnote.copyWith(color: c.label))),
+                    Expanded(child: Text(tr('I agree to share my vitals and alerts with my care team.'), style: T.footnote.copyWith(color: c.label))),
                   ]),
                 ),
               if (_error != null) Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Text(_error!, style: T.footnote.copyWith(color: c.red))),
@@ -237,18 +237,18 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
               CupertinoButton(
                 color: col,
                 onPressed: _busy ? null : _submit,
-                child: _busy ? const CupertinoActivityIndicator(color: Colors.white) : Text(_signUp ? 'Create $label account' : 'Log in as $label', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                child: _busy ? const CupertinoActivityIndicator(color: Colors.white) : Text(_signUp ? tr('Create {role} account', {'role': label}) : tr('Log in as {role}', {'role': label}), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               ),
               if (!AppConfig.supabaseEnabled) ...[
                 const SizedBox(height: 10),
-                CupertinoButton(onPressed: _fillDemo, child: Text('Use the demo $label account')),
-                Text('Demo: ${demoAccounts[role]!.$1} · ${demoAccounts[role]!.$2}', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label2)),
+                CupertinoButton(onPressed: _fillDemo, child: Text(tr('Use the demo {role} account', {'role': label}))),
+                Text('${tr('Demo')}: ${demoAccounts[role]!.$1} · ${demoAccounts[role]!.$2}', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label2)),
               ],
               const SizedBox(height: 16),
               Text(
                 AppConfig.supabaseEnabled
-                    ? (role == Role.patient ? 'Accounts use Supabase sign-in.' : 'Staff accounts also need a ward assignment from the BT39 admin.')
-                    : 'Accounts are stored on this device. Passwords are never stored, only a salted SHA-256 hash.',
+                    ? (role == Role.patient ? tr('Accounts use Supabase sign-in.') : tr('Staff accounts also need a ward assignment from the BT39 admin.'))
+                    : tr('Accounts are stored on this device. Passwords are never stored, only a salted SHA-256 hash.'),
                 textAlign: TextAlign.center,
                 style: T.caption.copyWith(color: c.label3),
               ),
@@ -270,14 +270,14 @@ class _Picker extends StatelessWidget {
     final c = context.ios;
     return IOSRow(
       title: label,
-      trailing: Text(value, style: T.sub.copyWith(color: c.label2)),
+      trailing: Text(trData(value), style: T.sub.copyWith(color: c.label2)),
       onTap: () async {
         final v = await showCupertinoModalPopup<String>(
           context: context,
           builder: (ctx) => CupertinoActionSheet(
             title: Text(label),
-            actions: [for (final o in options) CupertinoActionSheetAction(isDefaultAction: o == value, onPressed: () => Navigator.pop(ctx, o), child: Text(o))],
-            cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            actions: [for (final o in options) CupertinoActionSheetAction(isDefaultAction: o == value, onPressed: () => Navigator.pop(ctx, o), child: Text(trData(o)))],
+            cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
           ),
         );
         if (v != null) onChanged(v);

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/patient_models.dart';
 import '../../services/patient_store.dart';
 import '../../theme/ios_theme.dart';
@@ -26,10 +27,10 @@ class _CareScreenState extends State<CareScreen> {
     final store = context.watch<PatientStore>();
     final list = _past ? store.past : store.upcoming;
     return LargeTitlePage(
-      title: 'Care',
-      subtitle: 'Appointments and doctors',
+      title: tr('Care'),
+      subtitle: tr('Appointments and doctors'),
       trailing: Semantics(
-        label: 'Book appointment',
+        label: tr('Book appointment'),
         button: true,
         child: Pressable(onTap: _findDoctor, child: Icon(CupertinoIcons.add_circled_solid, color: c.blue, size: 28)),
       ),
@@ -42,7 +43,7 @@ class _CareScreenState extends State<CareScreen> {
             child: Row(children: [
               Icon(CupertinoIcons.search, size: 18, color: c.label2),
               const SizedBox(width: 8),
-              Expanded(child: Text('Search doctors, specialities, hospitals', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.callout.copyWith(color: c.label2))),
+              Expanded(child: Text(tr('Search doctors, specialities, hospitals'), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.callout.copyWith(color: c.label2))),
             ]),
           ),
         ),
@@ -50,14 +51,14 @@ class _CareScreenState extends State<CareScreen> {
         SizedBox(
           height: 92,
           child: ListView(scrollDirection: Axis.horizontal, children: [
-            for (final (s, icon, col) in [
-              ('Cardiologist', CupertinoIcons.heart_fill, c.red),
-              ('General Physician', CupertinoIcons.person_fill, c.blue),
-              ('Pulmonologist', CupertinoIcons.wind, c.teal),
-              ('Endocrinologist', CupertinoIcons.drop_fill, c.purple),
-              ('Pediatrician', CupertinoIcons.smiley_fill, c.orange),
-              ('Neurologist', CupertinoIcons.bolt_fill, c.indigo),
-              ('Psychiatrist', CupertinoIcons.cloud_sun_fill, c.green),
+            for (final (s, short, icon, col) in [
+              ('Cardiologist', tr('Heart'), CupertinoIcons.heart_fill, c.red),
+              ('General Physician', tr('General'), CupertinoIcons.person_fill, c.blue),
+              ('Pulmonologist', tr('Lungs'), CupertinoIcons.wind, c.teal),
+              ('Endocrinologist', tr('Hormones'), CupertinoIcons.drop_fill, c.purple),
+              ('Pediatrician', tr('Children'), CupertinoIcons.smiley_fill, c.orange),
+              ('Neurologist', tr('Brain'), CupertinoIcons.bolt_fill, c.indigo),
+              ('Psychiatrist', tr('Mind'), CupertinoIcons.cloud_sun_fill, c.green),
             ])
               Padding(
                 padding: const EdgeInsets.only(right: 10),
@@ -68,7 +69,7 @@ class _CareScreenState extends State<CareScreen> {
                     child: Column(children: [
                       Container(width: 56, height: 56, decoration: BoxDecoration(color: col.withValues(alpha: .15), borderRadius: BorderRadius.circular(18)), child: Icon(icon, color: col)),
                       const SizedBox(height: 6),
-                      Text(s.split(' ').first, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label)),
+                      Text(hindi ? short : s.split(' ').first, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label)),
                     ]),
                   ),
                 ),
@@ -78,7 +79,7 @@ class _CareScreenState extends State<CareScreen> {
         const SizedBox(height: 4),
         CupertinoSlidingSegmentedControl<bool>(
           groupValue: _past,
-          children: {false: Text('Upcoming (${store.upcoming.length})'), true: Text('Past (${store.past.length})')},
+          children: {false: Text(tr('Upcoming ({n})', {'n': store.upcoming.length})), true: Text(tr('Past ({n})', {'n': store.past.length}))},
           onValueChanged: (v) => setState(() => _past = v ?? false),
         ),
         const SizedBox(height: 12),
@@ -86,9 +87,9 @@ class _CareScreenState extends State<CareScreen> {
           EmptyState(
             icon: CupertinoIcons.calendar,
             color: c.blue,
-            title: _past ? 'No past appointments' : 'Nothing booked',
-            message: _past ? 'Completed and cancelled visits show up here.' : 'Find a doctor and book a video or clinic visit.',
-            action: _past ? null : 'Find a doctor',
+            title: _past ? tr('No past appointments') : tr('Nothing booked'),
+            message: _past ? tr('Completed and cancelled visits show up here.') : tr('Find a doctor and book a video or clinic visit.'),
+            action: _past ? null : tr('Find a doctor'),
             onAction: _findDoctor,
           )
         else
@@ -108,9 +109,9 @@ class _ApptCard extends StatelessWidget {
     final store = context.read<PatientStore>();
     final d = doctorById(a.doctorId);
     final (statusText, statusCol) = switch (a.status) {
-      ApptStatus.upcoming => a.at.isBefore(DateTime.now().add(const Duration(hours: 24))) ? ('Soon', c.orange) : ('Confirmed', c.green),
-      ApptStatus.completed => ('Completed', c.gray),
-      ApptStatus.cancelled => ('Cancelled', c.red),
+      ApptStatus.upcoming => a.at.isBefore(DateTime.now().add(const Duration(hours: 24))) ? (tr('Soon'), c.orange) : (tr('Confirmed'), c.green),
+      ApptStatus.completed => (tr('Completed'), c.gray),
+      ApptStatus.cancelled => (tr('Cancelled'), c.red),
     };
     final upcoming = a.status == ApptStatus.upcoming;
     return Padding(
@@ -124,7 +125,7 @@ class _ApptCard extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(d.name, style: T.headline.copyWith(color: c.label)),
-                Text('${d.specialty} · ${d.hospital}', style: T.footnote.copyWith(color: c.label2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('${trData(d.specialty)} · ${d.hospital}', style: T.footnote.copyWith(color: c.label2), maxLines: 1, overflow: TextOverflow.ellipsis),
               ]),
             ),
             Pill(statusText, color: statusCol),
@@ -139,12 +140,12 @@ class _ApptCard extends StatelessWidget {
               Expanded(child: Text(DateFormat('EEE d MMM · h:mm a').format(a.at), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600))),
               Icon(a.mode == ApptMode.video ? CupertinoIcons.video_camera_solid : CupertinoIcons.building_2_fill, size: 18, color: c.blue),
               const SizedBox(width: 6),
-              Text(a.mode == ApptMode.video ? 'Video' : 'Clinic', style: T.footnote.copyWith(color: c.label2)),
+              Text(a.mode == ApptMode.video ? tr('Video') : tr('Clinic'), style: T.footnote.copyWith(color: c.label2)),
             ]),
           ),
           const SizedBox(height: 10),
-          Text('For ${store.memberName(a.forMember)} · ${a.reason}', style: T.footnote.copyWith(color: c.label2)),
-          if (a.fromAlert != null) Padding(padding: const EdgeInsets.only(top: 6), child: Pill('Booked from an AdaptAlert alert', icon: CupertinoIcons.sparkles, color: c.indigo)),
+          Text('${tr('For {name}', {'name': trData(store.memberName(a.forMember))})} · ${trData(a.reason)}', style: T.footnote.copyWith(color: c.label2)),
+          if (a.fromAlert != null) Padding(padding: const EdgeInsets.only(top: 6), child: Pill(tr('Booked from an AdaptAlert alert'), icon: CupertinoIcons.sparkles, color: c.indigo)),
           if (upcoming) ...[
             const SizedBox(height: 12),
             Row(children: [
@@ -152,24 +153,24 @@ class _ApptCard extends StatelessWidget {
                 Expanded(
                   child: CupertinoButton.filled(
                     sizeStyle: CupertinoButtonSize.small,
-                    onPressed: () => toast(context, 'Video call', 'The call opens 10 minutes before the start time. Demo only.'),
-                    child: const Text('Join call'),
+                    onPressed: () => toast(context, tr('Video call'), tr('The call opens 10 minutes before the start time. Demo only.')),
+                    child: Text(tr('Join call')),
                   ),
                 ),
               if (a.mode == ApptMode.video) const SizedBox(width: 8),
-              Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => _edit(context), child: const Text('Reschedule'))),
+              Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => _edit(context), child: Text(tr('Reschedule')))),
               const SizedBox(width: 8),
               Expanded(
                 child: CupertinoButton.tinted(
                   sizeStyle: CupertinoButtonSize.small,
                   color: c.red,
                   onPressed: () async {
-                    if (await confirm(context, title: 'Cancel appointment?', message: '${d.name}, ${DateFormat('EEE d MMM, h:mm a').format(a.at)}', action: 'Cancel appointment')) {
+                    if (await confirm(context, title: tr('Cancel appointment?'), message: '${d.name}, ${DateFormat('EEE d MMM, h:mm a').format(a.at)}', action: tr('Cancel appointment'))) {
                       store.cancelAppointment(a.id);
-                      if (context.mounted) toast(context, 'Appointment cancelled');
+                      if (context.mounted) toast(context, tr('Appointment cancelled'));
                     }
                   },
-                  child: Text('Cancel', style: TextStyle(color: c.red)),
+                  child: Text(tr('Cancel'), style: TextStyle(color: c.red)),
                 ),
               ),
             ]),
@@ -179,11 +180,11 @@ class _ApptCard extends StatelessWidget {
               child: CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: () async {
-                  if (await confirm(context, title: 'Delete this record?', message: 'It will be removed from your appointment history.', action: 'Delete')) {
+                  if (await confirm(context, title: tr('Delete this record?'), message: tr('It will be removed from your appointment history.'), action: tr('Delete'))) {
                     store.deleteAppointment(a.id);
                   }
                 },
-                child: Text('Delete', style: T.footnote.copyWith(color: c.red)),
+                child: Text(tr('Delete'), style: T.footnote.copyWith(color: c.red)),
               ),
             ),
         ]),

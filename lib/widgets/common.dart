@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/ios_theme.dart';
 import 'shell_navigator.dart';
 
@@ -270,14 +271,18 @@ class LargeTitlePage extends StatelessWidget {
           context,
           back == null
               ? null
-              : CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(30, 30),
-                  onPressed: back.go,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(CupertinoIcons.chevron_back, size: 24),
-                    Flexible(child: Text(back.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 17))),
-                  ]),
+              // Phones have little room beside the title, so they show the arrow only.
+              : Semantics(
+                  label: back.label,
+                  button: true,
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(34, 34),
+                    onPressed: back.go,
+                    child: MediaQuery.sizeOf(context).width >= 600
+                        ? Row(mainAxisSize: MainAxisSize.min, children: [const Icon(CupertinoIcons.chevron_back, size: 26), Text(back.label, style: const TextStyle(fontSize: 17))])
+                        : const Icon(CupertinoIcons.chevron_back, size: 28),
+                  ),
                 ),
         ),
       );
@@ -411,7 +416,7 @@ Future<bool> confirm(BuildContext context, {required String title, required Stri
       title: Text(title),
       content: Text(message),
       actions: [
-        CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('Cancel'))),
         CupertinoDialogAction(isDestructiveAction: destructive, isDefaultAction: !destructive, onPressed: () => Navigator.pop(ctx, true), child: Text(action)),
       ],
     ),

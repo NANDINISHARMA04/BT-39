@@ -2,12 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/patient_models.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/lang_switch.dart';
 import 'family_screen.dart';
 import 'insurance_screen.dart';
 import 'patient_shell.dart';
@@ -26,7 +28,7 @@ class MeScreen extends StatelessWidget {
     final prefs = store.prefs;
     final e = context.watch<MonitorController>().engine;
     return LargeTitlePage(
-      title: 'Me',
+      title: tr('Me'),
       children: [
         FadeIn(
           child: IOSCard(
@@ -37,11 +39,11 @@ class MeScreen extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(p.name, style: T.title2.copyWith(color: c.label)),
-                  Text(p.email.isEmpty ? 'No email' : p.email, style: T.footnote.copyWith(color: c.label2)),
+                  Text(p.email.isEmpty ? tr('No email') : p.email, style: T.footnote.copyWith(color: c.label2)),
                   const SizedBox(height: 6),
                   Wrap(spacing: 6, children: [
-                    Pill(switch (s.mode) { AuthMode.demo => 'Demo Mode', AuthMode.local => 'Device account', AuthMode.cloud => 'Signed in' }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
-                    Pill('Edit profile', color: c.blue),
+                    Pill(switch (s.mode) { AuthMode.demo => tr('Demo Mode'), AuthMode.local => tr('Device account'), AuthMode.cloud => tr('Signed in') }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
+                    Pill(tr('Edit profile'), color: c.blue),
                   ]),
                 ]),
               ),
@@ -52,44 +54,44 @@ class MeScreen extends StatelessWidget {
         FadeIn(
           delay: 60,
           child: Row(children: [
-            _Fact('Age', '${p.age}'),
-            _Fact('Blood', p.bloodGroup),
+            _Fact(tr('Age'), '${p.age}'),
+            _Fact(tr('Blood'), p.bloodGroup),
             _Fact('BMI', p.bmi.toStringAsFixed(1)),
-            _Fact('Height', '${p.heightCm.round()} cm'),
+            _Fact(tr('Height'), '${p.heightCm.round()} cm'),
           ]),
         ),
-        FormGroup(header: 'Health', children: [
-          IOSRow(icon: CupertinoIcons.heart_circle_fill, iconColor: c.pink, title: 'Health profile', subtitle: '${p.conditions.length} condition${p.conditions.length == 1 ? '' : 's'} · ${p.medications.length} medicine${p.medications.length == 1 ? '' : 's'} · ${p.allergies.length} allerg${p.allergies.length == 1 ? 'y' : 'ies'}', onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const ProfileEditor()))),
-          IOSRow(icon: CupertinoIcons.doc_text_fill, iconColor: c.teal, title: 'Medical records', subtitle: '${store.records.length} files', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const RecordsScreen()))),
-          IOSRow(icon: CupertinoIcons.shield_lefthalf_fill, iconColor: c.green, title: 'Insurance & claims', subtitle: '${store.policies.length} polic${store.policies.length == 1 ? 'y' : 'ies'} · ${store.claims.length} claims', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const InsuranceScreen()))),
-          IOSRow(icon: CupertinoIcons.person_3_fill, iconColor: c.orange, title: 'Family', subtitle: '${store.family.length} members · caregiver ${store.caregiver?.name.split(' ').first ?? 'not set'}', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const FamilyScreen()))),
+        FormGroup(header: tr('Health'), children: [
+          IOSRow(icon: CupertinoIcons.heart_circle_fill, iconColor: c.pink, title: tr('Health profile'), subtitle: '${p.conditions.length == 1 ? tr('{n} condition', {'n': 1}) : tr('{n} conditions', {'n': p.conditions.length})} · ${p.medications.length == 1 ? tr('{n} medicine', {'n': 1}) : tr('{n} medicines', {'n': p.medications.length})} · ${p.allergies.length == 1 ? tr('{n} allergy', {'n': 1}) : tr('{n} allergies', {'n': p.allergies.length})}', onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const ProfileEditor()))),
+          IOSRow(icon: CupertinoIcons.doc_text_fill, iconColor: c.teal, title: tr('Medical records'), subtitle: tr('{n} files', {'n': store.records.length}), onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const RecordsScreen()))),
+          IOSRow(icon: CupertinoIcons.shield_lefthalf_fill, iconColor: c.green, title: tr('Insurance & claims'), subtitle: '${store.policies.length == 1 ? tr('{n} policy', {'n': 1}) : tr('{n} policies', {'n': store.policies.length})} · ${tr('{n} claims', {'n': store.claims.length})}', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const InsuranceScreen()))),
+          IOSRow(icon: CupertinoIcons.person_3_fill, iconColor: c.orange, title: tr('Family'), subtitle: '${tr('{n} members', {'n': store.family.length})} · ${store.caregiver == null ? tr('caregiver not set') : tr('caregiver {name}', {'name': store.caregiver!.name.split(' ').first})}', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const FamilyScreen()))),
         ]),
-        FormGroup(header: 'Emergency', children: [
-          IOSRow(icon: CupertinoIcons.exclamationmark_octagon_fill, iconColor: c.red, title: 'Emergency SOS', subtitle: 'Call 112 and alert ${store.emergencyContacts.length} contacts', onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen()))),
-          IOSRow(icon: CupertinoIcons.staroflife_fill, iconColor: c.red, title: 'Medical ID', subtitle: 'What responders see', onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen()))),
+        FormGroup(header: tr('Emergency'), children: [
+          IOSRow(icon: CupertinoIcons.exclamationmark_octagon_fill, iconColor: c.red, title: tr('Emergency SOS'), subtitle: tr('Call 112 and alert {n} contacts', {'n': store.emergencyContacts.length}), onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen()))),
+          IOSRow(icon: CupertinoIcons.staroflife_fill, iconColor: c.red, title: tr('Medical ID'), subtitle: tr('What responders see'), onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen()))),
           IOSRow(
             icon: CupertinoIcons.bolt_fill,
             iconColor: c.orange,
-            title: 'Auto-SOS on critical alerts',
-            subtitle: 'Opens SOS when a safety limit is reached',
+            title: tr('Auto-SOS on critical alerts'),
+            subtitle: tr('Opens SOS when a safety limit is reached'),
             trailing: CupertinoSwitch(value: prefs.autoSos, onChanged: (v) => store.updatePrefs((x) => x.autoSos = v)),
             chevron: false,
           ),
         ]),
-        FormGroup(header: 'Alerts', footer: 'Your alert threshold is ${(e.tau * 100).round()}%. It is learned from feedback and can\'t go above 75%.', children: [
-          IOSRow(icon: CupertinoIcons.bell_fill, iconColor: c.red, title: 'Notifications', trailing: CupertinoSwitch(value: prefs.notifications, onChanged: (v) => store.updatePrefs((x) => x.notifications = v)), chevron: false),
-          IOSRow(icon: CupertinoIcons.person_2_fill, iconColor: c.orange, title: 'Tell my caregiver', subtitle: 'If I don\'t reply in 10 minutes', trailing: CupertinoSwitch(value: prefs.caregiverEscalation, onChanged: (v) => store.updatePrefs((x) => x.caregiverEscalation = v)), chevron: false),
-          IOSRow(icon: CupertinoIcons.share_up, iconColor: c.blue, title: 'Share vitals with my care team', trailing: CupertinoSwitch(value: prefs.shareWithCareTeam, onChanged: (v) => store.updatePrefs((x) => x.shareWithCareTeam = v)), chevron: false),
-          IOSRow(icon: CupertinoIcons.slider_horizontal_3, iconColor: c.gray, title: 'Band simulator', subtitle: 'Demo scenarios', onTap: () => showSimulator(context)),
+        FormGroup(header: tr('Alerts'), footer: tr('Your alert threshold is {n}%. It is learned from feedback and can\'t go above 75%.', {'n': (e.tau * 100).round()}), children: [
+          IOSRow(icon: CupertinoIcons.bell_fill, iconColor: c.red, title: tr('Notifications'), trailing: CupertinoSwitch(value: prefs.notifications, onChanged: (v) => store.updatePrefs((x) => x.notifications = v)), chevron: false),
+          IOSRow(icon: CupertinoIcons.person_2_fill, iconColor: c.orange, title: tr('Tell my caregiver'), subtitle: tr('If I don\'t reply in 10 minutes'), trailing: CupertinoSwitch(value: prefs.caregiverEscalation, onChanged: (v) => store.updatePrefs((x) => x.caregiverEscalation = v)), chevron: false),
+          IOSRow(icon: CupertinoIcons.share_up, iconColor: c.blue, title: tr('Share vitals with my care team'), trailing: CupertinoSwitch(value: prefs.shareWithCareTeam, onChanged: (v) => store.updatePrefs((x) => x.shareWithCareTeam = v)), chevron: false),
+          IOSRow(icon: CupertinoIcons.slider_horizontal_3, iconColor: c.gray, title: tr('Band simulator'), subtitle: tr('Demo scenarios'), onTap: () => showSimulator(context)),
         ]),
-        FormGroup(header: 'Preferences', children: [
+        FormGroup(header: tr('Preferences'), children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 10, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.circle_lefthalf_fill, c.indigo), const SizedBox(width: 14), Text('Appearance', style: T.body.copyWith(color: c.label))]),
+              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.circle_lefthalf_fill, c.indigo), const SizedBox(width: 14), Text(tr('Appearance'), style: T.body.copyWith(color: c.label))]),
               CupertinoSlidingSegmentedControl<String>(
                 groupValue: prefs.theme,
-                children: const {'system': Text('Auto'), 'light': Text('Light'), 'dark': Text('Dark')},
+                children: {'system': Text(tr('Auto')), 'light': Text(tr('Light')), 'dark': Text(tr('Dark'))},
                 onValueChanged: (v) => store.updatePrefs((x) => x.theme = v ?? 'system'),
               ),
             ]),
@@ -97,7 +99,7 @@ class MeScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 10, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.thermometer, c.orange), const SizedBox(width: 14), Text('Temperature', style: T.body.copyWith(color: c.label))]),
+              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.thermometer, c.orange), const SizedBox(width: 14), Text(tr('Temperature'), style: T.body.copyWith(color: c.label))]),
               CupertinoSlidingSegmentedControl<bool>(
                 groupValue: prefs.fahrenheit,
                 children: const {false: Text('°C'), true: Text('°F')},
@@ -105,37 +107,20 @@ class MeScreen extends StatelessWidget {
               ),
             ]),
           ),
-          IOSRow(
-            icon: CupertinoIcons.globe,
-            iconColor: c.blue,
-            title: 'Language',
-            trailing: Text(prefs.language, style: T.sub.copyWith(color: c.label2)),
-            onTap: () async {
-              final v = await showCupertinoModalPopup<String>(
-                context: context,
-                builder: (ctx) => CupertinoActionSheet(
-                  title: const Text('App language'),
-                  message: const Text('Translations are planned. The app shows English for now.'),
-                  actions: [for (final l in ['English', 'हिन्दी (Hindi)', 'தமிழ் (Tamil)', 'বাংলা (Bengali)']) CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx, l), child: Text(l))],
-                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                ),
-              );
-              if (v != null) store.updatePrefs((x) => x.language = v);
-            },
-          ),
+          const LanguageRow(),
         ]),
-        FormGroup(header: 'About', children: [
-          IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'PulseOS', subtitle: 'Version 1.0 · AdaptAlert engine · student research prototype, not a medical device', chevron: false),
-          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: 'Privacy', subtitle: switch (s.mode) { AuthMode.demo => 'Demo Mode: all data stays on this device', AuthMode.local => 'Account stored on this device; the password is kept only as a salted hash', AuthMode.cloud => 'Signed in with Supabase. Health data in this build stays on this device.' }, chevron: false),
+        FormGroup(header: tr('About'), children: [
+          IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'PulseOS', subtitle: tr('Version 1.0 · AdaptAlert engine · student research prototype, not a medical device'), chevron: false),
+          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: tr('Privacy'), subtitle: switch (s.mode) { AuthMode.demo => tr('Demo Mode: all data stays on this device'), AuthMode.local => tr('Account stored on this device; the password is kept only as a salted hash'), AuthMode.cloud => tr('Signed in with Supabase. Health data in this build stays on this device.') }, chevron: false),
         ]),
         const SizedBox(height: 20),
         GroupedList(children: [
           IOSRow(
-            title: s.demo ? 'Leave Demo Mode' : 'Sign out',
+            title: s.demo ? tr('Leave Demo Mode') : tr('Sign out'),
             destructive: true,
             chevron: false,
             onTap: () async {
-              if (await confirm(context, title: s.demo ? 'Leave Demo Mode?' : 'Sign out?', message: 'Your data stays on this device for next time.', action: s.demo ? 'Leave' : 'Sign out')) {
+              if (await confirm(context, title: s.demo ? tr('Leave Demo Mode?') : tr('Sign out?'), message: tr('Your data stays on this device for next time.'), action: s.demo ? tr('Leave') : tr('Sign out'))) {
                 await s.signOut();
               }
             },
@@ -198,11 +183,11 @@ class _ProfileEditorState extends State<ProfileEditor> {
       return Padding(
         padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(i == null ? 'Add medicine' : 'Edit medicine', style: T.title2.copyWith(color: c.label)),
-          FormGroup(children: [FormField2(label: 'Name', controller: n), FormField2(label: 'Dose', controller: d, hint: 'e.g. 75 mg'), FormField2(label: 'When', controller: s, hint: 'e.g. Twice daily')]),
+          Text(i == null ? tr('Add medicine') : tr('Edit medicine'), style: T.title2.copyWith(color: c.label)),
+          FormGroup(children: [FormField2(label: tr('Name'), controller: n), FormField2(label: tr('Dose'), controller: d, hint: tr('e.g. 75 mg')), FormField2(label: tr('When'), controller: s, hint: tr('e.g. Twice daily'))]),
           const SizedBox(height: 16),
-          CupertinoButton.filled(onPressed: () => Navigator.pop(ctx, true), child: const Text('Done')),
-          if (i != null) CupertinoButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Remove medicine', style: TextStyle(color: c.red))),
+          CupertinoButton.filled(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('Done'))),
+          if (i != null) CupertinoButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('Remove medicine'), style: TextStyle(color: c.red))),
         ]),
       );
     });
@@ -226,12 +211,12 @@ class _ProfileEditorState extends State<ProfileEditor> {
       backgroundColor: c.bg,
       appBar: CupertinoNavigationBar(
         backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        middle: const Text('Profile'),
+        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
+        middle: Text(tr('Profile')),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () {
-            if (_name.text.trim().isEmpty) return toast(context, 'Add your name');
+            if (_name.text.trim().isEmpty) return toast(context, tr('Add your name'));
             context.read<PatientStore>().updateProfile((x) => x
               ..name = _name.text.trim()
               ..email = _email.text.trim()
@@ -246,48 +231,48 @@ class _ProfileEditorState extends State<ProfileEditor> {
               ..allergies = _split(_allergy.text)
               ..medications = _meds);
             Navigator.pop(context);
-            toast(context, 'Profile saved');
+            toast(context, tr('Profile saved'));
           },
-          child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
-        FormGroup(header: 'About you', children: [
-          FormField2(label: 'Name', controller: _name),
-          FormField2(label: 'Email', controller: _email, keyboard: TextInputType.emailAddress),
-          FormField2(label: 'Phone', controller: _phone, keyboard: TextInputType.phone),
-          FormField2(label: 'City', controller: _city),
+        FormGroup(header: tr('About you'), children: [
+          FormField2(label: tr('Name'), controller: _name),
+          FormField2(label: tr('Email'), controller: _email, keyboard: TextInputType.emailAddress),
+          FormField2(label: tr('Phone'), controller: _phone, keyboard: TextInputType.phone),
+          FormField2(label: tr('City'), controller: _city),
           Padding(
             padding: const EdgeInsets.all(12),
-            child: CupertinoSlidingSegmentedControl<String>(groupValue: _sex, children: const {'F': Text('Female'), 'M': Text('Male'), 'O': Text('Other')}, onValueChanged: (v) => setState(() => _sex = v ?? 'F')),
+            child: CupertinoSlidingSegmentedControl<String>(groupValue: _sex, children: {'F': Text(tr('Female')), 'M': Text(tr('Male')), 'O': Text(tr('Other'))}, onValueChanged: (v) => setState(() => _sex = v ?? 'F')),
           ),
         ]),
-        FormGroup(header: 'Body', children: [
-          FormField2(label: 'Age', controller: _age, keyboard: TextInputType.number),
-          FormField2(label: 'Height (cm)', controller: _h, keyboard: TextInputType.number),
-          FormField2(label: 'Weight (kg)', controller: _w, keyboard: TextInputType.number),
+        FormGroup(header: tr('Body'), children: [
+          FormField2(label: tr('Age'), controller: _age, keyboard: TextInputType.number),
+          FormField2(label: tr('Height (cm)'), controller: _h, keyboard: TextInputType.number),
+          FormField2(label: tr('Weight (kg)'), controller: _w, keyboard: TextInputType.number),
           IOSRow(
-            title: 'Blood group',
+            title: tr('Blood group'),
             trailing: Text(_blood, style: T.sub.copyWith(color: c.label2)),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
                 builder: (ctx) => CupertinoActionSheet(
                   actions: [for (final b in const ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']) CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx, b), child: Text(b))],
-                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
                 ),
               );
               if (v != null) setState(() => _blood = v);
             },
           ),
         ]),
-        FormGroup(header: 'Medical', footer: 'Separate items with commas. Shown on your Medical ID.', children: [
-          FormField2(label: 'Conditions', controller: _cond, maxLines: 2),
-          FormField2(label: 'Allergies', controller: _allergy, maxLines: 2),
+        FormGroup(header: tr('Medical'), footer: tr('Separate items with commas. Shown on your Medical ID.'), children: [
+          FormField2(label: tr('Conditions'), controller: _cond, maxLines: 2),
+          FormField2(label: tr('Allergies'), controller: _allergy, maxLines: 2),
         ]),
-        FormGroup(header: 'Medicines', children: [
-          for (final (i, m) in _meds.indexed) IOSRow(icon: CupertinoIcons.capsule_fill, iconColor: c.purple, title: '${m.name} ${m.dose}', subtitle: m.schedule, onTap: () => _editMed(i)),
-          IOSRow(icon: CupertinoIcons.add, iconColor: c.green, title: 'Add medicine', chevron: false, onTap: _editMed),
+        FormGroup(header: tr('Medicines'), children: [
+          for (final (i, m) in _meds.indexed) IOSRow(icon: CupertinoIcons.capsule_fill, iconColor: c.purple, title: '${m.name} ${m.dose}', subtitle: trData(m.schedule), onTap: () => _editMed(i)),
+          IOSRow(icon: CupertinoIcons.add, iconColor: c.green, title: tr('Add medicine'), chevron: false, onTap: _editMed),
         ]),
       ]),
     );

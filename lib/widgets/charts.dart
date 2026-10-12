@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/adapt_alert.dart';
 import '../engine/study.dart';
+import '../l10n/l10n.dart';
 import '../theme/ios_theme.dart';
 
 double _niceStep(double x) {
@@ -159,7 +160,7 @@ class StudyChart extends StatelessWidget {
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => c.card2,
               getTooltipItems: (spots) => [
-                for (final s in spots) LineTooltipItem('${systemNames[systems[s.barIndex]]} ${s.y.toStringAsFixed(2)}', T.caption.copyWith(color: s.bar.color, fontWeight: FontWeight.w600)),
+                for (final s in spots) LineTooltipItem('${tr(systemNames[systems[s.barIndex]]!)} ${s.y.toStringAsFixed(2)}', T.caption.copyWith(color: s.bar.color, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -174,7 +175,7 @@ class StudyChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 24,
                 interval: 1,
-                getTitlesWidget: (v, m) => [1, 7, 14, 21, 30].contains(v.toInt()) ? SideTitleWidget(meta: m, child: Text('Day ${v.toInt()}', style: T.caption.copyWith(color: c.label2))) : const SizedBox.shrink(),
+                getTitlesWidget: (v, m) => [1, 7, 14, 21, 30].contains(v.toInt()) ? SideTitleWidget(meta: m, child: Text(tr('Day {n}', {'n': v.toInt()}), style: T.caption.copyWith(color: c.label2))) : const SizedBox.shrink(),
               ),
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../services/assistant.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
@@ -40,7 +41,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   @override
   void initState() {
     super.initState();
-    _msgs.add(_Msg(false, 'Hi ${context.read<PatientStore>().profile.name.split(' ').first}. I can explain your vitals and alerts, and help with appointments, medicines, records and insurance. I don\'t diagnose or change doses.')..done = true);
+    _msgs.add(_Msg(false, tr('Hi {name}. I can explain your vitals and alerts, and help with appointments, medicines, records and insurance. I don\'t diagnose or change doses.', {'name': context.read<PatientStore>().profile.name.split(' ').first}))..done = true);
     if (widget.initial != null) WidgetsBinding.instance.addPostFrameCallback((_) => _send(widget.initial!));
   }
 
@@ -66,7 +67,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _typing = true;
     });
     _toEnd();
-    // "Typing", then stream the answer word by word.
+    // 'Typing', then stream the answer word by word.
     _t = Timer(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       final m = _Msg(false, '', reply: reply);
@@ -112,12 +113,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: CupertinoNavigationBar(
-        previousPageTitle: 'Today',
+        previousPageTitle: tr('Today'),
         backgroundColor: c.material,
         middle: Row(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 22, height: 22, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.indigo, c.pink])), child: const Icon(CupertinoIcons.sparkles, size: 13, color: Colors.white)),
           const SizedBox(width: 6),
-          const Flexible(child: Text('Health Assistant', overflow: TextOverflow.ellipsis)),
+          Flexible(child: Text(tr('Health Assistant'), overflow: TextOverflow.ellipsis)),
         ]),
       ),
       body: Column(children: [
@@ -152,7 +153,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                             sizeStyle: CupertinoButtonSize.small,
                             color: m.reply!.urgent ? c.red : null,
                             onPressed: () => _act(m.reply!.action!),
-                            child: Text(m.reply!.actionLabel ?? 'Open', style: TextStyle(color: m.reply!.urgent ? c.red : null)),
+                            child: Text(m.reply!.actionLabel ?? tr('Open'), style: TextStyle(color: m.reply!.urgent ? c.red : null)),
                           ),
                         ),
                     ]),
@@ -169,11 +170,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 8, bottom: 6),
                 child: Pressable(
-                  onTap: () => _send(s),
+                  onTap: () => _send(tr(s)),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(99), border: Border.all(color: c.sep)),
-                    child: Text(s, style: T.footnote.copyWith(color: c.label)),
+                    child: Text(tr(s), style: T.footnote.copyWith(color: c.label)),
                   ),
                 ),
               ),
@@ -188,7 +189,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 Expanded(
                   child: CupertinoTextField(
                     controller: _input,
-                    placeholder: 'Ask about your health',
+                    placeholder: tr('Ask about your health'),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.sep)),
                     style: T.callout.copyWith(color: c.label),
@@ -198,7 +199,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 ),
                 const SizedBox(width: 6),
                 Semantics(
-                  label: 'Send',
+                  label: tr('Send'),
                   button: true,
                   child: Pressable(onTap: () => _send(_input.text), child: Icon(CupertinoIcons.arrow_up_circle_fill, size: 34, color: c.blue)),
                 ),

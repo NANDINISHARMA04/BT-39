@@ -142,13 +142,12 @@ void main() {
     await settle(t);
     await t.tap(find.text('Insights').last);
     await settle(t);
-    // The on-screen back button names the previous tab.
-    final back = find.widgetWithText(CupertinoButton, 'Alerts');
-    expect(back, findsWidgets);
+    // The on-screen back button is labelled with the previous tab.
+    expect(find.bySemanticsLabel('Alerts'), findsWidgets);
     await t.binding.handlePopRoute();
     await settle(t);
-    expect(find.widgetWithText(CupertinoButton, 'Today'), findsWidgets, reason: 'on Alerts, back now leads to Today');
-    await t.tap(find.widgetWithText(CupertinoButton, 'Today').first);
+    expect(find.text('Alerts'), findsWidgets);
+    await t.tap(find.byIcon(CupertinoIcons.chevron_back).hitTestable().first);
     await settle(t);
     expect(find.text('Heart Rate'), findsOneWidget);
   });

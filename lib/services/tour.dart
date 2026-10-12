@@ -6,8 +6,19 @@ import 'monitor.dart';
 import 'narrator.dart';
 
 class TourStep {
-  const TourStep(this.title, this.body, {this.tab, this.last = false});
+  const TourStep(this.title, this.body, {this.tab, this.last = false, this.args});
+
+  /// English text. [body] may hold {placeholders} filled from [args]; the
+  /// caption card translates both at display.
   final String title, body;
+  final Map<String, Object?>? args;
+
+  /// [body] with its placeholders filled in (English).
+  String get filledBody {
+    var b = body;
+    args?.forEach((k, v) => b = b.replaceAll('{$k}', '$v'));
+    return b;
+  }
 
   /// The final step, which asks the person to log in or sign up.
   final bool last;
@@ -94,12 +105,11 @@ class TourController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lets the narrator finish the last step before moving on. Gives up after
-  /// about as long as the words take to say, in case a browser never reports
-  /// the end of speech.
+  /// Lets the voice-over finish the last step before moving on. Gives up
+  /// after 20 seconds (the longest clip is about 17), in case a browser never
+  /// reports the end of the clip.
   Future<void> _speechDone() async {
-    final words = step == null ? 0 : '${step!.title} ${step!.body}'.split(' ').length;
-    final end = DateTime.now().add(Duration(milliseconds: 1500 + words * 420));
+    final end = DateTime.now().add(const Duration(seconds: 20));
     while (!_cancel && narrator.speaking && DateTime.now().isBefore(end)) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
@@ -110,7 +120,7 @@ class TourController extends ChangeNotifier {
     if (_cancel) return;
     index++;
     _show(s);
-    narrator.say('${s.title}. ${s.body}');
+    narrator.playStep(index);
   }
 
   void toggleMute() {
@@ -172,8 +182,9 @@ class TourController extends ChangeNotifier {
 
     await _next(TourStep(
       'The result',
-      'Today a fixed monitor would have alarmed ${e.fixedCount} times; AdaptAlert sent ${e.sentCount} and held back ${e.held.length}. Over 30 simulated days it cut false alarms by about 97% and caught every real event. See the Research Lab for the evidence.',
+      'Today a fixed monitor would have alarmed {fixed} times; AdaptAlert sent {sent} and held back {held}. Over 30 simulated days it cut false alarms by about 97% and caught every real event. See the Research Lab for the evidence.',
       tab: 2,
+      args: {'fixed': e.fixedCount, 'sent': e.sentCount, 'held': e.held.length},
     ));
     m.runScenario('rest');
     await _wait(3000);

@@ -10,6 +10,19 @@ import 'dart:math';
 /// feedback says about the same pattern, and compares it with a personal
 /// threshold τ. Safety-floor alerts skip the model and can never be learned away.
 
+/// Translates engine text. The app sets this to its `tr` (see MonitorController);
+/// it stays plain English elsewhere, so the engine runs without Flutter
+/// (for example `dart run tool/run_study.dart`).
+String Function(String en, [Map<String, Object?>? args]) engineTr = _english;
+
+String _english(String en, [Map<String, Object?>? args]) {
+  var s = en;
+  args?.forEach((k, v) => s = s.replaceAll('{$k}', '$v'));
+  return s;
+}
+
+String _tr(String en, [Map<String, Object?>? args]) => engineTr(en, args);
+
 const tauMin = .30, tauMax = .75, tauWeekCap = .10;
 const vitals = ['hr', 'spo2', 'temp'];
 const vitalName = {'hr': 'heart rate', 'spo2': 'oxygen', 'temp': 'temperature'};
@@ -31,23 +44,23 @@ class TreeResult {
 
 /// The global model: a small, readable decision tree. Every leaf has a reason.
 TreeResult globalTree(Features f) {
-  if (f.sqi < .6) return const TreeResult(.10, ['Signal quality below 0.6']);
-  if (f.act != 'rest' && f.primary == 'hr') return const TreeResult(.18, ['Heart-rate rise while moving or cooling down']);
+  if (f.sqi < .6) return TreeResult(.10, [_tr('Signal quality below 0.6')]);
+  if (f.act != 'rest' && f.primary == 'hr') return TreeResult(.18, [_tr('Heart-rate rise while moving or cooling down')]);
   if (f.numAbn >= 2) {
-    if (f.zSpO2 <= -2) return const TreeResult(.90, ['Two or more vitals abnormal together', 'Oxygen is part of it']);
-    return const TreeResult(.82, ['Two or more vitals abnormal together']);
+    if (f.zSpO2 <= -2) return TreeResult(.90, [_tr('Two or more vitals abnormal together'), _tr('Oxygen is part of it')]);
+    return TreeResult(.82, [_tr('Two or more vitals abnormal together')]);
   }
   if (f.primary == 'spo2') {
-    if (f.zSpO2 <= -3.5) return const TreeResult(.84, ['Oxygen far below your normal']);
-    if (f.night) return const TreeResult(.55, ['Mild oxygen dip during sleep']);
-    return const TreeResult(.62, ['Oxygen slightly below your normal']);
+    if (f.zSpO2 <= -3.5) return TreeResult(.84, [_tr('Oxygen far below your normal')]);
+    if (f.night) return TreeResult(.55, [_tr('Mild oxygen dip during sleep')]);
+    return TreeResult(.62, [_tr('Oxygen slightly below your normal')]);
   }
   if (f.primary == 'temp') {
-    if (f.zTemp >= 3.5) return const TreeResult(.82, ['Temperature well above your normal']);
-    return const TreeResult(.56, ['Temperature slightly raised']);
+    if (f.zTemp >= 3.5) return TreeResult(.82, [_tr('Temperature well above your normal')]);
+    return TreeResult(.56, [_tr('Temperature slightly raised')]);
   }
-  if (f.zHR >= 5) return const TreeResult(.80, ['Heart rate far above your resting normal']);
-  return const TreeResult(.58, ['Moderate heart-rate rise at rest']);
+  if (f.zHR >= 5) return TreeResult(.80, [_tr('Heart rate far above your resting normal')]);
+  return TreeResult(.58, [_tr('Moderate heart-rate rise at rest')]);
 }
 
 /// Groups similar situations, so feedback on one applies to the next.
@@ -59,11 +72,13 @@ String bucketKey(Features f) {
 
 String bucketLabel(String key) {
   final p = key.split('|');
-  if (p.first == 'SAFETY') return 'Safety floor · ${vitalName[p[1]]}';
-  final act = {'rest': 'Resting', 'light': 'Light activity or cooling down', 'active': 'Active'}[p[0]];
-  final what = {'hr': 'heart rate up', 'spo2': 'oxygen down', 'temp': 'temperature up', 'multi': 'several vitals together'}[p[1]];
+  if (p.first == 'SAFETY') return '${_tr('Safety floor')} · ${_tr(vitalName[p[1]]!)}';
+  final act = {'rest': 'Resting', 'light': 'Light activity or cooling down', 'active': 'Active'}[p[0]]!;
+  final what = {'hr': 'heart rate up', 'spo2': 'oxygen down', 'temp': 'temperature up', 'multi': 'several vitals together'}[p[1]]!;
   final band = p[2] == 'multi' ? '' : (p[2] == 'high' ? ' a lot' : ' a little');
-  return '$act · $what$band · ${p[3]}';
+  // Hindi keys: every act value, every what+band combination, 'day' and 'night'.
+  final whatBand = '$what$band';
+  return '${_tr(act)} · ${_tr(whatBand)} · ${_tr(p[3])}';
 }
 
 Features featuresFromKey(String key) {
@@ -167,7 +182,8 @@ class HealthAlert {
   double contribR = 0, contribF = 0;
   final List<EscalationStep> escalation = [];
   static const levelName = {1: 'Check-in', 2: 'Warning', 3: 'Urgent', 4: 'Critical'};
-  String get levelLabel => levelName[level]!;
+  /// The level's name in the app's language ([levelName] stays English).
+  String get levelLabel => _tr(levelName[level]!);
 }
 
 class HeldEvent {
@@ -275,18 +291,18 @@ class AdaptAlertEngine {
     if (history.length > 240) history.removeAt(0);
     pipe
       ..clear()
-      ..['A'] = Stage(good ? StageState.ok : StageState.bad, 'Quality ${sqi.toStringAsFixed(2)} · ${good ? 'good, use it' : 'unreliable, ignore it'}')
-      ..['B'] = Stage(StageState.ok, '$actLabel · motion ${r.motion.toStringAsFixed(2)} g');
+      ..['A'] = Stage(good ? StageState.ok : StageState.bad, good ? _tr('Quality {q} · good, use it', {'q': sqi.toStringAsFixed(2)}) : _tr('Quality {q} · unreliable, ignore it', {'q': sqi.toStringAsFixed(2)}))
+      ..['B'] = Stage(StageState.ok, '${_tr(actLabel)} · ${_tr('motion {m} g', {'m': r.motion.toStringAsFixed(2)})}');
     t++;
 
     if (!good) {
       badRun++;
       cnt.updateAll((_, _) => 0);
       lowSpo2 = 0;
-      pipe['C'] = const Stage(StageState.idle, 'Skipped. Bad data never changes your normal');
-      pipe['D'] = const Stage(StageState.idle, 'Paused until the signal is reliable');
-      pipe['E'] = const Stage(StageState.idle, 'Skipped');
-      pipe['F'] = const Stage(StageState.idle, 'No decision on bad data');
+      pipe['C'] = Stage(StageState.idle, _tr('Skipped. Bad data never changes your normal'));
+      pipe['D'] = Stage(StageState.idle, _tr('Paused until the signal is reliable'));
+      pipe['E'] = Stage(StageState.idle, _tr('Skipped'));
+      pipe['F'] = Stage(StageState.idle, _tr('No decision on bad data'));
       pipe['G'] = const Stage(StageState.idle, '—');
       status = 'band';
       if (badRun == 4) onBadSignal?.call();
@@ -294,7 +310,7 @@ class AdaptAlertEngine {
       return rec;
     }
     badRun = 0;
-    pipe['C'] = Stage(StageState.ok, 'z · HR ${fmtZ(z['hr']!)} · SpO₂ ${fmtZ(z['spo2']!)} · Temp ${fmtZ(z['temp']!)}');
+    pipe['C'] = Stage(StageState.ok, _tr('z · HR {hr} · SpO₂ {spo2} · Temp {temp}', {'hr': fmtZ(z['hr']!), 'spo2': fmtZ(z['spo2']!), 'temp': fmtZ(z['temp']!)}));
 
     lowSpo2 = r.spo2 <= 91 ? lowSpo2 + 1 : 0;
     ({String v, String title, String rule})? safety;
@@ -305,7 +321,7 @@ class AdaptAlertEngine {
     } else if (r.temp >= 39.1 || r.temp <= 35) {
       safety = (v: 'temp', title: r.temp >= 39.1 ? 'Temperature critically high' : 'Temperature critically low', rule: 'Temp ≥ 39.1 or ≤ 35.0 °C');
     }
-    pipe['D'] = safety != null ? Stage(StageState.crit, 'Triggered · ${safety.rule}') : const Stage(StageState.ok, 'Clear · SpO₂ > 91%, HR 41–130, Temp 35.1–39.0 °C');
+    pipe['D'] = safety != null ? Stage(StageState.crit, _tr('Triggered · {rule}', {'rule': _tr(safety.rule)})) : Stage(StageState.ok, _tr('Clear · SpO₂ > 91%, HR 41–130, Temp 35.1–39.0 °C'));
 
     final hard = {'hr': z['hr']! >= 2.5, 'spo2': z['spo2']! <= -2.5, 'temp': z['temp']! >= 2.5};
     for (final v in vitals) {
@@ -318,13 +334,13 @@ class AdaptAlertEngine {
     final candidate = safety != null || sustained.isNotEmpty || (numAbn >= 2 && maxCnt >= 2);
 
     if (candidate) {
-      final names = (sustained.isNotEmpty ? sustained : vitals.where((v) => soft[v]!)).map((v) => vitalName[v]).join(' + ');
-      pipe['E'] = Stage(StageState.warn, 'Unusual for you · ${names.isEmpty ? vitalName[safety!.v] : names}');
+      final names = (sustained.isNotEmpty ? sustained : vitals.where((v) => soft[v]!)).map((v) => _tr(vitalName[v]!)).join(' + ');
+      pipe['E'] = Stage(StageState.warn, _tr('Unusual for you · {what}', {'what': names.isEmpty ? _tr(vitalName[safety!.v]!) : names}));
       _handleCandidate(rec, z, numAbn, safety, ctx);
     } else {
-      final w = vitals.where((v) => cnt[v]! > 0).map((v) => vitalName[v]).join(' + ');
-      pipe['E'] = maxCnt > 0 ? Stage(StageState.watch, 'Watching $w · $maxCnt of 3 min') : const Stage(StageState.ok, 'Within your normal range');
-      pipe['F'] = const Stage(StageState.idle, 'No decision needed');
+      final w = vitals.where((v) => cnt[v]! > 0).map((v) => _tr(vitalName[v]!)).join(' + ');
+      pipe['E'] = maxCnt > 0 ? Stage(StageState.watch, _tr('Watching {what} · {n} of 3 min', {'what': w, 'n': maxCnt})) : Stage(StageState.ok, _tr('Within your normal range'));
+      pipe['F'] = Stage(StageState.idle, _tr('No decision needed'));
       pipe['G'] = const Stage(StageState.idle, '—');
       status = maxCnt > 0 ? 'watch' : 'ok';
       if (_ep != null && ++_ep!.calm >= 3) _ep = null;
@@ -343,8 +359,8 @@ class AdaptAlertEngine {
     final key = safety != null ? 'SAFETY|${safety.v}' : bucketKey(f);
     if (key == ep.lastKey) {
       final sent = ep.sentLevel > 0;
-      pipe['F'] = Stage(sent ? StageState.send : StageState.hold, 'Same pattern since ${hhmm(ep.start)} · decision stands');
-      pipe['G'] = Stage(sent ? StageState.send : StageState.hold, sent ? 'Alert already sent' : 'Held back, still watching');
+      pipe['F'] = Stage(sent ? StageState.send : StageState.hold, _tr('Same pattern since {time} · decision stands', {'time': hhmm(ep.start)}));
+      pipe['G'] = Stage(sent ? StageState.send : StageState.hold, sent ? _tr('Alert already sent') : _tr('Held back, still watching'));
       status = sent ? 'alert' : 'held';
       if (sent) {
         rec.alert = ep.sentLevel;
@@ -366,8 +382,8 @@ class AdaptAlertEngine {
       pu = 0;
       w = 0;
       n = 0;
-      path = ['Safety floor: ${safety.rule}'];
-      pipe['F'] = const Stage(StageState.crit, 'Safety floor · sent without asking the model');
+      path = [_tr('Safety floor: {rule}', {'rule': _tr(safety.rule)})];
+      pipe['F'] = Stage(StageState.crit, _tr('Safety floor · sent without asking the model'));
     } else {
       final g = globalTree(f);
       final q = personal(buckets[key]);
@@ -379,7 +395,7 @@ class AdaptAlertEngine {
       p = (1 - w) * pg + w * pu;
       send = p >= tau;
       level = p >= .8 ? 3 : (numAbn >= 2 ? 2 : 1);
-      pipe['F'] = Stage(send ? StageState.send : StageState.hold, 'P(real) ${pct(p)} ${send ? '≥' : '<'} τ ${pct(tau)} · ${send ? 'send' : 'hold back'}');
+      pipe['F'] = Stage(send ? StageState.send : StageState.hold, send ? _tr('P(real) {p} ≥ τ {tau} · send', {'p': pct(p), 'tau': pct(tau)}) : _tr('P(real) {p} < τ {tau} · hold back', {'p': pct(p), 'tau': pct(tau)}));
     }
 
     final involved = safety != null ? [safety.v] : vitals.where((v) => v == 'spo2' ? z[v]! <= -1.5 : z[v]! >= 1.5).toList();
@@ -389,10 +405,11 @@ class AdaptAlertEngine {
         id: _nextId++, t: rec.t, level: level, title: _title(f, safety?.title), reasons: _reasons(rec, f, safety?.rule), path: path,
         p: p, pg: pg, pu: pu, w: w, n: n, tau: tau, key: key, safety: safety != null, hr: rec.r.hr, spo2: rec.r.spo2, temp: rec.r.temp,
       );
-      a.escalation.add(EscalationStep(rec.t, 'You', 'Phone notification'));
-      if (level >= 2) a.escalation.add(EscalationStep(rec.t, 'Caregiver', 'Family caregiver notified'));
-      a.escalation.add(EscalationStep(rec.t, 'Doctor', level >= 3 ? 'Flagged urgent for your doctor' : 'Added to doctor review'));
-      if (level >= 4) a.escalation.add(EscalationStep(rec.t, 'SOS', 'Emergency contacts alerted'));
+      // `who` stays English (it is matched in logic); screens translate it.
+      a.escalation.add(EscalationStep(rec.t, 'You', _tr('Phone notification')));
+      if (level >= 2) a.escalation.add(EscalationStep(rec.t, 'Caregiver', _tr('Family caregiver notified')));
+      a.escalation.add(EscalationStep(rec.t, 'Doctor', level >= 3 ? _tr('Flagged urgent for your doctor') : _tr('Added to doctor review')));
+      if (level >= 4) a.escalation.add(EscalationStep(rec.t, 'SOS', _tr('Emergency contacts alerted')));
       alerts.insert(0, a);
       sentCount++;
       ep.sentLevel = max(ep.sentLevel, level);
@@ -406,44 +423,49 @@ class AdaptAlertEngine {
       held.insert(0, h);
       rec.held = true;
       final k = n.round();
-      pipe['G'] = Stage(StageState.hold, 'Held back · matches $k past false alarm${k == 1 ? '' : 's'}');
+      pipe['G'] = Stage(StageState.hold, k == 1 ? _tr('Held back · matches {k} past false alarm', {'k': k}) : _tr('Held back · matches {k} past false alarms', {'k': k}));
       status = 'held';
       onHeld?.call(h);
     } else {
-      pipe['G'] = const Stage(StageState.send, 'Alert already sent for this episode');
+      pipe['G'] = Stage(StageState.send, _tr('Alert already sent for this episode'));
       status = 'alert';
       rec.alert = ep.sentLevel;
     }
   }
 
   String _title(Features f, String? safetyTitle) {
-    if (safetyTitle != null) return safetyTitle;
+    if (safetyTitle != null) return _tr(safetyTitle);
     if (f.primary == 'multi') {
-      final vs = [if (f.zHR >= 1.5) 'heart rate', if (f.zSpO2 <= -1.5) 'oxygen', if (f.zTemp >= 1.5) 'temperature'];
-      if (vs.length > 1) return '${vs[0][0].toUpperCase()}${vs[0].substring(1)} and ${vs[1]} changing together';
-      return 'Several vitals changing';
+      final vs = [if (f.zHR >= 1.5) _tr('heart rate'), if (f.zSpO2 <= -1.5) _tr('oxygen'), if (f.zTemp >= 1.5) _tr('temperature')];
+      if (vs.length > 1) return _tr('{a} and {b} changing together', {'a': '${vs[0][0].toUpperCase()}${vs[0].substring(1)}', 'b': vs[1]});
+      return _tr('Several vitals changing');
     }
-    return const {'hr': 'Heart rate above your normal', 'spo2': 'Oxygen below your normal', 'temp': 'Temperature above your normal'}[f.primary]!;
+    return {'hr': _tr('Heart rate above your normal'), 'spo2': _tr('Oxygen below your normal'), 'temp': _tr('Temperature above your normal')}[f.primary]!;
   }
 
   List<String> _reasons(WindowRecord rec, Features f, String? safetyRule) {
     final out = <String>[];
-    final ctxw = rec.ctx == 'rest' ? 'resting' : rec.ctx == 'light' ? 'light-activity' : 'active';
-    if (safetyRule != null) out.add('Safety limit reached: $safetyRule. Learning can never switch this alert off.');
+    if (safetyRule != null) out.add(_tr('Safety limit reached: {rule}. Learning can never switch this alert off.', {'rule': _tr(safetyRule)}));
     if (f.zHR >= 1.5) {
       final pc = ((rec.r.hr / rec.mu['hr']! - 1) * 100).round();
-      out.add('Heart rate ${rec.r.hr} bpm, $pc% above your usual $ctxw ${rec.mu['hr']!.round()} bpm${cnt['hr']! > 0 ? ' for ${cnt['hr']} min' : ''}${rec.ctx == 'rest' ? ', while you were still' : ''}.');
+      final args = {'hr': rec.r.hr, 'pc': pc, 'mu': rec.mu['hr']!.round()};
+      final head = rec.ctx == 'rest'
+          ? _tr('Heart rate {hr} bpm, {pc}% above your usual resting {mu} bpm', args)
+          : rec.ctx == 'light'
+              ? _tr('Heart rate {hr} bpm, {pc}% above your usual light-activity {mu} bpm', args)
+              : _tr('Heart rate {hr} bpm, {pc}% above your usual active {mu} bpm', args);
+      out.add('$head${cnt['hr']! > 0 ? _tr(' for {n} min', {'n': cnt['hr']}) : ''}${rec.ctx == 'rest' ? _tr(', while you were still') : ''}.');
     }
-    if (f.zSpO2 <= -1.5 || safetyRule?.contains('SpO') == true) out.add('Oxygen ${rec.r.spo2}%. Your usual is ${rec.mu['spo2']!.round()}%.');
-    if (f.zTemp >= 1.5) out.add('Temperature ${rec.r.temp.toStringAsFixed(1)} °C. Your usual is ${rec.mu['temp']!.toStringAsFixed(1)} °C.');
-    out.add('Signal quality good (${rec.sqi.toStringAsFixed(2)}), so this isn\'t a loose sensor.');
+    if (f.zSpO2 <= -1.5 || safetyRule?.contains('SpO') == true) out.add(_tr('Oxygen {spo2}%. Your usual is {mu}%.', {'spo2': rec.r.spo2, 'mu': rec.mu['spo2']!.round()}));
+    if (f.zTemp >= 1.5) out.add(_tr('Temperature {t} °C. Your usual is {mu} °C.', {'t': rec.r.temp.toStringAsFixed(1), 'mu': rec.mu['temp']!.toStringAsFixed(1)}));
+    out.add(_tr('Signal quality good ({q}), so this isn\'t a loose sensor.', {'q': rec.sqi.toStringAsFixed(2)}));
     return out;
   }
 
   void _escalate() {
     for (final a in alerts) {
       if (a.level == 1 && a.patientFeedback == null && !a.escalation.any((e) => e.who == 'Caregiver') && t - a.t >= 10) {
-        a.escalation.add(EscalationStep(t, 'Caregiver', 'No reply in 10 min, caregiver notified'));
+        a.escalation.add(EscalationStep(t, 'Caregiver', _tr('No reply in 10 min, caregiver notified')));
       }
     }
   }
@@ -477,7 +499,7 @@ class AdaptAlertEngine {
       case PatientFeedback.unwell:
         _setContrib(a, .5, 0);
         _nudge(-.02);
-        a.escalation.add(EscalationStep(t, 'Doctor', 'Priority: patient feels unwell'));
+        a.escalation.add(EscalationStep(t, 'Doctor', _tr('Priority: patient feels unwell')));
       case PatientFeedback.notSure:
         break;
     }

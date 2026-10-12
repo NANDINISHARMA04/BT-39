@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
 import '../../engine/simulator.dart';
+import '../../l10n/l10n.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
@@ -20,7 +21,7 @@ import 'me_screen.dart';
 import 'sos_screen.dart';
 import 'today_screen.dart';
 
-/// Lets any screen switch tabs (e.g. "Reply to alerts" on Today).
+/// Lets any screen switch tabs (e.g. Reply to alerts on Today).
 class TabSwitcher extends InheritedWidget {
   const TabSwitcher({super.key, required this.go, required super.child});
   final void Function(int index) go;
@@ -122,7 +123,7 @@ class PatientSidebar extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    _tabItems[i].$3,
+                                    tr(_tabItems[i].$3),
                                     style: T.callout.copyWith(color: i == tab ? c.blue : c.label, fontWeight: i == tab ? FontWeight.w600 : FontWeight.w400),
                                   ),
                                 ),
@@ -142,7 +143,7 @@ class PatientSidebar extends StatelessWidget {
                       ),
                     ),
                   const Spacer(),
-                  CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: onSimulate, child: const Text('Simulate a scenario')),
+                  CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: onSimulate, child: Text(tr('Simulate a scenario'))),
                   const SizedBox(height: 8),
                   CupertinoButton.filled(
                     sizeStyle: CupertinoButtonSize.medium,
@@ -152,7 +153,7 @@ class PatientSidebar extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Research prototype. Not a medical device.',
+                    tr('Research prototype. Not a medical device.'),
                     textAlign: TextAlign.center,
                     style: T.caption.copyWith(color: c.label3),
                   ),
@@ -225,15 +226,15 @@ class _PatientShellState extends State<PatientShell> {
   void _onHeld() {
     final h = _m.heldEvents.value;
     if (h == null || !mounted) return;
-    toast(context, 'Alert held back', 'Looks like a pattern you and your doctor marked harmless (${pct(h.p)} likely real).');
+    toast(context, tr('Alert held back'), tr('Looks like a pattern you and your doctor marked harmless ({pct} likely real).', {'pct': pct(h.p)}));
   }
 
   void _onBad() {
-    if (mounted) toast(context, 'Please adjust your band', 'Readings were unreliable for 4 minutes, so no alerts were sent.');
+    if (mounted) toast(context, tr('Please adjust your band'), tr('Readings were unreliable for 4 minutes, so no alerts were sent.'));
   }
 
   void _onScenarioEnded() {
-    if (mounted && _m.scenarioEnded.value != null) toast(context, 'Back to resting', 'The scenario finished.');
+    if (mounted && _m.scenarioEnded.value != null) toast(context, tr('Back to resting'), tr('The scenario finished.'));
   }
 
   void go(int i) {
@@ -248,11 +249,11 @@ class _PatientShellState extends State<PatientShell> {
     final m = context.watch<MonitorController>();
     final pages = const [TodayScreen(), AlertsScreen(), InsightsScreen(), CareScreen(), MeScreen()];
     final items = [
-      (CupertinoIcons.heart, CupertinoIcons.heart_fill, 'Today', 0),
-      (CupertinoIcons.bell, CupertinoIcons.bell_fill, 'Alerts', m.needsReply),
-      (CupertinoIcons.chart_bar_alt_fill, CupertinoIcons.chart_bar_alt_fill, 'Insights', 0),
-      (CupertinoIcons.calendar, CupertinoIcons.calendar_today, 'Care', 0),
-      (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, 'Me', 0),
+      (CupertinoIcons.heart, CupertinoIcons.heart_fill, tr('Today'), 0),
+      (CupertinoIcons.bell, CupertinoIcons.bell_fill, tr('Alerts'), m.needsReply),
+      (CupertinoIcons.chart_bar_alt_fill, CupertinoIcons.chart_bar_alt_fill, tr('Insights'), 0),
+      (CupertinoIcons.calendar, CupertinoIcons.calendar_today, tr('Care'), 0),
+      (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, tr('Me'), 0),
     ];
     final bottom = MediaQuery.of(context).padding.bottom;
     return TabSwitcher(
@@ -424,7 +425,7 @@ class _AlertBanner extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text('now', style: TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
+                  Text(tr('now'), style: const TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
                 ],
               ),
             ),
@@ -469,9 +470,9 @@ void showSimulator(BuildContext context) {
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
           children: [
-            Text('Simulate', style: T.title2.copyWith(color: c.label)),
+            Text(tr('Simulate'), style: T.title2.copyWith(color: c.label)),
             const SizedBox(height: 6),
-            Text('Pick what happens next. Each scenario runs for a few simulated minutes (one per second), then returns to resting.', style: T.footnote.copyWith(color: c.label2)),
+            Text(tr('Pick what happens next. Each scenario runs for a few simulated minutes (one per second), then returns to resting.'), style: T.footnote.copyWith(color: c.label2)),
             const SizedBox(height: 14),
             GroupedList(
               children: [
@@ -479,15 +480,15 @@ void showSimulator(BuildContext context) {
                   IOSRow(
                     icon: s.icon,
                     iconColor: scenarioColor(ctx, s),
-                    title: s.name,
-                    subtitle: m.scenarioId == s.id && s.id != 'rest' ? 'Running · ${m.scenarioMinutesLeft} min left' : s.desc,
-                    trailing: m.scenarioId == s.id ? Pill('Now', color: c.blue) : null,
+                    title: tr(s.name),
+                    subtitle: m.scenarioId == s.id && s.id != 'rest' ? tr('Running · {n} min left', {'n': m.scenarioMinutesLeft}) : tr(s.desc),
+                    trailing: m.scenarioId == s.id ? Pill(tr('Now'), color: c.blue) : null,
                     chevron: m.scenarioId != s.id,
                     onTap: () {
                       HapticFeedback.mediumImpact();
                       m.runScenario(s.id);
                       Navigator.pop(ctx);
-                      toast(context, s.name, s.desc);
+                      toast(context, tr(s.name), tr(s.desc));
                     },
                   ),
               ],
@@ -498,15 +499,15 @@ void showSimulator(BuildContext context) {
                 IOSRow(
                   icon: CupertinoIcons.pause_fill,
                   iconColor: c.gray,
-                  title: 'Pause the band',
+                  title: tr('Pause the band'),
                   trailing: CupertinoSwitch(value: m.paused, onChanged: m.setPaused),
                   chevron: false,
                 ),
                 IOSRow(
                   icon: CupertinoIcons.forward_fill,
                   iconColor: c.orange,
-                  title: 'Fast forward',
-                  subtitle: '4 simulated minutes per second',
+                  title: tr('Fast forward'),
+                  subtitle: tr('4 simulated minutes per second'),
                   trailing: CupertinoSwitch(value: m.fast, onChanged: m.setFast),
                   chevron: false,
                 ),
@@ -554,10 +555,10 @@ class TourOverlay extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('GUIDED DEMO', style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: .6)),
+                          child: Text(tr('GUIDED DEMO'), style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: .6)),
                         ),
                         const SizedBox(width: 8),
-                        Text('${tour.index} of ${TourController.totalSteps}', style: const TextStyle(color: Colors.white60, fontSize: 12, fontFeatures: T.num)),
+                        Text(tr('{i} of {n}', {'i': tour.index, 'n': TourController.totalSteps}), style: const TextStyle(color: Colors.white60, fontSize: 12, fontFeatures: T.num)),
                         const Spacer(),
                         CupertinoButton(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -566,14 +567,14 @@ class TourOverlay extends StatelessWidget {
                           child: Icon(tour.narrator.muted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill, color: Colors.white70, size: 20),
                         ),
                         if (tour.running)
-                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.stop, child: const Text('Skip', style: TextStyle(color: Colors.white70, fontSize: 14)))
+                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.stop, child: Text(tr('Skip'), style: const TextStyle(color: Colors.white70, fontSize: 14)))
                         else
-                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.finish, child: Text('Done', style: TextStyle(color: c.blue, fontSize: 15, fontWeight: FontWeight.w700))),
+                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.finish, child: Text(tr('Done'), style: TextStyle(color: c.blue, fontSize: 15, fontWeight: FontWeight.w700))),
                       ]),
                       const SizedBox(height: 6),
-                      Text(s.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.3)),
+                      Text(tr(s.title), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.3)),
                       const SizedBox(height: 4),
-                      Text(s.body, style: const TextStyle(color: Color(0xDDFFFFFF), fontSize: 14, height: 1.4)),
+                      Text(tr(s.body, s.args), style: const TextStyle(color: Color(0xDDFFFFFF), fontSize: 14, height: 1.4)),
                       if (s.last) ...[
                         const SizedBox(height: 12),
                         Row(children: [
@@ -584,7 +585,7 @@ class TourOverlay extends StatelessWidget {
                                 tour.finish();
                                 context.read<Session>().signOut();
                               },
-                              child: const Text('Log in or sign up', maxLines: 1),
+                              child: Text(tr('Log in or sign up'), maxLines: 1),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -592,7 +593,7 @@ class TourOverlay extends StatelessWidget {
                             child: CupertinoButton(
                               sizeStyle: CupertinoButtonSize.medium,
                               onPressed: tour.finish,
-                              child: const Text('Keep exploring', maxLines: 1, style: TextStyle(color: Colors.white)),
+                              child: Text(tr('Keep exploring'), maxLines: 1, style: const TextStyle(color: Colors.white)),
                             ),
                           ),
                         ]),

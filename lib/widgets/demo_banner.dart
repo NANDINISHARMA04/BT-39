@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/session.dart';
 import '../theme/ios_theme.dart';
 import 'common.dart';
@@ -19,14 +20,14 @@ class DemoBanner extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('You\'re exploring the demo', style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w700)),
-            Text('Log in or create your own patient, doctor or nurse account.', style: T.caption.copyWith(color: c.label2)),
+            Text(tr('You\'re exploring the demo'), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w700)),
+            Text(tr('Log in or create your own patient, doctor or nurse account.'), style: T.caption.copyWith(color: c.label2)),
           ]),
         ),
         CupertinoButton(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           onPressed: () => context.read<Session>().signOut(),
-          child: Text('Log in', style: T.sub.copyWith(color: c.blue, fontWeight: FontWeight.w700)),
+          child: Text(tr('Log in'), style: T.sub.copyWith(color: c.blue, fontWeight: FontWeight.w700)),
         ),
       ]),
     );

@@ -4,10 +4,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../services/narrator.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/lang_switch.dart';
 import '../research/research_lab_screen.dart';
 import 'role_auth_screen.dart';
 
@@ -43,14 +45,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('PulseOS', style: T.title2.copyWith(color: c.label)),
-            Text('powered by AdaptAlert', style: T.caption.copyWith(color: c.label2)),
+            Text(tr('powered by AdaptAlert'), style: T.caption.copyWith(color: c.label2)),
           ]),
         ]),
       ),
       const SizedBox(height: 22),
       FadeIn(
         delay: 60,
-        child: Text('Health alerts\nthat learn you.', textAlign: wide ? TextAlign.left : TextAlign.center, style: T.largeTitle.copyWith(color: c.label, fontSize: wide ? 56 : 40, height: 1.05, letterSpacing: -1)),
+        child: Text(tr('Health alerts\nthat learn you.'), textAlign: wide ? TextAlign.left : TextAlign.center, style: T.largeTitle.copyWith(color: c.label, fontSize: wide ? 56 : 40, height: 1.05, letterSpacing: -1)),
       ),
       const SizedBox(height: 14),
       FadeIn(
@@ -58,7 +60,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Text(
-            'Fixed-threshold monitors alarm at every walk, coffee and loose sensor, until nobody trusts them. AdaptAlert learns each patient\'s normal, explains every alert, and learns from patient and doctor feedback, while a safety floor keeps critical readings impossible to ignore.',
+            tr('Fixed-threshold monitors alarm at every walk, coffee and loose sensor, until nobody trusts them. AdaptAlert learns each patient\'s normal, explains every alert, and learns from patient and doctor feedback, while a safety floor keeps critical readings impossible to ignore.'),
             textAlign: wide ? TextAlign.left : TextAlign.center,
             style: T.callout.copyWith(color: c.label2, height: 1.45),
           ),
@@ -69,7 +71,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         delay: 180,
         child: Wrap(spacing: 10, runSpacing: 10, alignment: wide ? WrapAlignment.start : WrapAlignment.center, children: [
           _CtaButton(
-            label: 'Watch the demo with voice',
+            label: tr('Watch the demo with voice'),
             icon: CupertinoIcons.play_fill,
             onTap: () {
               // Browsers allow speech only from a tap, so start the voice here.
@@ -77,33 +79,33 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               s.startDemo(Role.patient, tour: true);
             },
           ),
-          _CtaButton(label: 'Research Lab', icon: CupertinoIcons.lab_flask_solid, tinted: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
+          _CtaButton(label: tr('Research Lab'), icon: CupertinoIcons.lab_flask_solid, tinted: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
         ]),
       ),
       const SizedBox(height: 16),
       FadeIn(
         delay: 220,
-        child: Wrap(spacing: 18, runSpacing: 8, alignment: wide ? WrapAlignment.start : WrapAlignment.center, children: const [
-          _Stat('~97%', 'fewer false alarms*'),
-          _Stat('100%', 'real events caught*'),
-          _Stat('7', 'stage explainable AI'),
+        child: Wrap(spacing: 18, runSpacing: 8, alignment: wide ? WrapAlignment.start : WrapAlignment.center, children: [
+          _Stat('~97%', tr('fewer false alarms*')),
+          _Stat('100%', tr('real events caught*')),
+          _Stat('7', tr('stage explainable AI')),
         ]),
       ),
     ]);
 
     final roles = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text('Sign in as', style: T.title3.copyWith(color: c.label)),
+      Text(tr('Sign in as'), style: T.title3.copyWith(color: c.label)),
       const SizedBox(height: 12),
       for (final (i, (r, sub)) in [
-        (Role.patient, 'Live vitals, explained alerts, appointments, records, SOS'),
-        (Role.doctor, 'Review AdaptAlert alerts, the ward on NEWS2, patient chat'),
-        (Role.nurse, 'Ward alerts, acknowledge and resolve, home-patient triage'),
+        (Role.patient, tr('Live vitals, explained alerts, appointments, records, SOS')),
+        (Role.doctor, tr('Review AdaptAlert alerts, the ward on NEWS2, patient chat')),
+        (Role.nurse, tr('Ward alerts, acknowledge and resolve, home-patient triage')),
       ].indexed)
         FadeIn(delay: 260 + i * 60, child: _RoleCard(role: r, subtitle: sub, onLogin: () => _auth(r), onSignUp: () => _auth(r, signUp: true))),
       const SizedBox(height: 8),
       Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        Text('Just looking? Try without an account:', style: T.footnote.copyWith(color: c.label2)),
-        for (final r in Role.values) CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(30, 30), onPressed: () => s.startDemo(r), child: Text(roleLabel[r]!, style: const TextStyle(fontSize: 14))),
+        Text(tr('Just looking? Try without an account:'), style: T.footnote.copyWith(color: c.label2)),
+        for (final r in Role.values) CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(30, 30), onPressed: () => s.startDemo(r), child: Text(tr(roleLabel[r]!), style: const TextStyle(fontSize: 14))),
       ]),
     ]);
 
@@ -113,6 +115,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         Positioned.fill(child: AnimatedBuilder(animation: _a, builder: (_, _) => CustomPaint(painter: _Orbs(_a.value, [c.pink, c.blue, c.teal, c.indigo], c.bg)))),
         SafeArea(
           child: ListView(padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: wide ? 48 : 24), children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: Align(alignment: wide ? Alignment.centerRight : Alignment.center, child: const LangToggle()),
+              ),
+            ),
+            SizedBox(height: wide ? 8 : 16),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1120),
@@ -127,7 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             const SizedBox(height: 40),
             Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1120), child: _HowItWorks(wide: wide))),
             const SizedBox(height: 24),
-            Text('* In a 30-day simulation of 40 virtual patients, compared with fixed thresholds. See the Research Lab.\nStudent research prototype (B.Tech CSE major project). Not a medical device.',
+            Text(tr('* In a 30-day simulation of 40 virtual patients, compared with fixed thresholds. See the Research Lab.\nStudent research prototype (B.Tech CSE major project). Not a medical device.'),
                 textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3, height: 1.5)),
           ]),
         ),
@@ -154,7 +163,7 @@ class _RoleCard extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(roleLabel[role]!, style: T.headline.copyWith(color: c.label)),
+              Text(tr(roleLabel[role]!), style: T.headline.copyWith(color: c.label)),
               Text(subtitle, style: T.footnote.copyWith(color: c.label2)),
             ]),
           ),
@@ -166,9 +175,9 @@ class _RoleCard extends StatelessWidget {
               color: col,
               borderRadius: BorderRadius.circular(99),
               onPressed: onLogin,
-              child: const Text('Log in', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              child: Text(tr('Log in'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
             ),
-            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 28), onPressed: onSignUp, child: Text('Sign up', style: TextStyle(color: col, fontSize: 13))),
+            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 28), onPressed: onSignUp, child: Text(tr('Sign up'), style: TextStyle(color: col, fontSize: 13))),
           ]),
         ]),
       ),
@@ -183,10 +192,10 @@ class _HowItWorks extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final steps = [
-      (CupertinoIcons.person_crop_circle, c.blue, 'Learns your normal', 'Personal ranges per vital and activity, from good-quality readings only.'),
-      (CupertinoIcons.text_bubble_fill, c.purple, 'Explains every alert', 'Plain reasons, how sure it is, and what would have changed the decision.'),
-      (CupertinoIcons.arrow_2_circlepath, c.green, 'Learns from feedback', 'Patient and doctor answers tune alerts for each person, within safe limits.'),
-      (CupertinoIcons.shield_lefthalf_fill, c.red, 'Never ignores danger', 'A safety floor and bounded learning keep critical readings alerting.'),
+      (CupertinoIcons.person_crop_circle, c.blue, tr('Learns your normal'), tr('Personal ranges per vital and activity, from good-quality readings only.')),
+      (CupertinoIcons.text_bubble_fill, c.purple, tr('Explains every alert'), tr('Plain reasons, how sure it is, and what would have changed the decision.')),
+      (CupertinoIcons.arrow_2_circlepath, c.green, tr('Learns from feedback'), tr('Patient and doctor answers tune alerts for each person, within safe limits.')),
+      (CupertinoIcons.shield_lefthalf_fill, c.red, tr('Never ignores danger'), tr('A safety floor and bounded learning keep critical readings alerting.')),
     ];
     final cards = [
       for (final (i, (icon, col, t, d)) in steps.indexed)
@@ -205,7 +214,7 @@ class _HowItWorks extends StatelessWidget {
         ),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('How AdaptAlert works', style: T.title2.copyWith(color: c.label)),
+      Text(tr('How AdaptAlert works'), style: T.title2.copyWith(color: c.label)),
       const SizedBox(height: 12),
       if (wide)
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final (i, card) in cards.indexed) Expanded(child: Padding(padding: EdgeInsets.only(right: i < 3 ? 12 : 0), child: card))])

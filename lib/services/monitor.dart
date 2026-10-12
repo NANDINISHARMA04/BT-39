@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../engine/adapt_alert.dart';
 import '../engine/simulator.dart';
+import '../l10n/l10n.dart';
 
 /// Runs the wearer's band and the AdaptAlert engine.
 ///
@@ -12,6 +13,8 @@ import '../engine/simulator.dart';
 /// ESP32 band (see README).
 class MonitorController extends ChangeNotifier {
   MonitorController() {
+    // Engine text (alert titles, reasons, pipeline steps) follows the app language.
+    engineTr = tr;
     engine = AdaptAlertEngine(
       onAlert: (a) {
         if (!_silent) alertEvents.value = a;

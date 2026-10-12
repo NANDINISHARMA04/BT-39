@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
+import '../../l10n/l10n.dart';
 import '../../services/monitor.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
@@ -57,25 +58,25 @@ class AdaptAlertHero extends StatelessWidget {
         boxShadow: [BoxShadow(color: c.indigo.withValues(alpha: .35), blurRadius: 24, offset: const Offset(0, 10))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Row(children: [
-          Icon(CupertinoIcons.sparkles, color: Colors.white, size: 20),
-          SizedBox(width: 8),
-          Text('AdaptAlert', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.3)),
-          Spacer(),
-          Text('today', style: TextStyle(color: Colors.white70, fontSize: 13)),
+        Row(children: [
+          const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
+          const Text('AdaptAlert', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.3)),
+          const Spacer(),
+          Text(tr('today'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
         ]),
         const SizedBox(height: 4),
-        const Text('Alerts that learn what matters for this person, and explain themselves.', style: TextStyle(color: Colors.white70, fontSize: 13.5)),
+        Text(tr('Alerts that learn what matters for this person, and explain themselves.'), style: const TextStyle(color: Colors.white70, fontSize: 13.5)),
         const SizedBox(height: 16),
-        bar('Fixed monitor', fixed, Colors.white.withValues(alpha: .45)),
-        bar('AdaptAlert sent', sent, c.green),
-        bar('Held back', held, c.teal),
+        bar(tr('Fixed monitor'), fixed, Colors.white.withValues(alpha: .45)),
+        bar(tr('AdaptAlert sent'), sent, c.green),
+        bar(tr('Held back'), held, c.teal),
         const SizedBox(height: 6),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          _Chip(fixed == 0 ? 'No fixed alarms yet' : '$cut% fewer alarms'),
-          _Chip('${e.labels} feedback answers'),
+          _Chip(fixed == 0 ? tr('No fixed alarms yet') : tr('{cut}% fewer alarms', {'cut': cut})),
+          _Chip(tr('{n} feedback answers', {'n': e.labels})),
           _Chip('τ ${pct(e.tau)}'),
-          _Chip('${e.buckets.length} learned patterns'),
+          _Chip(tr('{n} learned patterns', {'n': e.buckets.length})),
         ]),
         const SizedBox(height: 14),
         SizedBox(
@@ -87,7 +88,7 @@ class AdaptAlertHero extends StatelessWidget {
             onPressed: () => Navigator.of(context).push(CupertinoPageRoute(
               builder: (_) => ChangeNotifierProvider.value(value: context.read<MonitorController>(), child: const HowItWorksScreen()),
             )),
-            child: Text('See how AdaptAlert works', style: TextStyle(color: c.indigo, fontWeight: FontWeight.w700)),
+            child: Text(tr('See how AdaptAlert works'), style: TextStyle(color: c.indigo, fontWeight: FontWeight.w700)),
           ),
         ),
       ]),
@@ -116,32 +117,30 @@ class HowItWorksScreen extends StatelessWidget {
     final m = context.watch<MonitorController>();
     final e = m.engine;
     return LargeTitlePage(
-      title: 'How it works',
-      previousTitle: 'Alerts',
-      subtitle: 'AdaptAlert, the core of this project',
+      title: tr('How it works'),
+      previousTitle: tr('Alerts'),
+      subtitle: tr('AdaptAlert, the core of this project'),
       children: [
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('The problem', style: T.headline.copyWith(color: c.label)),
+            Text(tr('The problem'), style: T.headline.copyWith(color: c.label)),
             const SizedBox(height: 6),
             Text(
-              'Most monitors alarm on fixed numbers, like "heart rate above 100". They alarm when you climb stairs, drink coffee or the sensor slips. '
-              'After enough false alarms, patients and nurses stop trusting them, and a real emergency can be missed. This is called alarm fatigue.',
+              tr('Most monitors alarm on fixed numbers, like "heart rate above 100". They alarm when you climb stairs, drink coffee or the sensor slips. After enough false alarms, patients and nurses stop trusting them, and a real emergency can be missed. This is called alarm fatigue.'),
               style: T.sub.copyWith(color: c.label, height: 1.45),
             ),
             const SizedBox(height: 14),
-            Text('The idea', style: T.headline.copyWith(color: c.label)),
+            Text(tr('The idea'), style: T.headline.copyWith(color: c.label)),
             const SizedBox(height: 6),
             Text(
-              'AdaptAlert learns each person\'s normal, checks whether the data can be trusted, explains every alert, and asks "what was happening?". '
-              'Answers from the patient and the doctor teach it which patterns are harmless for this person, so it gets quieter without going blind.',
+              tr('AdaptAlert learns each person\'s normal, checks whether the data can be trusted, explains every alert, and asks "what was happening?". Answers from the patient and the doctor teach it which patterns are harmless for this person, so it gets quieter without going blind.'),
               style: T.sub.copyWith(color: c.label, height: 1.45),
             ),
           ]),
         ),
-        const SectionHeader('Every minute, seven stages', trailing: 'live'),
+        SectionHeader(tr('Every minute, seven stages'), trailing: tr('live')),
         PipelineList(pipe: e.pipe),
-        const SectionHeader('The learning rule'),
+        SectionHeader(tr('The learning rule')),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
@@ -152,23 +151,22 @@ class HowItWorksScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'P_model comes from a small, readable decision tree. P_you comes from this person\'s answers for the same kind of event. With no answers yet, the model decides; '
-              'as answers build up, the person\'s own history counts more. τ is their personal threshold, now ${pct(e.tau)}.',
+              tr('P_model comes from a small, readable decision tree. P_you comes from this person\'s answers for the same kind of event. With no answers yet, the model decides; as answers build up, the person\'s own history counts more. τ is their personal threshold, now {tau}.', {'tau': pct(e.tau)}),
               style: T.footnote.copyWith(color: c.label2, height: 1.45),
             ),
           ]),
         ),
-        const SectionHeader('Three safeguards'),
+        SectionHeader(tr('Three safeguards')),
         GroupedList(children: [
-          IOSRow(icon: CupertinoIcons.shield_lefthalf_fill, iconColor: c.red, title: 'Safety floor', subtitle: 'SpO₂ ≤ 91%, resting HR ≥ 131 or ≤ 40, temp ≥ 39.1 °C always alert. Learning can\'t touch them.', chevron: false),
-          IOSRow(icon: CupertinoIcons.slider_horizontal_3, iconColor: c.orange, title: 'Bounded threshold', subtitle: 'τ stays between 30% and 75% and moves at most 10 points a week.', chevron: false),
-          IOSRow(icon: CupertinoIcons.hand_raised_fill, iconColor: c.teal, title: 'One-way patient answers', subtitle: '"I feel unwell" and "Not sure" can only make AdaptAlert more careful, never less.', chevron: false),
+          IOSRow(icon: CupertinoIcons.shield_lefthalf_fill, iconColor: c.red, title: tr('Safety floor'), subtitle: tr('SpO₂ ≤ 91%, resting HR ≥ 131 or ≤ 40, temp ≥ 39.1 °C always alert. Learning can\'t touch them.'), chevron: false),
+          IOSRow(icon: CupertinoIcons.slider_horizontal_3, iconColor: c.orange, title: tr('Bounded threshold'), subtitle: tr('τ stays between 30% and 75% and moves at most 10 points a week.'), chevron: false),
+          IOSRow(icon: CupertinoIcons.hand_raised_fill, iconColor: c.teal, title: tr('One-way patient answers'), subtitle: tr('"I feel unwell" and "Not sure" can only make AdaptAlert more careful, never less.'), chevron: false),
         ]),
-        const SectionHeader('What it has learned', trailing: 'from feedback'),
+        SectionHeader(tr('What it has learned'), trailing: tr('from feedback')),
         IOSCard(
           padding: const EdgeInsets.all(14),
           child: e.buckets.isEmpty
-              ? Text('No feedback yet. Answer an alert to teach it.', style: T.sub.copyWith(color: c.label2))
+              ? Text(tr('No feedback yet. Answer an alert to teach it.'), style: T.sub.copyWith(color: c.label2))
               : Column(children: [
                   for (final k in e.buckets.keys)
                     Padding(
@@ -177,7 +175,7 @@ class HowItWorksScreen extends StatelessWidget {
                         Icon(e.bucketP(k) >= e.tau ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash_fill, color: e.bucketP(k) >= e.tau ? c.red : c.indigo, size: 18),
                         const SizedBox(width: 10),
                         Expanded(child: Text(bucketLabel(k), style: T.footnote.copyWith(color: c.label))),
-                        Text('${pct(e.bucketP(k))} → ${e.bucketP(k) >= e.tau ? 'alerts' : 'held'}', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+                        Text('${pct(e.bucketP(k))} → ${tr(e.bucketP(k) >= e.tau ? 'alerts' : 'held')}', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
                       ]),
                     ),
                 ]),
@@ -185,7 +183,7 @@ class HowItWorksScreen extends StatelessWidget {
         const SizedBox(height: 16),
         CupertinoButton.tinted(
           onPressed: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
-          child: const Text('See the evidence in the Research Lab'),
+          child: Text(tr('See the evidence in the Research Lab')),
         ),
       ],
     );

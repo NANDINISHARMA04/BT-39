@@ -1,4 +1,4 @@
-void unlock() {}
-void speak(String text) {}
-void cancel() {}
-bool speaking() => false;
+void unlock(String silentUrl) {}
+void play(String url) {}
+void stop() {}
+bool playing() => false;

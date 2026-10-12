@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'l10n/l10n.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/patient/patient_shell.dart';
 import 'screens/patient/sos_screen.dart';
@@ -21,23 +23,28 @@ class BT39App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => (session ?? Session())..restore()),
-        ChangeNotifierProvider(create: (_) => PatientStore()),
-      ],
-      child: Consumer2<Session, PatientStore>(
-        builder: (context, s, store, _) {
-          final pref = s.role == Role.patient && store.loaded ? store.prefs.theme : 'system';
-          return MaterialApp(
-            title: 'PulseOS',
-            debugShowCheckedModeBanner: false,
-            theme: buildTheme(IOS.light),
-            darkTheme: buildTheme(IOS.darkTheme),
-            themeMode: switch (pref) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system },
-            home: const RootGate(),
-          );
-        },
+    return LangScope(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => (session ?? Session())..restore()),
+          ChangeNotifierProvider(create: (_) => PatientStore()),
+        ],
+        child: Consumer2<Session, PatientStore>(
+          builder: (context, s, store, _) {
+            final pref = s.role == Role.patient && store.loaded ? store.prefs.theme : 'system';
+            return MaterialApp(
+              title: 'PulseOS',
+              locale: Locale(appLang.value),
+              supportedLocales: const [Locale('en'), Locale('hi')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              debugShowCheckedModeBanner: false,
+              theme: buildTheme(IOS.light),
+              darkTheme: buildTheme(IOS.darkTheme),
+              themeMode: switch (pref) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system },
+              home: const RootGate(),
+            );
+          },
+        ),
       ),
     );
   }
@@ -115,7 +122,7 @@ class _PatientRootState extends State<_PatientRoot> {
     if (!store.loaded) return const _Splash();
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
-    final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell(), labelOf: (t) => const ['Today', 'Alerts', 'Insights', 'Care', 'Me'][t]);
+    final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell(), labelOf: (t) => tr(const ['Today', 'Alerts', 'Insights', 'Care', 'Me'][t]));
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _monitor),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
+import '../../l10n/l10n.dart';
 import '../../services/clinical_store.dart';
 import '../../services/monitor.dart';
 import '../../services/session.dart';
@@ -21,7 +22,7 @@ import 'staff_shell.dart';
 
 String _greeting() {
   final h = DateTime.now().hour;
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  return h < 12 ? tr('Good morning') : h < 17 ? tr('Good afternoon') : tr('Good evening');
 }
 
 /// The first page staff see: a doctor's day, or a nurse's shift.
@@ -90,28 +91,28 @@ class _DoctorToday extends StatelessWidget {
     final live = cs.byId(livePatientId);
     final watching = cs.patients.where((p) => p.status == 'Watching').toList();
     return LargeTitlePage(
-      title: 'Today',
+      title: tr('Today'),
       subtitle: '${_greeting()}, ${s.name} · ${DateFormat('EEE d MMM').format(now)}',
       trailing: _meButton(context),
       children: [
         if (s.demo) ...[const DemoBanner(), const SizedBox(height: 12)],
         _kpiGrid(context, [
-          _Kpi(CupertinoIcons.waveform_path_ecg, c.indigo, '${pending.length}', 'AdaptAlert alerts to review', () => openStaffSection(context, StaffSec.review)),
-          _Kpi(CupertinoIcons.calendar, c.blue, '${today.where((v) => v.status == VisitStatus.upcoming).length}', 'appointments left today', () => openStaffSection(context, StaffSec.schedule)),
-          _Kpi(CupertinoIcons.exclamationmark_triangle_fill, c.red, '${risky.length}', 'ward patients at medium or high risk', () => openStaffSection(context, StaffSec.ward)),
-          _Kpi(CupertinoIcons.bell_fill, c.orange, '${sc.openUnacked}', 'ward alerts not acknowledged', () => openStaffSection(context, StaffSec.alerts)),
+          _Kpi(CupertinoIcons.waveform_path_ecg, c.indigo, '${pending.length}', tr('AdaptAlert alerts to review'), () => openStaffSection(context, StaffSec.review)),
+          _Kpi(CupertinoIcons.calendar, c.blue, '${today.where((v) => v.status == VisitStatus.upcoming).length}', tr('appointments left today'), () => openStaffSection(context, StaffSec.schedule)),
+          _Kpi(CupertinoIcons.exclamationmark_triangle_fill, c.red, '${risky.length}', tr('ward patients at medium or high risk'), () => openStaffSection(context, StaffSec.ward)),
+          _Kpi(CupertinoIcons.bell_fill, c.orange, '${sc.openUnacked}', tr('ward alerts not acknowledged'), () => openStaffSection(context, StaffSec.alerts)),
         ]),
-        const SectionHeader('Needs you now'),
+        SectionHeader(tr('Needs you now')),
         if (pending.isEmpty && risky.isEmpty && watching.isEmpty)
-          const EmptyState(icon: CupertinoIcons.checkmark_seal, title: 'All clear', message: 'Nothing needs you right now.')
+          EmptyState(icon: CupertinoIcons.checkmark_seal, title: tr('All clear'), message: tr('Nothing needs you right now.'))
         else
           GroupedList(children: [
             for (final a in pending)
               IOSRow(
                 icon: CupertinoIcons.waveform_path_ecg,
                 iconColor: a.level >= 3 || a.safety ? c.red : c.indigo,
-                title: '${live?.name ?? 'Home patient'}: ${a.title}',
-                subtitle: '${hhmm(a.t)} · ${a.levelLabel} · ${pct(a.p)} likely real · tap to review',
+                title: '${live?.name ?? tr('Home patient')}: ${a.title}',
+                subtitle: '${hhmm(a.t)} · ${a.levelLabel} · ${tr('{p} likely real · tap to review', {'p': pct(a.p)})}',
                 onTap: () => openAlertDetail(context, a, staffMode: true, reviewer: s.name),
               ),
             for (final b in risky.take(3))
@@ -119,23 +120,23 @@ class _DoctorToday extends StatelessWidget {
                 icon: CupertinoIcons.bed_double_fill,
                 iconColor: bandColor(context, b.band),
                 title: '${b.bed} · ${b.name}',
-                subtitle: 'NEWS2 ${b.news2 ?? '—'} · ${b.band == 'high' ? 'High risk: urgent review' : 'Medium risk: review within the hour'}',
+                subtitle: 'NEWS2 ${b.news2 ?? '—'} · ${b.band == 'high' ? tr('High risk: urgent review') : tr('Medium risk: review within the hour')}',
                 onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => BedScreen(bed: b.bed))),
               ),
             for (final p in watching)
               IOSRow(
                 leading: Avatar(p.name, size: 30, colors: [c.orange, c.pink]),
                 title: p.name,
-                subtitle: p.condition,
+                subtitle: trData(p.condition),
                 onTap: () => openPatient(context, p.id),
               ),
           ]),
-        SectionHeader('Next appointments', trailing: 'Schedule', onTrailing: () => openStaffSection(context, StaffSec.schedule)),
+        SectionHeader(tr('Next appointments'), trailing: tr('Schedule'), onTrailing: () => openStaffSection(context, StaffSec.schedule)),
         if (next.isEmpty)
-          const EmptyState(icon: CupertinoIcons.calendar, title: 'No more appointments', message: 'Book a follow-up from a patient\'s page.')
+          EmptyState(icon: CupertinoIcons.calendar, title: tr('No more appointments'), message: tr('Book a follow-up from a patient\'s page.'))
         else
           GroupedList(children: [for (final v in next) VisitRow(v: v)]),
-        const SectionHeader('AdaptAlert at home'),
+        SectionHeader(tr('AdaptAlert at home')),
         const AdaptAlertHero(),
       ],
     );
@@ -170,17 +171,17 @@ class _NurseShiftState extends State<_NurseShift> {
     final hour = DateTime.now().hour;
     final risky = sc.beds.where((b) => !b.empty && b.band == 'high').length;
     return LargeTitlePage(
-      title: 'My shift',
-      subtitle: '${_greeting()}, ${s.name} · ${s.details['shift'] ?? 'Morning'} shift · ${s.details['ward'] ?? 'Ward A'}',
+      title: tr('My shift'),
+      subtitle: '${_greeting()}, ${s.name} · ${tr('{shift} shift', {'shift': trData(s.details['shift'] ?? 'Morning')})} · ${trData(s.details['ward'] ?? 'Ward A')}',
       trailing: _meButton(context),
       children: [
         if (s.demo) ...[const DemoBanner(), const SizedBox(height: 12)],
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('$done of ${tasks.length}', style: T.title1.copyWith(color: c.label, fontFeatures: T.num)),
+              Text(tr('{done} of {total}', {'done': done, 'total': tasks.length}), style: T.title1.copyWith(color: c.label, fontFeatures: T.num)),
               const SizedBox(width: 8),
-              Text('tasks done', style: T.footnote.copyWith(color: c.label2)),
+              Text(tr('tasks done'), style: T.footnote.copyWith(color: c.label2)),
               const Spacer(),
               Text(DateFormat('EEE d MMM').format(DateTime.now()), style: T.footnote.copyWith(color: c.label2)),
             ]),
@@ -191,16 +192,16 @@ class _NurseShiftState extends State<_NurseShift> {
             ),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              GestureDetector(onTap: () => openStaffSection(context, StaffSec.alerts), child: Pill('${sc.openUnacked} alerts to acknowledge', icon: CupertinoIcons.bell_fill, color: sc.openUnacked > 0 ? c.red : c.green)),
-              GestureDetector(onTap: () => openStaffSection(context, StaffSec.ward), child: Pill('$risky high-risk beds', icon: CupertinoIcons.bed_double_fill, color: risky > 0 ? c.orange : c.green)),
+              GestureDetector(onTap: () => openStaffSection(context, StaffSec.alerts), child: Pill(tr('{n} alerts to acknowledge', {'n': sc.openUnacked}), icon: CupertinoIcons.bell_fill, color: sc.openUnacked > 0 ? c.red : c.green)),
+              GestureDetector(onTap: () => openStaffSection(context, StaffSec.ward), child: Pill(tr('{n} high-risk beds', {'n': risky}), icon: CupertinoIcons.bed_double_fill, color: risky > 0 ? c.orange : c.green)),
               GestureDetector(
                 onTap: () => openStaffSection(context, StaffSec.review),
-                child: Pill('Home band: ${m.engine.status == 'alert' ? 'alert' : m.engine.status == 'band' ? 'no signal' : 'stable'}', icon: CupertinoIcons.waveform_path_ecg, color: m.engine.status == 'alert' ? c.red : c.indigo),
+                child: Pill(tr('Home band: {status}', {'status': m.engine.status == 'alert' ? tr('alert') : m.engine.status == 'band' ? tr('no signal') : tr('stable')}), icon: CupertinoIcons.waveform_path_ecg, color: m.engine.status == 'alert' ? c.red : c.indigo),
               ),
             ]),
           ]),
         ),
-        const SectionHeader('Tasks'),
+        SectionHeader(tr('Tasks')),
         GroupedList(children: [
           for (final t in tasks)
             Builder(builder: (context) {
@@ -210,8 +211,8 @@ class _NurseShiftState extends State<_NurseShift> {
               return IOSRow(
                 leading: Icon(by != null ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle, color: by != null ? c.green : c.label3, size: 26),
                 title: '${t.hour.toString().padLeft(2, '0')}:00 · ${t.title}',
-                subtitle: by != null ? 'Done by $by' : t.detail,
-                trailing: late ? Pill('Overdue', color: c.red) : due ? Pill('Due now', color: c.orange) : null,
+                subtitle: by != null ? tr('Done by {by}', {'by': by}) : t.detail,
+                trailing: late ? Pill(tr('Overdue'), color: c.red) : due ? Pill(tr('Due now'), color: c.orange) : null,
                 chevron: false,
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -223,12 +224,12 @@ class _NurseShiftState extends State<_NurseShift> {
               );
             }),
         ]),
-        const SectionHeader('Handover'),
+        SectionHeader(tr('Handover')),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             CupertinoTextField(
               controller: _handover,
-              placeholder: 'What should the next shift know? Patients to watch, pending results, family updates…',
+              placeholder: tr('What should the next shift know? Patients to watch, pending results, family updates…'),
               maxLines: 4,
               minLines: 3,
               padding: const EdgeInsets.all(12),
@@ -242,9 +243,9 @@ class _NurseShiftState extends State<_NurseShift> {
                 if (_handover.text.trim().isEmpty) return;
                 await cs.addHandover(_handover.text);
                 _handover.clear();
-                if (context.mounted) toast(context, 'Handover saved', 'The next shift sees it here.');
+                if (context.mounted) toast(context, tr('Handover saved'), tr('The next shift sees it here.'));
               },
-              child: const Text('Save handover'),
+              child: Text(tr('Save handover')),
             ),
           ]),
         ),

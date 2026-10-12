@@ -2,75 +2,46 @@ import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
+// One audio element for the whole demo: once it has played during a tap,
+// browsers (Safari on iPhone included) let it play again later.
+final _audio = web.HTMLAudioElement()..preload = 'auto';
 var _gen = 0;
-var _speaking = false;
-web.SpeechSynthesisVoice? _voice;
+var _playing = false;
 
-/// Prefers an Indian English voice, then other natural-sounding English ones.
-void _pickVoice() {
-  if (_voice != null) return;
+void unlock(String silentUrl) {
   try {
-    final voices = web.window.speechSynthesis.getVoices().toDart;
-    var best = -1;
-    for (final v in voices) {
-      final lang = v.lang.toLowerCase().replaceAll('_', '-');
-      final name = v.name.toLowerCase();
-      if (!lang.startsWith('en')) continue;
-      var s = lang == 'en-in' ? 50 : lang == 'en-gb' ? 30 : 20;
-      if (name.contains('google') || name.contains('natural') || name.contains('premium') || name.contains('enhanced')) s += 15;
-      if (name.contains('veena') || name.contains('heera') || name.contains('samantha') || name.contains('female') || name.contains('zira')) s += 10;
-      if (s > best) {
-        best = s;
-        _voice = v;
-      }
-    }
+    _audio.src = silentUrl;
+    _audio.play();
   } catch (_) {}
 }
 
-void unlock() {
-  try {
-    final s = web.window.speechSynthesis;
-    final u = web.SpeechSynthesisUtterance(' ')..volume = 0;
-    s.speak(u);
-    _pickVoice();
-  } catch (_) {}
-}
+void play(String url) {
+  final gen = ++_gen;
+  void done(web.Event _) {
+    if (gen == _gen) _playing = false;
+  }
 
-void speak(String text) {
   try {
-    final s = web.window.speechSynthesis;
-    s.cancel();
-    _pickVoice();
-    final gen = ++_gen;
-    final u = web.SpeechSynthesisUtterance(text)
-      ..rate = 1.0
-      ..pitch = 1.0;
-    final v = _voice;
-    if (v != null) {
-      u.voice = v;
-      u.lang = v.lang;
-    } else {
-      u.lang = 'en-IN';
-    }
-    void done(web.Event _) {
-      if (gen == _gen) _speaking = false;
-    }
-
-    u.onend = done.toJS;
-    u.onerror = done.toJS;
-    _speaking = true;
-    s.speak(u);
+    _audio.pause();
+    _audio.onended = done.toJS;
+    _audio.onerror = done.toJS;
+    _audio.src = url;
+    _playing = true;
+    _audio.play().toDart.catchError((Object _) {
+      if (gen == _gen) _playing = false;
+      return null;
+    });
   } catch (_) {
-    _speaking = false;
+    _playing = false;
   }
 }
 
-void cancel() {
+void stop() {
   _gen++;
-  _speaking = false;
+  _playing = false;
   try {
-    web.window.speechSynthesis.cancel();
+    _audio.pause();
   } catch (_) {}
 }
 
-bool speaking() => _speaking;
+bool playing() => _playing;

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
 import '../../engine/study.dart';
+import '../../l10n/l10n.dart';
 import '../../services/monitor.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/charts.dart';
@@ -53,46 +54,46 @@ class _InsightsScreenState extends State<InsightsScreen> {
     final color = switch (_vital) { 'hr' => c.pink, 'spo2' => c.blue, _ => c.orange };
     final unit = switch (_vital) { 'hr' => 'bpm', 'spo2' => '%', _ => '°C' };
     return LargeTitlePage(
-      title: 'Insights',
-      subtitle: 'Health analytics and the AI behind your alerts',
+      title: tr('Insights'),
+      subtitle: tr('Health analytics and the AI behind your alerts'),
       children: [
         CupertinoSlidingSegmentedControl<String>(
           groupValue: _vital,
-          children: const {'hr': Text('Heart rate'), 'spo2': Text('Oxygen'), 'temp': Text('Temperature')},
+          children: {'hr': Text(tr('Heart rate')), 'spo2': Text(tr('Oxygen')), 'temp': Text(tr('Temperature'))},
           onValueChanged: (v) => insightsVital.value = v ?? 'hr',
         ),
         const SizedBox(height: 12),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Last ${(e.history.length / 60).toStringAsFixed(1)} hours · $unit', style: T.sub.copyWith(color: color, fontWeight: FontWeight.w600)),
+            Text('${tr('Last {h} hours', {'h': (e.history.length / 60).toStringAsFixed(1)})} · $unit', style: T.sub.copyWith(color: color, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             TrendChart(history: e.history, vital: _vital, color: color),
             const SizedBox(height: 8),
             Wrap(spacing: 12, runSpacing: 6, children: [
-              _Legend(color: c.blue.withValues(alpha: .25), label: 'Your normal (±2 SD)'),
-              _Legend(color: c.fill2, label: 'Unreliable data'),
-              _Legend(color: c.red, label: 'Alert', round: true),
-              _Legend(color: c.indigo, label: 'Held back', round: true, hollow: true),
+              _Legend(color: c.blue.withValues(alpha: .25), label: tr('Your normal (±2 SD)')),
+              _Legend(color: c.fill2, label: tr('Unreliable data')),
+              _Legend(color: c.red, label: tr('Alert'), round: true),
+              _Legend(color: c.indigo, label: tr('Held back'), round: true, hollow: true),
             ]),
             const SizedBox(height: 12),
             if (vals.isNotEmpty)
               Row(children: [
-                _MiniStat('Low', vals.reduce(min).toStringAsFixed(dec)),
+                _MiniStat(tr('Low'), vals.reduce(min).toStringAsFixed(dec)),
                 const SizedBox(width: 8),
-                _MiniStat('Average', (vals.reduce((a, b) => a + b) / vals.length).toStringAsFixed(dec)),
+                _MiniStat(tr('Average'), (vals.reduce((a, b) => a + b) / vals.length).toStringAsFixed(dec)),
                 const SizedBox(width: 8),
-                _MiniStat('High', vals.reduce(max).toStringAsFixed(dec)),
+                _MiniStat(tr('High'), vals.reduce(max).toStringAsFixed(dec)),
               ]),
           ]),
         ),
-        const SectionHeader('Your personal normal', trailing: 'learned, not fixed'),
+        SectionHeader(tr('Your personal normal'), trailing: tr('learned, not fixed')),
         GroupedList(
-          footer: 'Updated slowly from good-quality readings only. Readings during an alert never count, so a problem can\'t become your new normal.',
+          footer: tr('Updated slowly from good-quality readings only. Readings during an alert never count, so a problem can\'t become your new normal.'),
           children: [
             for (final (k, name, col, icon) in [
-              ('rest', 'Resting', c.green, CupertinoIcons.bed_double_fill),
-              ('light', 'Light activity', c.teal, CupertinoIcons.person_fill),
-              ('active', 'Active', c.blue, CupertinoIcons.flame_fill),
+              ('rest', tr('Resting'), c.green, CupertinoIcons.bed_double_fill),
+              ('light', tr('Light activity'), c.teal, CupertinoIcons.person_fill),
+              ('active', tr('Active'), c.blue, CupertinoIcons.flame_fill),
             ])
               IOSRow(
                 icon: icon,
@@ -103,17 +104,17 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ),
           ],
         ),
-        const SectionHeader('Alert load today', trailing: 'per hour'),
+        SectionHeader(tr('Alert load today'), trailing: tr('per hour')),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             AlertLoadChart(history: e.history),
             const SizedBox(height: 8),
-            Wrap(spacing: 12, children: [_Legend(color: c.gray, label: 'Fixed-threshold alarms'), _Legend(color: c.green, label: 'AdaptAlert alerts')]),
+            Wrap(spacing: 12, children: [_Legend(color: c.gray, label: tr('Fixed-threshold alarms')), _Legend(color: c.green, label: tr('AdaptAlert alerts'))]),
           ]),
         ),
-        const SectionHeader('AI engine, live', trailing: 'every minute'),
+        SectionHeader(tr('AI engine, live'), trailing: tr('every minute')),
         PipelineList(pipe: e.pipe),
-        const SectionHeader('Your sensitivity'),
+        SectionHeader(tr('Your sensitivity')),
         IOSCard(
           child: Column(children: [
             Row(children: [
@@ -121,23 +122,23 @@ class _InsightsScreenState extends State<InsightsScreen> {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Alert threshold τ', style: T.footnote.copyWith(color: c.label2)),
+                  Text(tr('Alert threshold τ'), style: T.footnote.copyWith(color: c.label2)),
                   AnimatedNumber(e.tau * 100, style: T.title1.copyWith(color: c.label)),
                   const SizedBox(height: 6),
-                  Text('Feedback answers', style: T.footnote.copyWith(color: c.label2)),
+                  Text(tr('Feedback answers'), style: T.footnote.copyWith(color: c.label2)),
                   Text('${e.labels}', style: T.title2.copyWith(color: c.label)),
                 ]),
               ),
             ]),
             const SizedBox(height: 10),
-            Text('An alert is sent when the AI is at least τ sure it is real. τ stays between 30% and 75% (shaded) and moves at most 10 points a week. Safety-floor alerts ignore τ.', style: T.footnote.copyWith(color: c.label2)),
+            Text(tr('An alert is sent when the AI is at least τ sure it is real. τ stays between 30% and 75% (shaded) and moves at most 10 points a week. Safety-floor alerts ignore τ.'), style: T.footnote.copyWith(color: c.label2)),
           ]),
         ),
-        SectionHeader('What it has learned', trailing: e.buckets.isEmpty ? null : '${e.buckets.length} pattern${e.buckets.length == 1 ? '' : 's'}'),
+        SectionHeader(tr('What it has learned'), trailing: e.buckets.isEmpty ? null : e.buckets.length == 1 ? tr('1 pattern') : tr('{n} patterns', {'n': e.buckets.length})),
         IOSCard(
           padding: EdgeInsets.zero,
           child: e.buckets.isEmpty
-              ? Padding(padding: const EdgeInsets.all(16), child: Text('No feedback yet. Answer an alert to teach AdaptAlert.', style: T.sub.copyWith(color: c.label2)))
+              ? Padding(padding: const EdgeInsets.all(16), child: Text(tr('No feedback yet. Answer an alert to teach AdaptAlert.'), style: T.sub.copyWith(color: c.label2)))
               : Column(children: [
                   for (final (i, k) in e.buckets.keys.indexed) ...[
                     if (i > 0) Divider(height: .5, color: c.sep),
@@ -145,7 +146,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   ],
                 ]),
         ),
-        const SectionHeader('30-day study', trailing: 'simulated'),
+        SectionHeader(tr('30-day study'), trailing: tr('simulated')),
         IOSCard(
           onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
           color: c.indigo,
@@ -154,8 +155,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Open the Research Lab', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
-                Text('Run your own experiments: 5 systems, ablation, alarm fatigue, federated cold start, 95% CIs.', style: T.footnote.copyWith(color: Colors.white.withValues(alpha: .85))),
+                Text(tr('Open the Research Lab'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
+                Text(tr('Run your own experiments: 5 systems, ablation, alarm fatigue, federated cold start, 95% CIs.'), style: T.footnote.copyWith(color: Colors.white.withValues(alpha: .85))),
               ]),
             ),
             const Icon(CupertinoIcons.chevron_forward, color: Colors.white70, size: 18),
@@ -164,16 +165,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
         const SizedBox(height: 12),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('False alarms per patient per day', style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
+            Text(tr('False alarms per patient per day'), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             StudyChart(result: _study),
             const SizedBox(height: 8),
-            Wrap(spacing: 12, children: [_Legend(color: c.gray, label: 'Fixed threshold'), _Legend(color: c.blue, label: 'Personal normal only'), _Legend(color: c.green, label: 'AdaptAlert')]),
+            Wrap(spacing: 12, children: [_Legend(color: c.gray, label: tr('Fixed threshold')), _Legend(color: c.blue, label: tr('Personal normal only')), _Legend(color: c.green, label: 'AdaptAlert')]),
             const SizedBox(height: 12),
             _StudyTable(r: _study),
             const SizedBox(height: 10),
             Text(
-              '${_study.patients} virtual patients over ${_study.days} days, ${_study.realEvents} real events. In week 5 AdaptAlert sent ${(100 * (1 - _study.metrics['C']!.falsePerDayWeek5 / _study.metrics['A']!.falsePerDayWeek5)).round()}% fewer false alarms than the fixed-threshold monitor and caught ${pct(_study.metrics['C']!.sensitivity)} of real events. Simulated data, using the same decision code as the live app.',
+              tr('{patients} virtual patients over {days} days, {events} real events. In week 5 AdaptAlert sent {cut}% fewer false alarms than the fixed-threshold monitor and caught {caught} of real events. Simulated data, using the same decision code as the live app.', {
+                'patients': _study.patients,
+                'days': _study.days,
+                'events': _study.realEvents,
+                'cut': (100 * (1 - _study.metrics['C']!.falsePerDayWeek5 / _study.metrics['A']!.falsePerDayWeek5)).round(),
+                'caught': pct(_study.metrics['C']!.sensitivity),
+              }),
               style: T.footnote.copyWith(color: c.label2),
             ),
             const SizedBox(height: 10),
@@ -185,7 +192,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   _seed = Random().nextInt(1 << 20);
                   _study = runStudy(seed: _seed);
                 }),
-                child: const Text('Run again with new patients'),
+                child: Text(tr('Run again with new patients')),
               ),
             ),
           ]),
@@ -264,7 +271,7 @@ class PipelineList extends StatelessWidget {
               decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
               child: Text(k, style: TextStyle(color: fg, fontWeight: FontWeight.w700)),
             ),
-            title: names[k]!,
+            title: tr(names[k]!),
             subtitle: s.text,
             chevron: false,
           );
@@ -288,7 +295,7 @@ class _BucketRow extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(bucketLabel(k), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w500))),
-          Text('${b.r.toStringAsFixed(1)} real · ${b.f.toStringAsFixed(1)} false', style: T.caption.copyWith(color: c.label2)),
+          Text(tr('{r} real · {f} false', {'r': b.r.toStringAsFixed(1), 'f': b.f.toStringAsFixed(1)}), style: T.caption.copyWith(color: c.label2)),
         ]),
         const SizedBox(height: 8),
         LayoutBuilder(
@@ -300,8 +307,8 @@ class _BucketRow extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text.rich(TextSpan(style: T.caption.copyWith(color: c.label2), children: [
-          TextSpan(text: 'Now ${pct(p)} likely real → '),
-          TextSpan(text: send ? 'alerts' : 'held back', style: TextStyle(color: c.label, fontWeight: FontWeight.w700)),
+          TextSpan(text: tr('Now {pct} likely real → ', {'pct': pct(p)})),
+          TextSpan(text: tr(send ? 'alerts' : 'held back'), style: TextStyle(color: c.label, fontWeight: FontWeight.w700)),
         ])),
       ]),
     );
@@ -324,15 +331,15 @@ class _StudyTable extends StatelessWidget {
       border: TableBorder(horizontalInside: BorderSide(color: c.sep, width: .5)),
       children: [
         TableRow(children: [
-          Text('System', style: h),
-          Text('False/day\nweek 1', style: h, textAlign: TextAlign.right),
-          Text('False/day\nweek 5', style: h, textAlign: TextAlign.right),
-          Text('Caught', style: h, textAlign: TextAlign.right),
-          Text('Real when\nalerted', style: h, textAlign: TextAlign.right),
+          Text(tr('System'), style: h),
+          Text(tr('False/day\nweek 1'), style: h, textAlign: TextAlign.right),
+          Text(tr('False/day\nweek 5'), style: h, textAlign: TextAlign.right),
+          Text(tr('Caught'), style: h, textAlign: TextAlign.right),
+          Text(tr('Real when\nalerted'), style: h, textAlign: TextAlign.right),
         ]),
         for (final (k, name, col) in [('A', 'Fixed', c.gray), ('B', 'Personal', c.blue), ('C', 'AdaptAlert', c.green)])
           TableRow(children: [
-            Row(children: [Container(width: 8, height: 8, decoration: BoxDecoration(color: col, shape: BoxShape.circle)), const SizedBox(width: 6), Flexible(child: cell(name, bold: k == 'C', align: TextAlign.left))]),
+            Row(children: [Container(width: 8, height: 8, decoration: BoxDecoration(color: col, shape: BoxShape.circle)), const SizedBox(width: 6), Flexible(child: cell(tr(name), bold: k == 'C', align: TextAlign.left))]),
             cell(r.metrics[k]!.falsePerDayWeek1.toStringAsFixed(2), bold: k == 'C'),
             cell(r.metrics[k]!.falsePerDayWeek5.toStringAsFixed(2), bold: k == 'C'),
             cell(pct(r.metrics[k]!.sensitivity), bold: k == 'C'),

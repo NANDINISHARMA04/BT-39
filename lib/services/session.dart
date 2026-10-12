@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config.dart';
+import '../l10n/l10n.dart';
 
 enum Role { patient, doctor, nurse }
 
@@ -119,7 +120,7 @@ class Session extends ChangeNotifier {
   /// Returns an error sentence, or null on success.
   Future<String?> signIn(String email, String password) async {
     final sb = _sb;
-    if (sb == null) return 'Sign-in is not set up in this build. Use Demo Mode, or see the README to add your Supabase key.';
+    if (sb == null) return tr('Sign-in is not set up in this build. Use Demo Mode, or see the README to add your Supabase key.');
     try {
       await sb.auth.signInWithPassword(email: email.trim(), password: password);
       await _loadAccount();
@@ -128,13 +129,13 @@ class Session extends ChangeNotifier {
     } on AuthException catch (e) {
       return e.message;
     } catch (_) {
-      return 'Could not reach the sign-in service. Check your connection and try again.';
+      return tr('Could not reach the sign-in service. Check your connection and try again.');
     }
   }
 
   Future<String?> signUp(String name, String email, String password) async {
     final sb = _sb;
-    if (sb == null) return 'Sign-up is not set up in this build. Use Demo Mode, or see the README to add your Supabase key.';
+    if (sb == null) return tr('Sign-up is not set up in this build. Use Demo Mode, or see the README to add your Supabase key.');
     try {
       final r = await sb.auth.signUp(email: email.trim(), password: password, data: {'name': name.trim(), 'role': 'patient'});
       if (r.session == null) return 'CHECK_EMAIL';
@@ -144,13 +145,13 @@ class Session extends ChangeNotifier {
     } on AuthException catch (e) {
       return e.message;
     } catch (_) {
-      return 'Could not reach the sign-in service. Check your connection and try again.';
+      return tr('Could not reach the sign-in service. Check your connection and try again.');
     }
   }
 
   Future<String?> resetPassword(String email) async {
     final sb = _sb;
-    if (sb == null) return 'Password reset needs Supabase. Use Demo Mode in this build.';
+    if (sb == null) return tr('Password reset needs Supabase. Use Demo Mode in this build.');
     try {
       await sb.auth.resetPasswordForEmail(email.trim());
       return null;
@@ -196,9 +197,9 @@ class Session extends ChangeNotifier {
   Future<String?> localSignIn(String email, String password, {required Role as}) async {
     final mail = email.trim().toLowerCase();
     final acc = (await _accounts())[mail];
-    if (acc == null || _hash(acc['salt'] as String, password) != acc['hash']) return 'That email and password don\'t match an account on this device.';
+    if (acc == null || _hash(acc['salt'] as String, password) != acc['hash']) return tr('That email and password don\'t match an account on this device.');
     final r = Role.values.byName(acc['role'] as String);
-    if (r != as) return 'This is a ${roleLabel[r]!.toLowerCase()} account. Go back and choose ${roleLabel[r]}.';
+    if (r != as) return tr('This is a {role} account. Go back and choose {Role}.', {'role': tr(roleLabel[r]!).toLowerCase(), 'Role': tr(roleLabel[r]!)});
     _setLocal(mail, acc);
     try {
       (await SharedPreferences.getInstance()).setString('bt39.localUser', mail);
@@ -210,14 +211,14 @@ class Session extends ChangeNotifier {
   Future<String?> localSignUp({required Role role, required String name, required String email, required String password, Map<String, String> details = const {}}) async {
     final mail = email.trim().toLowerCase();
     final all = await _accounts();
-    if (all.containsKey(mail)) return 'An account with this email already exists on this device. Log in instead.';
+    if (all.containsKey(mail)) return tr('An account with this email already exists on this device. Log in instead.');
     final rnd = Random.secure();
     final salt = List.generate(16, (_) => rnd.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
     all[mail] = {'role': role.name, 'name': name.trim(), 'salt': salt, 'hash': _hash(salt, password), 'details': details};
     try {
       await _saveAccounts(all);
     } catch (_) {
-      return 'This browser is blocking storage, so the account can\'t be saved. Use the demo account instead.';
+      return tr('This browser is blocking storage, so the account can\'t be saved. Use the demo account instead.');
     }
     return localSignIn(mail, password, as: role);
   }

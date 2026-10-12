@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../engine/adapt_alert.dart';
+import '../../l10n/l10n.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../theme/ios_theme.dart';
@@ -71,7 +72,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
 
   Future<void> _call() async {
     final ok = await canLaunchUrl(Uri.parse('tel:112')) && await launchUrl(Uri.parse('tel:112'));
-    if (!ok && mounted) toast(context, 'Dial 112', 'This device can\'t place calls from the app. Dial 112 from your phone.');
+    if (!ok && mounted) toast(context, tr('Dial 112'), tr('This device can\'t place calls from the app. Dial 112 from your phone.'));
   }
 
   @override
@@ -87,22 +88,22 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
               padding: EdgeInsets.zero,
               onPressed: () {
                 if (_active) {
-                  toast(context, 'SOS ended', 'Your contacts were told you cancelled.');
+                  toast(context, tr('SOS ended'), tr('Your contacts were told you cancelled.'));
                 }
                 Navigator.pop(context);
               },
-              child: Text(_active ? 'End SOS' : 'Cancel', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              child: Text(_active ? tr('End SOS') : tr('Cancel'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ]),
           const SizedBox(height: 8),
-          Text(_active ? 'Help is on the way' : (widget.trigger != null ? 'Critical alert' : 'Emergency SOS'), textAlign: TextAlign.center, style: T.largeTitle.copyWith(color: Colors.white)),
+          Text(_active ? tr('Help is on the way') : (widget.trigger != null ? tr('Critical alert') : tr('Emergency SOS')), textAlign: TextAlign.center, style: T.largeTitle.copyWith(color: Colors.white)),
           const SizedBox(height: 8),
           Text(
             _active
-                ? 'Your emergency contacts have your location and live vitals.'
+                ? tr('Your emergency contacts have your location and live vitals.')
                 : widget.trigger != null
-                    ? '${widget.trigger!.title}. SOS starts in $_left s unless you cancel.'
-                    : 'Press and hold for 3 seconds to call 112 and alert your emergency contacts.',
+                    ? tr('{title}. SOS starts in {n} s unless you cancel.', {'title': trData(widget.trigger!.title), 'n': _left})
+                    : tr('Press and hold for 3 seconds to call 112 and alert your emergency contacts.'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
           ),
@@ -114,7 +115,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
               onTapCancel: () => _hold.isCompleted ? null : _hold.reverse(),
               child: Semantics(
                 button: true,
-                label: 'Hold for SOS',
+                label: tr('Hold for SOS'),
                 child: AnimatedBuilder(
                   animation: Listenable.merge([_pulse, _hold]),
                   builder: (_, _) => SizedBox(
@@ -132,7 +133,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
                         height: 156,
                         alignment: Alignment.center,
                         decoration: const BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Color(0xFFFF6B5E), Color(0xFFD70015)])),
-                        child: Text(_active ? 'ACTIVE' : (widget.trigger != null ? '$_left' : 'SOS'), style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                        child: Text(_active ? tr('ACTIVE') : (widget.trigger != null ? '$_left' : 'SOS'), style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: 1)),
                       ),
                     ]),
                   ),
@@ -142,39 +143,39 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
           ),
           if (widget.trigger != null && !_active) ...[
             const SizedBox(height: 18),
-            CupertinoButton(color: Colors.white, onPressed: _activate, child: const Text('Send SOS now', style: TextStyle(color: Color(0xFFD70015), fontWeight: FontWeight.w700))),
-            CupertinoButton(onPressed: () => Navigator.pop(context), child: const Text('I\'m OK, cancel', style: TextStyle(color: Colors.white))),
+            CupertinoButton(color: Colors.white, onPressed: _activate, child: Text(tr('Send SOS now'), style: TextStyle(color: Color(0xFFD70015), fontWeight: FontWeight.w700))),
+            CupertinoButton(onPressed: () => Navigator.pop(context), child: Text(tr('I\'m OK, cancel'), style: const TextStyle(color: Colors.white))),
           ],
           const SizedBox(height: 22),
           _DarkCard(children: [
-            _DarkRow(icon: CupertinoIcons.phone_fill, title: 'Call 112', subtitle: 'National emergency number', trailing: CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 14), color: const Color(0xFF34C759), sizeStyle: CupertinoButtonSize.small, onPressed: _call, child: const Text('Call'))),
-            _DarkRow(icon: CupertinoIcons.location_fill, title: 'Location', subtitle: _active ? 'Shared · Sector 62, Noida (demo location)' : 'Shared when SOS starts'),
-            if (r != null && r.good) _DarkRow(icon: CupertinoIcons.waveform_path_ecg, title: 'Live vitals', subtitle: 'HR ${r.r.hr} · SpO₂ ${r.r.spo2}% · ${r.r.temp.toStringAsFixed(1)} °C'),
+            _DarkRow(icon: CupertinoIcons.phone_fill, title: tr('Call 112'), subtitle: tr('National emergency number'), trailing: CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 14), color: const Color(0xFF34C759), sizeStyle: CupertinoButtonSize.small, onPressed: _call, child: Text(tr('Call')))),
+            _DarkRow(icon: CupertinoIcons.location_fill, title: tr('Location'), subtitle: _active ? tr('Shared · Sector 62, Noida (demo location)') : tr('Shared when SOS starts')),
+            if (r != null && r.good) _DarkRow(icon: CupertinoIcons.waveform_path_ecg, title: tr('Live vitals'), subtitle: 'HR ${r.r.hr} · SpO₂ ${r.r.spo2}% · ${r.r.temp.toStringAsFixed(1)} °C'),
           ]),
           const SizedBox(height: 14),
-          const Padding(padding: EdgeInsets.only(left: 6, bottom: 8), child: Text('EMERGENCY CONTACTS', style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: .5))),
+          Padding(padding: const EdgeInsets.only(left: 6, bottom: 8), child: Text(tr('EMERGENCY CONTACTS'), style: const TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: .5))),
           _DarkCard(children: [
-            if (store.emergencyContacts.isEmpty) const _DarkRow(icon: CupertinoIcons.person_crop_circle_badge_exclam, title: 'No emergency contacts', subtitle: 'Add them in Me > Family'),
+            if (store.emergencyContacts.isEmpty) _DarkRow(icon: CupertinoIcons.person_crop_circle_badge_exclam, title: tr('No emergency contacts'), subtitle: tr('Add them in Me > Family')),
             for (final m in store.emergencyContacts)
               _DarkRow(
                 icon: CupertinoIcons.person_crop_circle_fill,
-                title: '${m.name} · ${m.relation}',
+                title: '${m.name} · ${trData(m.relation)}',
                 subtitle: m.phone,
                 trailing: !_active
                     ? null
                     : switch (_contactState[m.id] ?? 0) {
                         0 => const CupertinoActivityIndicator(color: Colors.white),
-                        1 => const Text('Delivered', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        _ => const Text('Seen ✓', style: TextStyle(color: Color(0xFF30D158), fontSize: 13, fontWeight: FontWeight.w700)),
+                        1 => Text(tr('Delivered'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        _ => Text(tr('Seen ✓'), style: const TextStyle(color: Color(0xFF30D158), fontSize: 13, fontWeight: FontWeight.w700)),
                       },
               ),
           ]),
           const SizedBox(height: 14),
           CupertinoButton(
             onPressed: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen())),
-            child: const Text('Show Medical ID', style: TextStyle(color: Colors.white)),
+            child: Text(tr('Show Medical ID'), style: const TextStyle(color: Colors.white)),
           ),
-          Text('Messages to contacts are simulated in Demo Mode. The 112 call uses your phone\'s dialer.', textAlign: TextAlign.center, style: T.caption.copyWith(color: Colors.white38)),
+          Text(tr('Messages to contacts are simulated in Demo Mode. The 112 call uses your phone\'s dialer.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: Colors.white38)),
         ]),
       ),
     );
@@ -233,7 +234,7 @@ class MedicalIdScreen extends StatelessWidget {
         );
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: 'Back', backgroundColor: c.material, middle: const Text('Medical ID')),
+      appBar: CupertinoNavigationBar(previousPageTitle: tr('Back'), backgroundColor: c.material, middle: Text(tr('Medical ID'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -243,18 +244,18 @@ class MedicalIdScreen extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(p.name, style: T.title2.copyWith(color: c.label)),
-                  Text('${p.age} years · ${p.sex == 'M' ? 'Male' : p.sex == 'F' ? 'Female' : 'Other'}', style: T.footnote.copyWith(color: c.label2)),
+                  Text('${tr('{n} years', {'n': p.age})} · ${p.sex == 'M' ? tr('Male') : p.sex == 'F' ? tr('Female') : tr('Other')}', style: T.footnote.copyWith(color: c.label2)),
                 ]),
               ),
               Icon(CupertinoIcons.staroflife_fill, color: c.red, size: 30),
             ]),
             const SizedBox(height: 18),
-            block('Blood type', p.bloodGroup),
-            block('Medical conditions', p.conditions.isEmpty ? 'None' : p.conditions.join('\n')),
-            block('Allergies', p.allergies.isEmpty ? 'None known' : p.allergies.join(', ')),
-            block('Medications', p.medications.isEmpty ? 'None' : p.medications.map((m) => '${m.name} ${m.dose}, ${m.schedule}').join('\n')),
-            block('Height / weight', '${p.heightCm.round()} cm · ${p.weightKg.round()} kg'),
-            block('Emergency contacts', store.emergencyContacts.isEmpty ? 'None' : store.emergencyContacts.map((m) => '${m.name} (${m.relation}) ${m.phone}').join('\n')),
+            block(tr('Blood type'), p.bloodGroup),
+            block(tr('Medical conditions'), p.conditions.isEmpty ? tr('None') : p.conditions.map(trData).join('\n')),
+            block(tr('Allergies'), p.allergies.isEmpty ? tr('None known') : p.allergies.map(trData).join(', ')),
+            block(tr('Medications'), p.medications.isEmpty ? tr('None') : p.medications.map((m) => '${m.name} ${m.dose}, ${trData(m.schedule)}').join('\n')),
+            block(tr('Height / weight'), '${p.heightCm.round()} cm · ${p.weightKg.round()} kg'),
+            block(tr('Emergency contacts'), store.emergencyContacts.isEmpty ? tr('None') : store.emergencyContacts.map((m) => '${m.name} (${trData(m.relation)}) ${m.phone}').join('\n')),
           ]),
         ),
       ]),

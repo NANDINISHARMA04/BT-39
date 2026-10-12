@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
+import '../../l10n/l10n.dart';
 import '../../models/patient_models.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
@@ -29,17 +30,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final e = m.engine;
     final list = _filter == 'open' ? e.alerts.where((a) => a.patientFeedback == null).toList() : e.alerts;
     return LargeTitlePage(
-      title: 'Alerts',
-      subtitle: 'Explained, and learning from your answers',
+      title: tr('Alerts'),
+      subtitle: tr('Explained, and learning from your answers'),
       children: [
         const FadeIn(child: AdaptAlertHero()),
         const SizedBox(height: 14),
         CupertinoSlidingSegmentedControl<String>(
           groupValue: _filter,
           children: {
-            'open': Text('Needs reply${m.needsReply > 0 ? ' (${m.needsReply})' : ''}'),
-            'all': const Text('All'),
-            'held': const Text('Held back'),
+            'open': Text('${tr('Needs reply')}${m.needsReply > 0 ? ' (${m.needsReply})' : ''}'),
+            'all': Text(tr('All')),
+            'held': Text(tr('Held back')),
           },
           onValueChanged: (v) => setState(() => _filter = v ?? 'open'),
         ),
@@ -50,15 +51,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
             key: ValueKey('$_filter-${list.length}-${e.held.length}'),
             children: _filter == 'held'
                 ? (e.held.isEmpty
-                    ? [const EmptyState(icon: CupertinoIcons.checkmark_circle, title: 'Nothing held back yet', message: 'When AdaptAlert learns a pattern is harmless for you, those alerts show up here instead of buzzing your phone.')]
+                    ? [EmptyState(icon: CupertinoIcons.checkmark_circle, title: tr('Nothing held back yet'), message: tr('When AdaptAlert learns a pattern is harmless for you, those alerts show up here instead of buzzing your phone.'))]
                     : [for (final (i, h) in e.held.indexed) FadeIn(delay: i * 40, child: _HeldCard(h: h))])
                 : (list.isEmpty
                     ? [
                         EmptyState(
                           icon: CupertinoIcons.checkmark_circle,
-                          title: 'You\'re all caught up',
-                          message: 'No alerts need your reply. Try “Heart racing at rest” or “Coffee or stress” from the simulator.',
-                          action: 'Open simulator',
+                          title: tr('You\'re all caught up'),
+                          message: tr('No alerts need your reply. Try “Heart racing at rest” or “Coffee or stress” from the simulator.'),
+                          action: tr('Open simulator'),
                           onAction: () => showSimulator(context),
                         ),
                       ]
@@ -79,6 +80,7 @@ class AlertCard extends StatelessWidget {
   final bool staffMode;
   final String reviewer;
 
+  /// English labels; shown through tr().
   static const feedbackOptions = [
     (PatientFeedback.active, '🏃', 'I was active'),
     (PatientFeedback.loose, '⌚', 'Sensor was loose'),
@@ -97,8 +99,8 @@ class AlertCard extends StatelessWidget {
     final c = context.ios;
     final col = levelColor(context, a.level);
     final ai = a.safety
-        ? 'Safety floor. Sent without asking the model, whatever the feedback history.'
-        : '${a.path.join(' → ')}. Model says ${pct(a.pg)}${a.n > 0 ? ', your history (${a.n.toStringAsFixed(1)} labels) says ${pct(a.pu)}, weighted ${pct(a.w)}' : ', no personal history for this pattern yet'}.';
+        ? tr('Safety floor. Sent without asking the model, whatever the feedback history.')
+        : '${a.path.join(' → ')}. ${tr('Model says {p}', {'p': pct(a.pg)})}${a.n > 0 ? tr(', your history ({n} labels) says {pu}, weighted {w}', {'n': a.n.toStringAsFixed(1), 'pu': pct(a.pu), 'w': pct(a.w)}) : tr(', no personal history for this pattern yet')}.';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: ClipRRect(
@@ -109,7 +111,7 @@ class AlertCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Text(a.levelLabel.toUpperCase(), style: T.caption.copyWith(color: col, fontWeight: FontWeight.w800, letterSpacing: .6)),
-              if (a.safety) ...[const SizedBox(width: 8), Flexible(child: Pill('Safety floor', color: c.red))],
+              if (a.safety) ...[const SizedBox(width: 8), Flexible(child: Pill(tr('Safety floor'), color: c.red))],
               const Spacer(),
               Text(hhmm(a.t), style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
             ]),
@@ -130,9 +132,9 @@ class AlertCard extends StatelessWidget {
               decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(12)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('Likely real', style: T.caption.copyWith(color: c.label2)),
+                  Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
                   const Spacer(),
-                  Flexible(child: Text('${pct(a.p)} · sends at ${pct(a.tau)}', textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700, fontFeatures: T.num))),
+                  Flexible(child: Text(tr('{p} · sends at {tau}', {'p': pct(a.p), 'tau': pct(a.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700, fontFeatures: T.num))),
                 ]),
                 const SizedBox(height: 6),
                 ProbabilityBar(p: a.p, tau: a.tau, color: col),
@@ -143,7 +145,7 @@ class AlertCard extends StatelessWidget {
             const SizedBox(height: 10),
             Wrap(spacing: 6, runSpacing: 6, children: [
               for (final s in a.escalation)
-                Pill('${s.who} · ${s.what}', color: switch (s.who) { 'Doctor' => c.blue, 'Caregiver' => c.orange, 'SOS' => c.red, _ => null }),
+                Pill('${trData(s.who)} · ${s.what}', color: switch (s.who) { 'Doctor' => c.blue, 'Caregiver' => c.orange, 'SOS' => c.red, _ => null }),
             ]),
             const SizedBox(height: 4),
             Align(
@@ -154,7 +156,7 @@ class AlertCard extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(CupertinoIcons.sparkles, size: 16, color: c.indigo),
                   const SizedBox(width: 6),
-                  Text('See how AdaptAlert decided', style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
+                  Text(tr('See how AdaptAlert decided'), style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
                   Icon(CupertinoIcons.chevron_forward, size: 14, color: c.indigo),
                 ]),
               ),
@@ -182,9 +184,9 @@ class AlertActions extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const SizedBox(height: 12),
             if (staffMode)
-              Text(a.patientFeedback == null ? 'The patient hasn\'t answered yet.' : AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said you were', 'Patient said they were').replaceFirst('You said you', 'Patient said they').replaceFirst('You said the', 'Patient said the').replaceFirst('You weren\'t', 'Patient wasn\'t'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))
+              Text(a.patientFeedback == null ? tr('The patient hasn\'t answered yet.') : tr(AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said you were', 'Patient said they were').replaceFirst('You said you', 'Patient said they').replaceFirst('You said the', 'Patient said the').replaceFirst('You weren\'t', 'Patient wasn\'t')), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))
             else if (a.patientFeedback == null) ...[
-              Text('What was happening?', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+              Text(tr('What was happening?'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               GridView.count(
                 crossAxisCount: 2,
@@ -200,10 +202,10 @@ class AlertActions extends StatelessWidget {
                       onTap: () {
                         HapticFeedback.lightImpact();
                         m.feedback(a, k);
-                        toast(context, 'Thanks for the feedback', switch (k) {
-                          PatientFeedback.unwell => 'Your doctor has been told you feel unwell.',
-                          PatientFeedback.notSure => 'Your doctor will review it.',
-                          _ => 'AdaptAlert will learn from this.',
+                        toast(context, tr('Thanks for the feedback'), switch (k) {
+                          PatientFeedback.unwell => tr('Your doctor has been told you feel unwell.'),
+                          PatientFeedback.notSure => tr('Your doctor will review it.'),
+                          _ => tr('AdaptAlert will learn from this.'),
                         });
                       },
                       child: Container(
@@ -212,14 +214,14 @@ class AlertActions extends StatelessWidget {
                         child: Row(children: [
                           Text(emoji, style: const TextStyle(fontSize: 17)),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(label, style: T.footnote.copyWith(color: c.label, fontWeight: FontWeight.w600))),
+                          Expanded(child: Text(tr(label), style: T.footnote.copyWith(color: c.label, fontWeight: FontWeight.w600))),
                         ]),
                       ),
                     ),
                 ],
               ),
             ] else
-              Text(AlertCard.fbText[a.patientFeedback]!, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+              Text(tr(AlertCard.fbText[a.patientFeedback]!), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
             if (a.level >= 2 && !staffMode) ...[
               const SizedBox(height: 10),
               SizedBox(
@@ -229,11 +231,11 @@ class AlertActions extends StatelessWidget {
                   onPressed: () => Navigator.of(context).push(CupertinoPageRoute(
                     fullscreenDialog: true,
                     builder: (_) => AppointmentEditor(
-                      initial: Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: 'Follow-up after alert: ${a.title}', fromAlert: '${a.id}'),
+                      initial: Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: tr('Follow-up after alert: {title}', {'title': a.title}), fromAlert: '${a.id}'),
                       isNew: true,
                     ),
                   )),
-                  child: const Text('Book a follow-up'),
+                  child: Text(tr('Book a follow-up')),
                 ),
               ),
             ],
@@ -241,22 +243,22 @@ class AlertActions extends StatelessWidget {
             Divider(height: 1, color: c.sep),
             const SizedBox(height: 10),
             Row(children: [
-              Text('Doctor review', style: T.footnote.copyWith(color: c.label2)),
+              Text(tr('Doctor review'), style: T.footnote.copyWith(color: c.label2)),
               const Spacer(),
               switch (a.doctor) {
-                DoctorLabel.confirmed => Flexible(child: Pill('Confirmed real${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.red)),
-                DoctorLabel.rejected => Flexible(child: Pill('False alarm${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.green)),
-                DoctorLabel.pending => Pill('Pending', color: c.gray),
+                DoctorLabel.confirmed => Flexible(child: Pill('${tr('Confirmed real')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.red)),
+                DoctorLabel.rejected => Flexible(child: Pill('${tr('False alarm')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.green)),
+                DoctorLabel.pending => Pill(tr('Pending'), color: c.gray),
               },
             ]),
             if (a.doctor == DoctorLabel.pending) ...[
               const SizedBox(height: 8),
-              Text(staffMode ? 'Your review teaches AdaptAlert about this patient.' : 'Demo control: answer as $reviewer', style: T.caption.copyWith(color: c.label3)),
+              Text(staffMode ? tr('Your review teaches AdaptAlert about this patient.') : tr('Demo control: answer as {name}', {'name': reviewer}), style: T.caption.copyWith(color: c.label3)),
               const SizedBox(height: 6),
               Row(children: [
-                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.red, onPressed: () => _label(context, m, true), child: Text('Confirm real', style: TextStyle(color: c.red)))),
+                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.red, onPressed: () => _label(context, m, true), child: Text(tr('Confirm real'), style: TextStyle(color: c.red)))),
                 const SizedBox(width: 8),
-                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.green, onPressed: () => _label(context, m, false), child: Text('False alarm', style: TextStyle(color: c.green)))),
+                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.green, onPressed: () => _label(context, m, false), child: Text(tr('False alarm'), style: TextStyle(color: c.green)))),
               ]),
             ],
     ]);
@@ -265,7 +267,7 @@ class AlertActions extends StatelessWidget {
   void _label(BuildContext context, MonitorController m, bool real) {
     HapticFeedback.mediumImpact();
     m.doctorLabel(a, real, by: reviewer);
-    toast(context, real ? 'Confirmed as real' : 'Marked as a false alarm', real ? 'Similar patterns will alert sooner.' : 'Similar patterns will be held back. Safety limits still apply.');
+    toast(context, real ? tr('Confirmed as real') : tr('Marked as a false alarm'), real ? tr('Similar patterns will alert sooner.') : tr('Similar patterns will be held back. Safety limits still apply.'));
   }
 }
 
@@ -313,24 +315,24 @@ class _HeldCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('HELD BACK', style: T.caption.copyWith(color: c.indigo, fontWeight: FontWeight.w800, letterSpacing: .6)),
+              Text(tr('HELD BACK'), style: T.caption.copyWith(color: c.indigo, fontWeight: FontWeight.w800, letterSpacing: .6)),
               const Spacer(),
               Text(hhmm(h.t), style: T.caption.copyWith(color: c.label2)),
             ]),
             const SizedBox(height: 6),
             Text(bucketLabel(h.key), style: T.headline.copyWith(color: c.label)),
             const SizedBox(height: 6),
-            Text('Heart rate ${h.rec.r.hr} bpm, oxygen ${h.rec.r.spo2}%, temperature ${h.rec.r.temp.toStringAsFixed(1)} °C. Model said ${pct(h.pg)}; your history (${h.n.toStringAsFixed(1)} labels) said ${pct(h.pu)}.', style: T.footnote.copyWith(color: c.label2, height: 1.4)),
+            Text(tr('Heart rate {hr} bpm, oxygen {spo2}%, temperature {temp} °C. Model said {pg}; your history ({n} labels) said {pu}.', {'hr': h.rec.r.hr, 'spo2': h.rec.r.spo2, 'temp': h.rec.r.temp.toStringAsFixed(1), 'pg': pct(h.pg), 'n': h.n.toStringAsFixed(1), 'pu': pct(h.pu)}), style: T.footnote.copyWith(color: c.label2, height: 1.4)),
             const SizedBox(height: 10),
             Row(children: [
-              Text('Likely real', style: T.caption.copyWith(color: c.label2)),
+              Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
               const Spacer(),
-              Flexible(child: Text('${pct(h.p)} · needs ${pct(h.tau)}', textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700))),
+              Flexible(child: Text(tr('{p} · needs {tau}', {'p': pct(h.p), 'tau': pct(h.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700))),
             ]),
             const SizedBox(height: 6),
             ProbabilityBar(p: h.p, tau: h.tau, color: c.indigo),
             const SizedBox(height: 8),
-            Text('Not sent. If this gets worse, or hits a safety limit, AdaptAlert alerts right away.', style: T.caption.copyWith(color: c.label2)),
+            Text(tr('Not sent. If this gets worse, or hits a safety limit, AdaptAlert alerts right away.'), style: T.caption.copyWith(color: c.label2)),
           ]),
         ),
       ),

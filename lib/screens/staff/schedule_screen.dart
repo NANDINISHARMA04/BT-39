@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../services/clinical_store.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
@@ -33,8 +34,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final visits = cs.visitsOn(sel);
     final left = visits.where((v) => v.status == VisitStatus.upcoming).length;
     return LargeTitlePage(
-      title: 'Schedule',
-      subtitle: '${DateFormat('EEEE d MMMM').format(sel)} · ${visits.length} appointments${left > 0 ? ' · $left to see' : ''}',
+      title: tr('Schedule'),
+      subtitle: '${DateFormat('EEEE d MMMM').format(sel)} · ${tr('{n} appointments', {'n': visits.length})}${left > 0 ? ' · ${tr('{n} to see', {'n': left})}' : ''}',
       trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showBookSheet(context, null, day: sel), child: const Icon(CupertinoIcons.add_circled_solid, size: 28)),
       children: [
         SizedBox(
@@ -54,7 +55,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   width: 56,
                   decoration: BoxDecoration(color: on ? c.blue : c.card, borderRadius: BorderRadius.circular(16)),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(i == 1 ? 'Today' : DateFormat('EEE').format(d), style: T.caption.copyWith(color: on ? Colors.white : c.label2, fontWeight: FontWeight.w600)),
+                    Text(i == 1 ? tr('Today') : DateFormat('EEE').format(d), style: T.caption.copyWith(color: on ? Colors.white : c.label2, fontWeight: FontWeight.w600)),
                     Text('${d.day}', style: T.title3.copyWith(color: on ? Colors.white : c.label)),
                     Text(n == 0 ? '–' : '$n', style: T.caption.copyWith(color: on ? Colors.white70 : c.label3)),
                   ]),
@@ -65,11 +66,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         const SizedBox(height: 14),
         if (visits.isEmpty)
-          EmptyState(icon: CupertinoIcons.calendar, title: sel.weekday == DateTime.sunday ? 'Sunday: clinic closed' : 'No appointments', message: 'Tap + to book one.')
+          EmptyState(icon: CupertinoIcons.calendar, title: sel.weekday == DateTime.sunday ? tr('Sunday: clinic closed') : tr('No appointments'), message: tr('Tap + to book one.'))
         else
           GroupedList(children: [for (final v in visits) VisitRow(v: v)]),
         const SizedBox(height: 10),
-        Text('Visits patients book in PulseOS with you appear here too.', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        Text(tr('Visits patients book in PulseOS with you appear here too.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
     );
   }
@@ -91,8 +92,8 @@ class VisitRow extends StatelessWidget {
         ]),
       ),
       title: v.patientName,
-      subtitle: '${v.video ? 'Video' : 'Clinic'} · ${v.reason}',
-      trailing: Pill(visitStatusLabel[v.status]!, color: visitColor(context, v.status)),
+      subtitle: '${v.video ? tr('Video') : tr('Clinic')} · ${trData(v.reason)}',
+      trailing: Pill(tr(visitStatusLabel[v.status]!), color: visitColor(context, v.status)),
       onTap: () => showVisitSheet(context, v),
     );
   }
@@ -105,7 +106,7 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
     Future<void> set(VisitStatus s, {String note = ''}) async {
       await cs.setVisitStatus(v, s, note: note);
       if (ctx.mounted) Navigator.pop(ctx);
-      if (context.mounted) toast(context, visitStatusLabel[s]!, s == VisitStatus.completed ? 'Your consultation note is in ${v.patientName.split(' ').first}\'s notes.' : null);
+      if (context.mounted) toast(context, tr(visitStatusLabel[s]!), s == VisitStatus.completed ? tr('Your consultation note is in {name}\'s notes.', {'name': v.patientName.split(' ').first}) : null);
     }
 
     return Padding(
@@ -117,28 +118,28 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(v.patientName, style: T.title3.copyWith(color: c.label)),
-              Text('${DateFormat('EEE d MMM, h:mm a').format(v.at)} · ${v.video ? 'Video consult' : 'In clinic'}', style: T.footnote.copyWith(color: c.label2)),
+              Text('${DateFormat('EEE d MMM, h:mm a').format(v.at)} · ${v.video ? tr('Video consult') : tr('In clinic')}', style: T.footnote.copyWith(color: c.label2)),
             ]),
           ),
-          Pill(visitStatusLabel[v.status]!, color: visitColor(ctx, v.status)),
+          Pill(tr(visitStatusLabel[v.status]!), color: visitColor(ctx, v.status)),
         ]),
         const SizedBox(height: 14),
-        IOSCard(child: Text(v.reason, style: T.body.copyWith(color: c.label))),
-        if (v.bookedByPatient) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Booked by the patient in the PulseOS app.', style: T.caption.copyWith(color: c.label2))),
+        IOSCard(child: Text(trData(v.reason), style: T.body.copyWith(color: c.label))),
+        if (v.bookedByPatient) Padding(padding: const EdgeInsets.only(top: 8), child: Text(tr('Booked by the patient in the PulseOS app.'), style: T.caption.copyWith(color: c.label2))),
         const SizedBox(height: 14),
         CupertinoButton.tinted(
           onPressed: () {
             Navigator.pop(ctx);
             openPatient(context, v.patientId);
           },
-          child: const Text('Open patient record'),
+          child: Text(tr('Open patient record')),
         ),
         if (v.status == VisitStatus.upcoming) ...[
           if (v.video) ...[
             const SizedBox(height: 8),
             CupertinoButton.tinted(
-              onPressed: () => toast(ctx, 'Video consult', 'In a full deployment this opens the video call with ${v.patientName.split(' ').first}.'),
-              child: const Text('Start video consult'),
+              onPressed: () => toast(ctx, tr('Video consult'), tr('In a full deployment this opens the video call with {name}.', {'name': v.patientName.split(' ').first})),
+              child: Text(tr('Start video consult')),
             ),
           ],
           const SizedBox(height: 8),
@@ -148,23 +149,23 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
               final ok = await showCupertinoDialog<bool>(
                 context: ctx,
                 builder: (d) => CupertinoAlertDialog(
-                  title: const Text('Consultation note'),
-                  content: Padding(padding: const EdgeInsets.only(top: 10), child: CupertinoTextField(controller: note, placeholder: 'Findings and plan', maxLines: 4)),
+                  title: Text(tr('Consultation note')),
+                  content: Padding(padding: const EdgeInsets.only(top: 10), child: CupertinoTextField(controller: note, placeholder: tr('Findings and plan'), maxLines: 4)),
                   actions: [
-                    CupertinoDialogAction(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-                    CupertinoDialogAction(isDefaultAction: true, onPressed: () => Navigator.pop(d, true), child: const Text('Complete')),
+                    CupertinoDialogAction(onPressed: () => Navigator.pop(d, false), child: Text(tr('Cancel'))),
+                    CupertinoDialogAction(isDefaultAction: true, onPressed: () => Navigator.pop(d, true), child: Text(tr('Complete'))),
                   ],
                 ),
               );
               if (ok == true) await set(VisitStatus.completed, note: note.text);
               note.dispose();
             },
-            child: const Text('Mark as seen'),
+            child: Text(tr('Mark as seen')),
           ),
           const SizedBox(height: 4),
           Row(children: [
-            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.noShow), child: Text('No-show', style: TextStyle(color: c.orange)))),
-            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.cancelled), child: Text('Cancel visit', style: TextStyle(color: c.red)))),
+            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.noShow), child: Text(tr('No-show'), style: TextStyle(color: c.orange)))),
+            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.cancelled), child: Text(tr('Cancel visit'), style: TextStyle(color: c.red)))),
           ]),
         ],
       ]),
@@ -200,33 +201,33 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
         padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.viewInsetsOf(ctx).bottom),
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(p == null ? 'Book a visit' : 'Book a visit with ${p!.name}', style: T.title3.copyWith(color: c.label)),
+            Text(p == null ? tr('Book a visit') : tr('Book a visit with {name}', {'name': p!.name}), style: T.title3.copyWith(color: c.label)),
             if (patient == null) ...[
               const SizedBox(height: 12),
-              Text('PATIENT', style: T.footnote.copyWith(color: c.label2)),
+              Text(tr('PATIENT'), style: T.footnote.copyWith(color: c.label2)),
               const SizedBox(height: 6),
               Wrap(children: [for (final x in cs.patients) chip(x.name, p?.id == x.id, () => set(() => p = x))]),
             ],
             const SizedBox(height: 12),
-            Text('DAY', style: T.footnote.copyWith(color: c.label2)),
+            Text(tr('DAY'), style: T.footnote.copyWith(color: c.label2)),
             const SizedBox(height: 6),
             Wrap(children: [
               for (final x in days)
-                chip(DateUtils.isSameDay(x, now) ? 'Today' : DateFormat('EEE d').format(x), DateUtils.isSameDay(x, d), () => set(() {
+                chip(DateUtils.isSameDay(x, now) ? tr('Today') : DateFormat('EEE d').format(x), DateUtils.isSameDay(x, d), () => set(() {
                       d = x;
                       slot = null;
                     })),
             ]),
             const SizedBox(height: 6),
-            Text('TIME', style: T.footnote.copyWith(color: c.label2)),
+            Text(tr('TIME'), style: T.footnote.copyWith(color: c.label2)),
             const SizedBox(height: 6),
-            if (slots.isEmpty) Text('No free slots left on this day.', style: T.footnote.copyWith(color: c.label2)) else Wrap(children: [for (final s in slots) chip(DateFormat('h:mm a').format(s), slot == s, () => set(() => slot = s))]),
+            if (slots.isEmpty) Text(tr('No free slots left on this day.'), style: T.footnote.copyWith(color: c.label2)) else Wrap(children: [for (final s in slots) chip(DateFormat('h:mm a').format(s), slot == s, () => set(() => slot = s))]),
             const SizedBox(height: 6),
-            CupertinoSlidingSegmentedControl<bool>(groupValue: video, children: const {false: Text('In clinic'), true: Text('Video')}, onValueChanged: (v) => set(() => video = v ?? false)),
+            CupertinoSlidingSegmentedControl<bool>(groupValue: video, children: {false: Text(tr('In clinic')), true: Text(tr('Video'))}, onValueChanged: (v) => set(() => video = v ?? false)),
             const SizedBox(height: 12),
             CupertinoTextField(
               controller: reason,
-              placeholder: 'Reason, e.g. Follow-up after alert',
+              placeholder: tr('Reason, e.g. Follow-up after alert'),
               padding: const EdgeInsets.all(12),
               style: T.body.copyWith(color: c.label),
               decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
@@ -240,9 +241,9 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
                     : () async {
                         await cs.book(p!, slot!, reason.text, video: video);
                         if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) toast(context, 'Visit booked', '${p!.name}, ${DateFormat('EEE d MMM, h:mm a').format(slot!)}');
+                        if (context.mounted) toast(context, tr('Visit booked'), '${p!.name}, ${DateFormat('EEE d MMM, h:mm a').format(slot!)}');
                       },
-                child: const Text('Book visit'),
+                child: Text(tr('Book visit')),
               ),
             ),
           ]),

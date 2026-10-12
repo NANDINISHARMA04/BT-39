@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
+import '../../l10n/l10n.dart';
 import '../../models/patient_models.dart';
 import '../../services/monitor.dart';
 import '../../services/narrator.dart';
@@ -37,10 +38,10 @@ class TodayScreen extends StatelessWidget {
     final r = m.last;
     final e = m.engine;
     return LargeTitlePage(
-      title: 'Today',
+      title: tr('Today'),
       subtitle: '${DateFormat('EEEE, d MMMM').format(DateTime.now())} · ${store.profile.name}',
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        _NavIcon(icon: CupertinoIcons.slider_horizontal_3, label: 'Simulate', onTap: () => showSimulator(context)),
+        _NavIcon(icon: CupertinoIcons.slider_horizontal_3, label: tr('Simulate'), onTap: () => showSimulator(context)),
         const SizedBox(width: 8),
         Pressable(
           onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen())),
@@ -74,8 +75,8 @@ class TodayScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Watch the guided demo', style: T.headline.copyWith(color: c.label)),
-                    Text('With a voice guide: walk, loose band, coffee, a real emergency, and how AdaptAlert learns.', style: T.footnote.copyWith(color: c.label2)),
+                    Text(tr('Watch the guided demo'), style: T.headline.copyWith(color: c.label)),
+                    Text(tr('With a voice guide: walk, loose band, coffee, a real emergency, and how AdaptAlert learns.'), style: T.footnote.copyWith(color: c.label2)),
                   ]),
                 ),
                 Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
@@ -99,14 +100,14 @@ class TodayScreen extends StatelessWidget {
           FadeIn(
             delay: 160,
             child: Row(children: [
-              Expanded(child: _BarsCard(title: 'Activity', icon: CupertinoIcons.flame_fill, color: c.green, value: r.act, bars: e.history.reversed.take(12).toList().reversed.map((h) => h.r.motion / .8).toList(), colorFor: (i, v) => v >= .56 ? c.green : v >= .19 ? c.green.withValues(alpha: .55) : c.fill2)),
+              Expanded(child: _BarsCard(title: tr('Activity'), icon: CupertinoIcons.flame_fill, color: c.green, value: tr(r.act), bars: e.history.reversed.take(12).toList().reversed.map((h) => h.r.motion / .8).toList(), colorFor: (i, v) => v >= .56 ? c.green : v >= .19 ? c.green.withValues(alpha: .55) : c.fill2)),
               const SizedBox(width: 12),
               Expanded(
                 child: _BarsCard(
-                  title: 'Signal',
+                  title: tr('Signal'),
                   icon: CupertinoIcons.waveform,
                   color: c.teal,
-                  value: r.good ? (r.sqi >= .85 ? 'Excellent' : 'Good') : 'Poor',
+                  value: tr(r.good ? (r.sqi >= .85 ? 'Excellent' : 'Good') : 'Poor'),
                   bars: e.history.reversed.take(12).toList().reversed.map((h) => h.sqi).toList(),
                   colorFor: (i, v) => v >= e.sqiMin ? c.teal : c.gray,
                 ),
@@ -115,11 +116,11 @@ class TodayScreen extends StatelessWidget {
           ),
         ],
         FadeIn(delay: 200, child: const _AssistantCard()),
-        SectionHeader('Latest alert', trailing: e.alerts.isEmpty ? null : 'See all', onTrailing: () => TabSwitcher.of(context, PatientTab.alerts)),
+        SectionHeader(tr('Latest alert'), trailing: e.alerts.isEmpty ? null : tr('See all'), onTrailing: () => TabSwitcher.of(context, PatientTab.alerts)),
         FadeIn(
           delay: 240,
           child: e.alerts.isEmpty
-              ? IOSCard(child: Text('No alerts today.', style: T.sub.copyWith(color: c.label2)))
+              ? IOSCard(child: Text(tr('No alerts today.'), style: T.sub.copyWith(color: c.label2)))
               : IOSCard(
                   padding: EdgeInsets.zero,
                   child: IOSRow(
@@ -131,26 +132,26 @@ class TodayScreen extends StatelessWidget {
                   ),
                 ),
         ),
-        SectionHeader('Next appointment', trailing: 'Care', onTrailing: () => TabSwitcher.of(context, PatientTab.care)),
+        SectionHeader(tr('Next appointment'), trailing: tr('Care'), onTrailing: () => TabSwitcher.of(context, PatientTab.care)),
         FadeIn(delay: 280, child: _NextAppt(appt: store.upcoming.firstOrNull)),
-        const SectionHeader('Quick actions'),
+        SectionHeader(tr('Quick actions')),
         FadeIn(
           delay: 320,
           child: Row(children: [
-            _Quick(icon: CupertinoIcons.calendar_badge_plus, label: 'Book', color: c.blue, onTap: () => TabSwitcher.of(context, PatientTab.care)),
-            _Quick(icon: CupertinoIcons.doc_text_fill, label: 'Records', color: c.teal, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const RecordsScreen()))),
-            _Quick(icon: CupertinoIcons.shield_lefthalf_fill, label: 'Insurance', color: c.green, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const InsuranceScreen()))),
-            _Quick(icon: CupertinoIcons.person_3_fill, label: 'Family', color: c.orange, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const FamilyScreen()))),
+            _Quick(icon: CupertinoIcons.calendar_badge_plus, label: tr('Book'), color: c.blue, onTap: () => TabSwitcher.of(context, PatientTab.care)),
+            _Quick(icon: CupertinoIcons.doc_text_fill, label: tr('Records'), color: c.teal, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const RecordsScreen()))),
+            _Quick(icon: CupertinoIcons.shield_lefthalf_fill, label: tr('Insurance'), color: c.green, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const InsuranceScreen()))),
+            _Quick(icon: CupertinoIcons.person_3_fill, label: tr('Family'), color: c.orange, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const FamilyScreen()))),
           ]),
         ),
         if (store.profile.medications.isNotEmpty) ...[
-          SectionHeader('Medicines', trailing: '${store.profile.medications.length}'),
+          SectionHeader(tr('Medicines'), trailing: '${store.profile.medications.length}'),
           GroupedList(children: [
-            for (final med in store.profile.medications) IOSRow(icon: CupertinoIcons.capsule_fill, iconColor: c.purple, title: '${med.name} ${med.dose}', subtitle: med.schedule, chevron: false),
+            for (final med in store.profile.medications) IOSRow(icon: CupertinoIcons.capsule_fill, iconColor: c.purple, title: '${med.name} ${med.dose}', subtitle: trData(med.schedule), chevron: false),
           ]),
         ],
         const SizedBox(height: 16),
-        Text('Vitals come from a simulated band in this build. Student research prototype, not a medical device.', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        Text(tr('Vitals come from a simulated band in this build. Student research prototype, not a medical device.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
     );
   }
@@ -163,10 +164,10 @@ void openInsights(BuildContext context, String vital) {
 }
 
 String alertStatusText(HealthAlert a) {
-  if (a.doctor == DoctorLabel.confirmed) return 'Confirmed real by your doctor';
-  if (a.doctor == DoctorLabel.rejected) return 'Marked false alarm by your doctor';
-  if (a.patientFeedback != null) return 'Waiting for your doctor';
-  return 'Waiting for your reply';
+  if (a.doctor == DoctorLabel.confirmed) return tr('Confirmed real by your doctor');
+  if (a.doctor == DoctorLabel.rejected) return tr('Marked false alarm by your doctor');
+  if (a.patientFeedback != null) return tr('Waiting for your doctor');
+  return tr('Waiting for your reply');
 }
 
 class _NavIcon extends StatelessWidget {
@@ -209,11 +210,11 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final c = context.ios;
     final (cols, tag, title, text) = switch (widget.status) {
-      'watch' => ([c.orange, c.yellow, c.pink], 'Live · watching', 'Keeping an eye on it', 'Something is a little off. AdaptAlert waits 3 minutes to see if it lasts before deciding.'),
-      'held' => ([c.indigo, c.blue, c.teal], 'Live · learned pattern', 'No alert needed', 'This looks like a pattern you and your doctor marked harmless before. Safety limits still apply.'),
-      'alert' => ([c.red, c.orange, c.pink], 'Live · alert sent', 'Alert sent', 'Open Alerts to see why, and tell AdaptAlert how you feel.'),
-      'band' => ([c.gray, c.teal, c.indigo], 'Live · signal lost', 'Check your band', 'The sensor isn\'t reading well. These readings are ignored, so they can\'t cause false alarms.'),
-      _ => ([c.green, c.teal, c.blue], 'Live · band connected', 'All clear', 'Your vitals are inside your personal normal range.'),
+      'watch' => ([c.orange, c.yellow, c.pink], tr('Live · watching'), tr('Keeping an eye on it'), tr('Something is a little off. AdaptAlert waits 3 minutes to see if it lasts before deciding.')),
+      'held' => ([c.indigo, c.blue, c.teal], tr('Live · learned pattern'), tr('No alert needed'), tr('This looks like a pattern you and your doctor marked harmless before. Safety limits still apply.')),
+      'alert' => ([c.red, c.orange, c.pink], tr('Live · alert sent'), tr('Alert sent'), tr('Open Alerts to see why, and tell AdaptAlert how you feel.')),
+      'band' => ([c.gray, c.teal, c.indigo], tr('Live · signal lost'), tr('Check your band'), tr('The sensor isn\'t reading well. These readings are ignored, so they can\'t cause false alarms.')),
+      _ => ([c.green, c.teal, c.blue], tr('Live · band connected'), tr('All clear'), tr('Your vitals are inside your personal normal range.')),
     };
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -247,8 +248,8 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
               const SizedBox(height: 12),
               Wrap(spacing: 6, runSpacing: 6, children: [
                 if (widget.r != null) _GlassChip(hhmm(widget.r!.t)),
-                if (widget.r != null) _GlassChip(widget.r!.act),
-                _GlassChip('Sensitivity ${pct(widget.tau)}'),
+                if (widget.r != null) _GlassChip(tr(widget.r!.act)),
+                _GlassChip(tr('Sensitivity {pct}', {'pct': pct(widget.tau)})),
               ]),
             ]),
           ),
@@ -329,12 +330,12 @@ class _HeartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    final ctx = r.ctx == 'rest' ? 'resting' : r.act == 'Cooling down' ? 'cooling down' : r.ctx == 'light' ? 'light activity' : 'active';
+    final ctx = tr(r.ctx == 'rest' ? 'resting' : r.act == 'Cooling down' ? 'cooling down' : r.ctx == 'light' ? 'light activity' : 'active');
     final big = T.largeTitle.copyWith(fontSize: 44, color: c.label, letterSpacing: -1.2);
     return IOSCard(
       onTap: () => openInsights(context, 'hr'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _CardTitle(BeatingHeart(bpm: r.good ? r.r.hr : 70, color: c.pink), 'Heart Rate', c.pink, trailing: 'now'),
+        _CardTitle(BeatingHeart(bpm: r.good ? r.r.hr : 70, color: c.pink), tr('Heart Rate'), c.pink, trailing: tr('now')),
         const SizedBox(height: 8),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           AnimatedNumber(r.good ? r.r.hr.toDouble() : null, style: big),
@@ -344,7 +345,7 @@ class _HeartCard extends StatelessWidget {
         ]),
         const SizedBox(height: 6),
         Text.rich(TextSpan(style: T.caption.copyWith(color: c.label2), children: [
-          TextSpan(text: 'Your normal ($ctx): '),
+          TextSpan(text: tr('Your normal ({ctx}): ', {'ctx': ctx})),
           TextSpan(text: '${(r.mu['hr']! - 2 * r.sd['hr']!).round()}–${(r.mu['hr']! + 2 * r.sd['hr']!).round()} bpm', style: TextStyle(color: c.label, fontWeight: FontWeight.w600)),
         ])),
       ]),
@@ -362,7 +363,7 @@ class _SpO2Card extends StatelessWidget {
     return IOSCard(
       onTap: () => openInsights(context, 'spo2'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _CardTitle(Icon(CupertinoIcons.drop_fill, size: 17, color: c.blue), 'Oxygen', c.blue),
+        _CardTitle(Icon(CupertinoIcons.drop_fill, size: 17, color: c.blue), tr('Oxygen'), c.blue),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(
@@ -374,7 +375,7 @@ class _SpO2Card extends StatelessWidget {
           Ring(value: r.good ? (r.r.spo2 - 85) / 15 : 0, color: low ? c.red : c.blue, size: 54, stroke: 7),
         ]),
         const SizedBox(height: 6),
-        Text('Normal ${min(100, r.mu['spo2']! - 2 * r.sd['spo2']!).round()}–100%', style: T.caption.copyWith(color: c.label2)),
+        Text(tr('Normal {range}', {'range': '${min(100, r.mu['spo2']! - 2 * r.sd['spo2']!).round()}–100%'}), style: T.caption.copyWith(color: c.label2)),
       ]),
     );
   }
@@ -391,7 +392,7 @@ class _TempCard extends StatelessWidget {
     return IOSCard(
       onTap: () => openInsights(context, 'temp'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _CardTitle(Icon(CupertinoIcons.thermometer, size: 17, color: c.orange), 'Temp', c.orange),
+        _CardTitle(Icon(CupertinoIcons.thermometer, size: 17, color: c.orange), tr('Temp'), c.orange),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(
@@ -414,7 +415,7 @@ class _TempCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 6),
-        Text('Normal ${fmtTemp(r.mu['temp']! - 2 * r.sd['temp']!, fahrenheit, unit: false)}–${fmtTemp(r.mu['temp']! + 2 * r.sd['temp']!, fahrenheit)}', style: T.caption.copyWith(color: c.label2)),
+        Text(tr('Normal {range}', {'range': '${fmtTemp(r.mu['temp']! - 2 * r.sd['temp']!, fahrenheit, unit: false)}–${fmtTemp(r.mu['temp']! + 2 * r.sd['temp']!, fahrenheit)}'}), style: T.caption.copyWith(color: c.label2)),
       ]),
     );
   }
@@ -464,8 +465,8 @@ class _AssistantCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('AI Health Assistant', style: T.headline.copyWith(color: c.label)),
-                Text('Ask about your vitals, alerts, medicines or appointments', style: T.footnote.copyWith(color: c.label2)),
+                Text(tr('AI Health Assistant'), style: T.headline.copyWith(color: c.label)),
+                Text(tr('Ask about your vitals, alerts, medicines or appointments'), style: T.footnote.copyWith(color: c.label2)),
               ]),
             ),
             Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
@@ -482,7 +483,7 @@ class _AssistantCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(color: c.indigo.withValues(alpha: .12), borderRadius: BorderRadius.circular(99)),
-                      child: Text(q, style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
+                      child: Text(tr(q), style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ),
@@ -501,7 +502,7 @@ class _NextAppt extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final a = appt;
-    if (a == null) return IOSCard(onTap: () => TabSwitcher.of(context, PatientTab.care), child: Text('No upcoming appointments. Tap to book one.', style: T.sub.copyWith(color: c.label2)));
+    if (a == null) return IOSCard(onTap: () => TabSwitcher.of(context, PatientTab.care), child: Text(tr('No upcoming appointments. Tap to book one.'), style: T.sub.copyWith(color: c.label2)));
     final d = doctorById(a.doctorId);
     final store = context.read<PatientStore>();
     return IOSCard(
@@ -520,11 +521,11 @@ class _NextAppt extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(d.name, style: T.headline.copyWith(color: c.label)),
-            Text('${d.specialty} · ${DateFormat('EEE, h:mm a').format(a.at)}', style: T.footnote.copyWith(color: c.label2)),
+            Text('${trData(d.specialty)} · ${DateFormat('EEE, h:mm a').format(a.at)}', style: T.footnote.copyWith(color: c.label2)),
             const SizedBox(height: 6),
             Wrap(spacing: 6, children: [
-              Pill(a.mode == ApptMode.video ? 'Video' : 'In clinic', icon: a.mode == ApptMode.video ? CupertinoIcons.video_camera_solid : CupertinoIcons.building_2_fill, color: c.blue),
-              if (a.forMember != 'self') Pill('For ${store.memberName(a.forMember).split(' ').first}', color: c.orange),
+              Pill(tr(a.mode == ApptMode.video ? 'Video' : 'In clinic'), icon: a.mode == ApptMode.video ? CupertinoIcons.video_camera_solid : CupertinoIcons.building_2_fill, color: c.blue),
+              if (a.forMember != 'self') Pill(tr('For {name}', {'name': store.memberName(a.forMember).split(' ').first}), color: c.orange),
             ]),
           ]),
         ),

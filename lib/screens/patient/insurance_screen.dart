@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/patient_models.dart';
 import '../../services/patient_store.dart';
 import '../../theme/ios_theme.dart';
@@ -24,27 +25,27 @@ class InsuranceScreen extends StatelessWidget {
     final c = context.ios;
     final store = context.watch<PatientStore>();
     return LargeTitlePage(
-      title: 'Insurance',
-      previousTitle: 'Back',
-      subtitle: 'Policies, cover left and claims',
+      title: tr('Insurance'),
+      previousTitle: tr('Back'),
+      subtitle: tr('Policies, cover left and claims'),
       trailing: Semantics(
-        label: 'Add policy',
+        label: tr('Add policy'),
         button: true,
         child: Pressable(onTap: () => _editPolicy(context, null), child: Icon(CupertinoIcons.add_circled_solid, color: c.blue, size: 28)),
       ),
       children: [
         if (store.policies.isEmpty)
-          EmptyState(icon: CupertinoIcons.shield, color: c.green, title: 'No policy yet', message: 'Add your health insurance to track cover and claims.', action: 'Add a policy', onAction: () => _editPolicy(context, null)),
+          EmptyState(icon: CupertinoIcons.shield, color: c.green, title: tr('No policy yet'), message: tr('Add your health insurance to track cover and claims.'), action: tr('Add a policy'), onAction: () => _editPolicy(context, null)),
         for (final (i, p) in store.policies.indexed) FadeIn(delay: i * 60, child: _PolicyCard(p: p)),
         if (store.policies.isNotEmpty) ...[
-          SectionHeader('Claims', trailing: 'New claim', onTrailing: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const ClaimEditor()))),
+          SectionHeader(tr('Claims'), trailing: tr('New claim'), onTrailing: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const ClaimEditor()))),
           if (store.claims.isEmpty)
-            IOSCard(child: Text('No claims yet.', style: T.sub.copyWith(color: c.label2)))
+            IOSCard(child: Text(tr('No claims yet.'), style: T.sub.copyWith(color: c.label2)))
           else
             for (final (i, cl) in store.claims.indexed) FadeIn(delay: i * 50, child: _ClaimCard(cl: cl)),
         ],
         const SizedBox(height: 8),
-        Text('Insurer updates are simulated in the demo. Tap “Simulate insurer update” on a claim to move it forward.', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        Text(tr('Insurer updates are simulated in the demo. Tap “Simulate insurer update” on a claim to move it forward.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
     );
   }
@@ -78,11 +79,11 @@ class _PolicyCard extends StatelessWidget {
               const Icon(CupertinoIcons.shield_lefthalf_fill, color: Colors.white),
               const SizedBox(width: 8),
               Expanded(child: Text(p.insurer, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17))),
-              if (p.cashless) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(99)), child: const Text('Cashless', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
+              if (p.cashless) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(99)), child: Text(tr('Cashless'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
             ]),
             Text(p.plan, style: const TextStyle(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 18),
-            const Text('Cover left', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(tr('Cover left'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
             Text(rupees(left), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.5, fontFeatures: T.num)),
             const SizedBox(height: 8),
             ClipRRect(
@@ -95,14 +96,14 @@ class _PolicyCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('${rupees(used)} used of ${rupees(p.sumInsured)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(tr('{used} used of {total}', {'used': rupees(used), 'total': rupees(p.sumInsured)}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
             const SizedBox(height: 14),
             Row(children: [
               Expanded(child: Text(p.policyNo, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 1, fontFeatures: T.num))),
-              Text(daysLeft >= 0 ? 'Renews in $daysLeft days' : 'Expired', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(daysLeft >= 0 ? tr('Renews in {n} days', {'n': daysLeft}) : tr('Expired'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ]),
             const SizedBox(height: 4),
-            Text('Covers ${p.members.map(store.memberName).join(', ')}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(tr('Covers {names}', {'names': p.members.map((id) => trData(store.memberName(id))).join(', ')}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ]),
         ),
       ),
@@ -124,14 +125,14 @@ class _ClaimCard extends StatelessWidget {
       child: IOSCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text(cl.title, style: T.headline.copyWith(color: c.label))),
-            Pill(claimStatusLabel[cl.status]!, color: claimColor(context, cl.status)),
+            Expanded(child: Text(trData(cl.title), style: T.headline.copyWith(color: c.label))),
+            Pill(tr(claimStatusLabel[cl.status]!), color: claimColor(context, cl.status)),
           ]),
-          Text('${cl.hospital} · ${store.memberName(cl.forMember)} · filed ${DateFormat('d MMM').format(cl.filed)}', style: T.footnote.copyWith(color: c.label2)),
+          Text('${cl.hospital} · ${trData(store.memberName(cl.forMember))} · ${tr('filed {date}', {'date': DateFormat('d MMM').format(cl.filed)})}', style: T.footnote.copyWith(color: c.label2)),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _Amt('Claimed', rupees(cl.amount))),
-            Expanded(child: _Amt('Approved', cl.approved == null ? '—' : rupees(cl.approved!))),
+            Expanded(child: _Amt(tr('Claimed'), rupees(cl.amount))),
+            Expanded(child: _Amt(tr('Approved'), cl.approved == null ? '—' : rupees(cl.approved!))),
           ]),
           const SizedBox(height: 14),
           Row(children: [
@@ -146,28 +147,28 @@ class _ClaimCard extends StatelessWidget {
                     child: i <= idx ? Icon(cl.status == ClaimStatus.rejected && i == idx ? CupertinoIcons.xmark : CupertinoIcons.checkmark_alt, size: 13, color: Colors.white) : null,
                   ),
                   const SizedBox(height: 4),
-                  Text(cl.status == ClaimStatus.rejected && i == idx ? 'Rejected' : claimStatusLabel[steps[i]]!, textAlign: TextAlign.center, style: T.caption.copyWith(color: i <= idx ? c.label : c.label3, fontSize: 10.5)),
+                  Text(cl.status == ClaimStatus.rejected && i == idx ? tr('Rejected') : tr(claimStatusLabel[steps[i]]!), textAlign: TextAlign.center, style: T.caption.copyWith(color: i <= idx ? c.label : c.label3, fontSize: 10.5)),
                 ]),
               ),
             ],
           ]),
           if (cl.timeline.any((e) => e.note.isNotEmpty)) ...[
             const SizedBox(height: 10),
-            for (final e in cl.timeline.where((e) => e.note.isNotEmpty)) Text('• ${DateFormat('d MMM').format(e.at)}: ${e.note}', style: T.caption.copyWith(color: c.label2)),
+            for (final e in cl.timeline.where((e) => e.note.isNotEmpty)) Text('• ${DateFormat('d MMM').format(e.at)}: ${trData(e.note)}', style: T.caption.copyWith(color: c.label2)),
           ],
           const SizedBox(height: 10),
           Row(children: [
             if (cl.status != ClaimStatus.paid && cl.status != ClaimStatus.rejected)
-              Flexible(child: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => store.advanceClaim(cl), child: Text('Simulate insurer update', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.footnote.copyWith(color: c.blue)))),
+              Flexible(child: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => store.advanceClaim(cl), child: Text(tr('Simulate insurer update'), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.footnote.copyWith(color: c.blue)))),
             const Spacer(),
-            CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => ClaimEditor(claim: cl))), child: Text('Edit', style: T.footnote.copyWith(color: c.blue))),
+            CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => ClaimEditor(claim: cl))), child: Text(tr('Edit'), style: T.footnote.copyWith(color: c.blue))),
             const SizedBox(width: 16),
             CupertinoButton(
               padding: EdgeInsets.zero,
               onPressed: () async {
-                if (await confirm(context, title: 'Delete claim?', message: cl.title, action: 'Delete')) store.deleteClaim(cl.id);
+                if (await confirm(context, title: tr('Delete claim?'), message: trData(cl.title), action: tr('Delete'))) store.deleteClaim(cl.id);
               },
-              child: Text('Delete', style: T.footnote.copyWith(color: c.red)),
+              child: Text(tr('Delete'), style: T.footnote.copyWith(color: c.red)),
             ),
           ]),
         ]),
@@ -217,42 +218,42 @@ class _PolicyEditorState extends State<PolicyEditor> {
       backgroundColor: c.bg,
       appBar: CupertinoNavigationBar(
         backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        middle: Text(p == null ? 'Add policy' : 'Edit policy'),
+        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
+        middle: Text(p == null ? tr('Add policy') : tr('Edit policy')),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () {
             final sum = int.tryParse(_sum.text.replaceAll(RegExp(r'[^0-9]'), ''));
-            if (_insurer.text.trim().isEmpty || _no.text.trim().isEmpty || sum == null) return toast(context, 'Fill in insurer, policy number and sum insured');
+            if (_insurer.text.trim().isEmpty || _no.text.trim().isEmpty || sum == null) return toast(context, tr('Fill in insurer, policy number and sum insured'));
             store.upsertPolicy(InsurancePolicy(
               id: p?.id ?? store.newId(), insurer: _insurer.text.trim(), plan: _plan.text.trim(), policyNo: _no.text.trim(), sumInsured: sum, validTill: _valid,
               members: _members.toList(), cashless: _cashless, premium: int.tryParse(_premium.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
             ));
             Navigator.pop(context);
-            toast(context, p == null ? 'Policy added' : 'Policy updated');
+            toast(context, p == null ? tr('Policy added') : tr('Policy updated'));
           },
-          child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
-        FormGroup(header: 'Policy', children: [
-          FormField2(label: 'Insurer', controller: _insurer, hint: 'e.g. Star Health'),
-          FormField2(label: 'Plan', controller: _plan, hint: 'Plan name'),
-          FormField2(label: 'Policy no.', controller: _no, hint: 'From your policy card'),
-          FormField2(label: 'Sum insured', controller: _sum, hint: '₹', keyboard: TextInputType.number),
-          FormField2(label: 'Premium', controller: _premium, hint: '₹ per year', keyboard: TextInputType.number),
+        FormGroup(header: tr('Policy'), children: [
+          FormField2(label: tr('Insurer'), controller: _insurer, hint: tr('e.g. Star Health')),
+          FormField2(label: tr('Plan'), controller: _plan, hint: tr('Plan name')),
+          FormField2(label: tr('Policy no.'), controller: _no, hint: tr('From your policy card')),
+          FormField2(label: tr('Sum insured'), controller: _sum, hint: '₹', keyboard: TextInputType.number),
+          FormField2(label: tr('Premium'), controller: _premium, hint: tr('₹ per year'), keyboard: TextInputType.number),
           IOSRow(
-            title: 'Valid till',
+            title: tr('Valid till'),
             trailing: Text(DateFormat('d MMM y').format(_valid), style: T.sub.copyWith(color: c.label2)),
             onTap: () => showCupertinoModalPopup(
               context: context,
               builder: (_) => Container(height: 260, color: c.card, child: CupertinoDatePicker(mode: CupertinoDatePickerMode.date, initialDateTime: _valid, onDateTimeChanged: (d) => setState(() => _valid = d))),
             ),
           ),
-          IOSRow(title: 'Cashless network', trailing: CupertinoSwitch(value: _cashless, onChanged: (v) => setState(() => _cashless = v)), chevron: false),
+          IOSRow(title: tr('Cashless network'), trailing: CupertinoSwitch(value: _cashless, onChanged: (v) => setState(() => _cashless = v)), chevron: false),
         ]),
-        FormGroup(header: 'Who is covered', children: [
-          for (final (id, name) in [('self', 'Me'), ...store.family.map((m) => (m.id, m.name))])
+        FormGroup(header: tr('Who is covered'), children: [
+          for (final (id, name) in [('self', tr('Me')), ...store.family.map((m) => (m.id, m.name))])
             IOSRow(
               title: name,
               trailing: _members.contains(id) ? Icon(CupertinoIcons.checkmark_alt, color: c.blue) : null,
@@ -264,12 +265,12 @@ class _PolicyEditorState extends State<PolicyEditor> {
           const SizedBox(height: 24),
           CupertinoButton(
             onPressed: () async {
-              if (await confirm(context, title: 'Delete policy?', message: 'Its claims will be deleted too.', action: 'Delete')) {
+              if (await confirm(context, title: tr('Delete policy?'), message: tr('Its claims will be deleted too.'), action: tr('Delete'))) {
                 store.deletePolicy(p!.id);
                 if (context.mounted) Navigator.pop(context);
               }
             },
-            child: Text('Delete policy', style: TextStyle(color: c.red)),
+            child: Text(tr('Delete policy'), style: TextStyle(color: c.red)),
           ),
         ],
       ]),
@@ -308,13 +309,13 @@ class _ClaimEditorState extends State<ClaimEditor> {
       backgroundColor: c.bg,
       appBar: CupertinoNavigationBar(
         backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        middle: Text(cl == null ? 'New claim' : 'Edit claim'),
+        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
+        middle: Text(cl == null ? tr('New claim') : tr('Edit claim')),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () {
             final amt = int.tryParse(_amount.text.replaceAll(RegExp(r'[^0-9]'), ''));
-            if (_policy == null || _title.text.trim().isEmpty || amt == null) return toast(context, 'Add a title, amount and policy');
+            if (_policy == null || _title.text.trim().isEmpty || amt == null) return toast(context, tr('Add a title, amount and policy'));
             final claim = cl ?? Claim(id: store.newId(), policyId: _policy!, title: '', hospital: '', amount: 0, forMember: _for, timeline: [ClaimEvent(ClaimStatus.submitted, DateTime.now())]);
             store.upsertClaim(claim
               ..policyId = _policy!
@@ -324,51 +325,51 @@ class _ClaimEditorState extends State<ClaimEditor> {
               ..forMember = _for
               ..recordIds = _recs.toList());
             Navigator.pop(context);
-            toast(context, cl == null ? 'Claim submitted' : 'Claim updated', cl == null ? 'You\'ll see updates from the insurer here.' : null);
+            toast(context, cl == null ? tr('Claim submitted') : tr('Claim updated'), cl == null ? tr('You\'ll see updates from the insurer here.') : null);
           },
-          child: Text(cl == null ? 'Submit' : 'Save', style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(cl == null ? tr('Submit') : tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
-        FormGroup(header: 'Claim', children: [
-          FormField2(label: 'For', controller: _title, hint: 'e.g. Hospital stay, OPD visit'),
-          FormField2(label: 'Hospital', controller: _hospital, hint: 'Hospital or clinic'),
-          FormField2(label: 'Amount', controller: _amount, hint: '₹', keyboard: TextInputType.number),
+        FormGroup(header: tr('Claim'), children: [
+          FormField2(label: tr('For'), controller: _title, hint: tr('e.g. Hospital stay, OPD visit')),
+          FormField2(label: tr('Hospital'), controller: _hospital, hint: tr('Hospital or clinic')),
+          FormField2(label: tr('Amount'), controller: _amount, hint: '₹', keyboard: TextInputType.number),
           IOSRow(
-            title: 'Policy',
-            trailing: Text(store.policies.where((p) => p.id == _policy).map((p) => p.insurer).firstOrNull ?? 'None', style: T.sub.copyWith(color: c.label2)),
+            title: tr('Policy'),
+            trailing: Text(store.policies.where((p) => p.id == _policy).map((p) => p.insurer).firstOrNull ?? tr('None'), style: T.sub.copyWith(color: c.label2)),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
                 builder: (ctx) => CupertinoActionSheet(
                   actions: [for (final p in store.policies) CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx, p.id), child: Text('${p.insurer} · ${p.policyNo}'))],
-                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
                 ),
               );
               if (v != null) setState(() => _policy = v);
             },
           ),
           IOSRow(
-            title: 'Patient',
-            trailing: Text(store.memberName(_for), style: T.sub.copyWith(color: c.label2)),
+            title: tr('Patient'),
+            trailing: Text(trData(store.memberName(_for)), style: T.sub.copyWith(color: c.label2)),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
                 builder: (ctx) => CupertinoActionSheet(
-                  actions: [for (final (id, n) in [('self', 'Me'), ...store.family.map((m) => (m.id, m.name))]) CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx, id), child: Text(n))],
-                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  actions: [for (final (id, n) in [('self', tr('Me')), ...store.family.map((m) => (m.id, m.name))]) CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx, id), child: Text(n))],
+                  cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
                 ),
               );
               if (v != null) setState(() => _for = v);
             },
           ),
         ]),
-        FormGroup(header: 'Attach records', footer: 'Bills, discharge summary and reports from your vault.', children: [
-          if (store.records.isEmpty) IOSRow(title: 'No records in your vault yet', chevron: false),
+        FormGroup(header: tr('Attach records'), footer: tr('Bills, discharge summary and reports from your vault.'), children: [
+          if (store.records.isEmpty) IOSRow(title: tr('No records in your vault yet'), chevron: false),
           for (final r in store.records)
             IOSRow(
-              title: r.title,
-              subtitle: r.category,
+              title: trData(r.title),
+              subtitle: trData(r.category),
               trailing: _recs.contains(r.id) ? Icon(CupertinoIcons.checkmark_alt, color: c.blue) : null,
               chevron: false,
               onTap: () => setState(() => _recs.contains(r.id) ? _recs.remove(r.id) : _recs.add(r.id)),

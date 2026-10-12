@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config.dart';
 import '../engine/news2.dart';
+import '../l10n/l10n.dart';
 import 'bt39_client.dart';
 
 class StaffAlert {
@@ -144,15 +145,15 @@ class StaffController extends ChangeNotifier {
           )
           .subscribe();
     } catch (e) {
-      error = 'Alerts could not be loaded from Supabase.';
+      error = tr('Alerts could not be loaded from Supabase.');
       notifyListeners();
     }
   }
 
   StaffAlert _fromRow(Map<String, dynamic> r) => StaffAlert(
-        id: r['id'], patientId: r['patient_id'], bed: _bedLabels[r['bed_id']] ?? '—', patientName: _patientNames[r['patient_id']] ?? 'Patient',
+        id: r['id'], patientId: r['patient_id'], bed: _bedLabels[r['bed_id']] ?? '—', patientName: _patientNames[r['patient_id']] ?? tr('Patient'),
         kind: r['kind'], severity: r['severity'], message: r['message'] ?? '', news2: r['news2'], startedAt: DateTime.parse(r['started_at']).toLocal(),
-        ackBy: r['acknowledged_by'] == null ? null : 'Staff', ackAt: r['acknowledged_at'] == null ? null : DateTime.parse(r['acknowledged_at']).toLocal(),
+        ackBy: r['acknowledged_by'] == null ? null : tr('Staff'), ackAt: r['acknowledged_at'] == null ? null : DateTime.parse(r['acknowledged_at']).toLocal(),
         resolvedAt: r['resolved_at'] == null ? null : DateTime.parse(r['resolved_at']).toLocal(), resolution: r['resolution'],
       );
 
@@ -174,7 +175,7 @@ class StaffController extends ChangeNotifier {
   }
 
   Future<String?> resolve(StaffAlert a, String note) async {
-    if (a.severity != 'low' && note.trim().length < 3) return 'Add a short note on what was done (at least 3 characters).';
+    if (a.severity != 'low' && note.trim().length < 3) return tr('Add a short note on what was done (at least 3 characters).');
     if (demo) {
       a.resolvedAt = DateTime.now();
       a.resolution = note.trim().isEmpty ? 'resolved' : note.trim();
@@ -317,13 +318,13 @@ class StaffController extends ChangeNotifier {
   }
 
   void _rules(String bed, String name, News2Score s, {int? hr, int? spo2, required int rr, required double temp}) {
-    final vals = 'HR ${hr ?? '—'}, RR $rr, SpO₂ ${spo2 ?? '—'}%, Temp ${temp.toStringAsFixed(1)} °C';
+    final vals = 'HR ${hr ?? '—'}, RR $rr, SpO₂ ${spo2 ?? '—'}%, ${tr('Temp')} ${temp.toStringAsFixed(1)} °C';
     if (s.band != 'low') {
-      _open(bed, name, 'news2', switch (s.band) { 'high' => 'high', 'medium' => 'medium', _ => 'low' }, 'NEWS2 ${s.total} (${bandLabel[s.band]}): $vals', s.total);
+      _open(bed, name, 'news2', switch (s.band) { 'high' => 'high', 'medium' => 'medium', _ => 'low' }, 'NEWS2 ${s.total} (${tr(bandLabel[s.band]!)}): $vals', s.total);
     }
-    if ((_low[bed] ?? 0) >= 5) _open(bed, name, 'acute_spo2', 'high', 'SpO₂ ${spo2 ?? '—'}% for 30 s on air', s.total);
-    if (hr != null && hr > 150) _open(bed, name, 'acute_hr', 'high', 'Heart rate $hr for 30 s', s.total);
-    if ((_off[bed] ?? 0) >= 5) _open(bed, name, 'sensor_off', 'low', 'No heart rate or SpO₂ for 30 s. Check the probe.', null);
+    if ((_low[bed] ?? 0) >= 5) _open(bed, name, 'acute_spo2', 'high', tr('SpO₂ {spo2}% for 30 s on air', {'spo2': spo2 ?? '—'}), s.total);
+    if (hr != null && hr > 150) _open(bed, name, 'acute_hr', 'high', tr('Heart rate {hr} for 30 s', {'hr': hr}), s.total);
+    if ((_off[bed] ?? 0) >= 5) _open(bed, name, 'sensor_off', 'low', tr('No heart rate or SpO₂ for 30 s. Check the probe.'), null);
     // Auto-resolve: quiet for 20 s (shortened from 10 min for the demo).
     for (final a in alerts.where((a) => a.bed == bed && a.open)) {
       final firing = switch (a.kind) {
@@ -346,12 +347,15 @@ class StaffController extends ChangeNotifier {
     final open = alerts.where((a) => a.bed == b.bed && a.open).toList();
     final hist = (hrHistory[b.bed] ?? []).whereType<int>().toList();
     final trend = hist.length > 10 ? hist.last - hist[hist.length - 10] : 0;
-    final buf = StringBuffer('${b.name} (${b.age}${b.sex}, bed ${b.bed}) has NEWS2 ${b.news2 ?? '—'} (${bandLabel[b.band] ?? '—'}). ');
-    buf.write('Now: HR ${b.hr ?? '—'}, SpO₂ ${b.spo2 ?? '—'}%, RR ${b.rr ?? '—'}, BP ${b.sbp ?? '—'}/${b.dbp ?? '—'} (cuff ${((b.nibpAgeS ?? 0) / 60).round()} min old), Temp ${b.temp?.toStringAsFixed(1) ?? '—'} °C${b.onOxygen == true ? ', on oxygen' : ''}. ');
-    if (trend.abs() >= 5) buf.write('Heart rate has ${trend > 0 ? 'risen' : 'fallen'} by ${trend.abs()} over the last few minutes. ');
-    buf.write(open.isEmpty ? 'There are no open alerts. ' : 'Open alerts: ${open.map((a) => '${a.kindName} (${severityLabel[a.severity]})').join(', ')}. ');
-    if (q.toLowerCase().contains('sepsis') || (b.temp ?? 0) >= 38.1 && (b.hr ?? 0) > 110) buf.write('The pattern of fever, fast heart rate and fast breathing fits the sepsis screening criteria; consider the sepsis pathway. ');
-    buf.write('\n\nDemo Mode answer, built on the device from this bed\'s data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports.');
+    final buf = StringBuffer(tr('{name} ({age}{sex}, bed {bed}) has NEWS2 {score} ({band}). ', {'name': b.name, 'age': b.age, 'sex': b.sex, 'bed': b.bed, 'score': b.news2 ?? '—', 'band': b.band == null ? '—' : tr(bandLabel[b.band] ?? '—')}));
+    buf.write(tr('Now: HR {hr}, SpO₂ {spo2}%, RR {rr}, BP {sbp}/{dbp} (cuff {cuff} min old), Temp {temp} °C', {'hr': b.hr ?? '—', 'spo2': b.spo2 ?? '—', 'rr': b.rr ?? '—', 'sbp': b.sbp ?? '—', 'dbp': b.dbp ?? '—', 'cuff': ((b.nibpAgeS ?? 0) / 60).round(), 'temp': b.temp?.toStringAsFixed(1) ?? '—'}));
+    buf.write(b.onOxygen == true ? tr(', on oxygen') : '');
+    buf.write('. ');
+    if (trend.abs() >= 5) buf.write(trend > 0 ? tr('Heart rate has risen by {n} over the last few minutes. ', {'n': trend.abs()}) : tr('Heart rate has fallen by {n} over the last few minutes. ', {'n': trend.abs()}));
+    buf.write(open.isEmpty ? tr('There are no open alerts. ') : tr('Open alerts: {list}. ', {'list': open.map((a) => '${trData(a.kindName)} (${tr(severityLabel[a.severity]!)})').join(', ')}));
+    if (q.toLowerCase().contains('sepsis') || (b.temp ?? 0) >= 38.1 && (b.hr ?? 0) > 110) buf.write(tr('The pattern of fever, fast heart rate and fast breathing fits the sepsis screening criteria; consider the sepsis pathway. '));
+    buf.write('\n\n');
+    buf.write(tr('Demo Mode answer, built on the device from this bed\'s data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports.'));
     return buf.toString();
   }
 }
