@@ -115,7 +115,7 @@ class _PatientRootState extends State<_PatientRoot> {
     if (!store.loaded) return const _Splash();
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
-    final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell());
+    final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell(), labelOf: (t) => const ['Today', 'Alerts', 'Insights', 'Care', 'Me'][t]);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _monitor),

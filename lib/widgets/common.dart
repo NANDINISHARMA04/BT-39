@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/ios_theme.dart';
+import 'shell_navigator.dart';
 
 /// Shrinks a little while pressed, with an iOS spring.
 class Pressable extends StatefulWidget {
@@ -261,6 +262,30 @@ class LargeTitlePage extends StatelessWidget {
   final EdgeInsets padding;
   @override
   Widget build(BuildContext context) {
+    // A tab's first page offers a way back to the previous tab.
+    if (leading == null && !(ModalRoute.of(context)?.canPop ?? false)) {
+      return ValueListenableBuilder(
+        valueListenable: shellBack,
+        builder: (context, back, _) => _page(
+          context,
+          back == null
+              ? null
+              : CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(30, 30),
+                  onPressed: back.go,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(CupertinoIcons.chevron_back, size: 24),
+                    Flexible(child: Text(back.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 17))),
+                  ]),
+                ),
+        ),
+      );
+    }
+    return _page(context, leading);
+  }
+
+  Widget _page(BuildContext context, Widget? leading) {
     final c = context.ios;
     return Scaffold(
       backgroundColor: c.bg,

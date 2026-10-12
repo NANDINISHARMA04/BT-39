@@ -130,6 +130,29 @@ void main() {
     expect(find.text('Heart Rate'), findsOneWidget, reason: 'second back goes to Today');
   });
 
+  testWidgets('back returns to the previously visited tab', (t) async {
+    t.view.physicalSize = const Size(1179, 2556);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
+    await settle(t, 10);
+    await t.tap(find.text('Alerts').last);
+    await settle(t);
+    await t.tap(find.text('Insights').last);
+    await settle(t);
+    // The on-screen back button names the previous tab.
+    final back = find.widgetWithText(CupertinoButton, 'Alerts');
+    expect(back, findsWidgets);
+    await t.binding.handlePopRoute();
+    await settle(t);
+    expect(find.widgetWithText(CupertinoButton, 'Today'), findsWidgets, reason: 'on Alerts, back now leads to Today');
+    await t.tap(find.widgetWithText(CupertinoButton, 'Today').first);
+    await settle(t);
+    expect(find.text('Heart Rate'), findsOneWidget);
+  });
+
   testWidgets('nurse screens render', (t) async {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;

@@ -104,7 +104,7 @@ class _StaffRootState extends State<StaffRoot> {
 
   @override
   Widget build(BuildContext context) {
-    final navigator = ShellNavigator(navKey: staffNavKey, tab: staffSec, homeTab: StaffSec.today.index, home: const StaffShell());
+    final navigator = ShellNavigator(navKey: staffNavKey, tab: staffSec, homeTab: StaffSec.today.index, home: const StaffShell(), labelOf: (t) => _secItem(StaffSec.values[t], context.read<Session>().role).$3);
     if (!isWide(context)) return navigator;
     return ColoredBox(
       color: context.ios.bg,
