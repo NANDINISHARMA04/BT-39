@@ -65,7 +65,7 @@ void main() {
     await t.ensureVisible(submit);
     await t.tap(submit);
     await settle(t, 12);
-    expect(find.text('Ward A'), findsWidgets);
+    expect(find.text('Today'), findsWidgets);
     expect(find.textContaining('Dr. Meenal Shah'), findsWidgets);
   });
 }

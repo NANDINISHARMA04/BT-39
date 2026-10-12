@@ -19,7 +19,7 @@ There are two apps in one, chosen at sign-in.
 | Feature | Where |
 |---|---|
 | Secure authentication: separate **log in and sign up for patients, doctors and nurses** (role-specific fields such as registration number, speciality, ward and shift), salted SHA-256 password hashes on the device, Supabase when a key is set, plus **Demo Mode** that needs no account | Welcome › Log in / Sign up |
-| **Guided 90-second demo**: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions | Welcome › Watch the 90-second demo |
+| **Guided demo with a voice guide**: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions read aloud by the browser, then asks you to log in or sign up | Welcome › Watch the demo with voice |
 | **Alert detail "How AdaptAlert decided"**: what the band saw, which signals drove it (SDs from your normal), model vs your history with a confidence interval, the blend formula and threshold, counterfactuals (what would have changed the decision) and who was told | Alerts › See how AdaptAlert decided |
 | **How it works** explainer and the AdaptAlert hero card (fixed monitor vs sent vs held back) | Alerts |
 | **Research Lab**: run the 5-system experiment with your own settings, ablation, label-noise and alarm-fatigue sweeps, bootstrap CIs, copy results as Markdown for the paper | Welcome › Research Lab, Insights |
@@ -35,13 +35,19 @@ There are two apps in one, chosen at sign-in.
 | Emergency access and SOS: hold-to-activate, call 112, alert emergency contacts, share location and live vitals, Medical ID, and **auto-SOS** on a safety-floor alert | SOS button, Me › Emergency |
 | User profile and preferences: health profile, medicines, appearance (auto/light/dark), °C/°F, notifications, caregiver escalation, language | Me |
 
-**Staff app** (doctors and nurses, on the BT39 monitor service)
+**Doctor and nurse app** (tabs on phones, a sidebar on laptops)
 
-- Ward grid of 12 beds sorted by risk, live NEWS2 score and band, a pulsing border on unacknowledged emergencies.
-- Bed detail: six vitals with their NEWS2 points, heart-rate trend, alerts, and a patient chat for doctors.
-- Alert feed: acknowledge, resolve with a note, and label each alert *Real* or *False alarm* (AdaptAlert feedback).
-- **Home patients** tab: the doctor or nurse reviews the patient's AdaptAlert alerts (with the patient's own feedback), marks them real or false, and the patient's alerts learn from it.
-- AdaptAlert tab: how often each ward rule was right, so the noisiest rules can be tuned first.
+| Feature | Who | Where |
+|---|---|---|
+| **Today** dashboard: AdaptAlert alerts to review, appointments left, high-risk ward patients, unacknowledged alerts, "needs you now" list, next appointments | Doctor | Today |
+| **My shift**: timed nursing tasks (vitals rounds, medicines, home video check, dressings) with who ticked them off, live counts, and a **handover note** for the next shift | Nurse | Shift |
+| **Patients**: search and filter; patients who sign up on the same device appear automatically. Each patient page has live or last vitals, AdaptAlert status, conditions, allergies, medicines, visits, alerts, shared records, and notes | Both | Patients |
+| **Notes and prescriptions**: doctors write notes, consultation notes and prescriptions (with an allergy warning); nurses write nursing notes. A prescription for a patient with an account also appears in the patient's own medicine list | Both | Patient › Note / Prescribe |
+| **Schedule**: a week of appointments, including ones patients booked in the patient app; mark seen with a consultation note, no-show or cancel; book a follow-up | Doctor | Schedule |
+| **Ward**: 12 beds sorted by risk, live NEWS2, a pulsing border on unacknowledged emergencies; bed detail with NEWS2 points and chat | Both | Ward |
+| **Alerts**: acknowledge, resolve with a note, label *Real* or *False alarm* | Both | Alerts |
+| **AdaptAlert review**: the home patient's alerts with her own feedback; marking them real or false teaches AdaptAlert | Both | AdaptAlert review / Home band |
+| **Ward rules**: how often each ward rule was right, so the noisiest rules can be tuned first | Both | Ward rules |
 
 ## How AdaptAlert works
 
@@ -83,7 +89,7 @@ With no settings, accounts are stored on the device. Three demo accounts always 
 | Doctor | doctor@pulseos.app | doctor123 |
 | Nurse | nurse@pulseos.app | nurse123 |
 
-You can also sign up as any role, or tap *Try without an account*.
+You can also sign up as any role, or tap *Try without an account*. The demo patient is **Nandini Sharma**. A demo session is not remembered: reopening the site starts at the welcome page.
 
 ### Demo script (5 minutes)
 
@@ -151,7 +157,7 @@ flutter run \
 ```
 lib/
   engine/      adapt_alert.dart (7-stage engine), simulator.dart (band), study.dart (30-day study), news2.dart
-  services/    session.dart (auth), tour.dart (guided demo), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
+  services/    session.dart (auth), tour.dart (guided demo), narrator.dart (voice), clinical_store.dart (doctor and nurse data), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
   models/      patient_models.dart
   screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
   widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart

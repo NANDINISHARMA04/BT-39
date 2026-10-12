@@ -559,6 +559,12 @@ class TourOverlay extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text('${tour.index} of ${TourController.totalSteps}', style: const TextStyle(color: Colors.white60, fontSize: 12, fontFeatures: T.num)),
                         const Spacer(),
+                        CupertinoButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(30, 30),
+                          onPressed: tour.toggleMute,
+                          child: Icon(tour.narrator.muted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill, color: Colors.white70, size: 20),
+                        ),
                         if (tour.running)
                           CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.stop, child: const Text('Skip', style: TextStyle(color: Colors.white70, fontSize: 14)))
                         else
@@ -568,6 +574,29 @@ class TourOverlay extends StatelessWidget {
                       Text(s.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.3)),
                       const SizedBox(height: 4),
                       Text(s.body, style: const TextStyle(color: Color(0xDDFFFFFF), fontSize: 14, height: 1.4)),
+                      if (s.last) ...[
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                            child: CupertinoButton.filled(
+                              sizeStyle: CupertinoButtonSize.medium,
+                              onPressed: () {
+                                tour.finish();
+                                context.read<Session>().signOut();
+                              },
+                              child: const Text('Log in or sign up', maxLines: 1),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: CupertinoButton(
+                              sizeStyle: CupertinoButtonSize.medium,
+                              onPressed: tour.finish,
+                              child: const Text('Keep exploring', maxLines: 1, style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        ]),
+                      ],
                       const SizedBox(height: 10),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(2),

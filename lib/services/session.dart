@@ -17,7 +17,7 @@ const roleLabel = {Role.patient: 'Patient', Role.doctor: 'Doctor', Role.nurse: '
 
 /// Accounts that exist on every device, so anyone can try each role.
 const demoAccounts = {
-  Role.patient: ('patient@pulseos.app', 'patient123', 'Aarav Mehta'),
+  Role.patient: ('patient@pulseos.app', 'patient123', 'Nandini Sharma'),
   Role.doctor: ('doctor@pulseos.app', 'doctor123', 'Dr. Kavya Rao'),
   Role.nurse: ('nurse@pulseos.app', 'nurse123', 'Nurse Anjali Singh'),
 };
@@ -61,11 +61,11 @@ class Session extends ChangeNotifier {
   Future<void> restore() async {
     try {
       final sp = await SharedPreferences.getInstance();
-      final demoRole = sp.getString('bt39.demoRole');
+      // A demo session is not restored: reopening the site starts at the
+      // welcome page, so nobody gets stuck in the demo account.
+      await sp.remove('bt39.demoRole');
       final localUser = sp.getString('bt39.localUser');
-      if (demoRole != null) {
-        _setDemo(Role.values.byName(demoRole));
-      } else if (localUser != null && (await _accounts())[localUser] != null) {
+      if (localUser != null && (await _accounts())[localUser] != null) {
         _setLocal(localUser, (await _accounts())[localUser]!);
       } else if (_sb?.auth.currentSession != null) {
         await _loadAccount();
@@ -82,16 +82,13 @@ class Session extends ChangeNotifier {
     mode = AuthMode.demo;
     details = {};
     wardId = null;
-    name = switch (r) { Role.patient => 'Aarav Mehta', Role.doctor => 'Dr. Kavya Rao', Role.nurse => 'Nurse Anjali Singh' };
-    email = switch (r) { Role.patient => 'aarav.demo@bt39.app', Role.doctor => 'demo.doctor@example.com', Role.nurse => 'demo.nurse@example.com' };
+    name = switch (r) { Role.patient => 'Nandini Sharma', Role.doctor => 'Dr. Kavya Rao', Role.nurse => 'Nurse Anjali Singh' };
+    email = switch (r) { Role.patient => 'patient@pulseos.app', Role.doctor => 'doctor@pulseos.app', Role.nurse => 'nurse@pulseos.app' };
   }
 
   Future<void> startDemo(Role r, {bool tour = false}) async {
     _setDemo(r);
     pendingTour = tour;
-    try {
-      (await SharedPreferences.getInstance()).setString('bt39.demoRole', r.name);
-    } catch (_) {}
     notifyListeners();
   }
 
@@ -223,6 +220,20 @@ class Session extends ChangeNotifier {
       return 'This browser is blocking storage, so the account can\'t be saved. Use the demo account instead.';
     }
     return localSignIn(mail, password, as: role);
+  }
+
+  /// Patient accounts created on this device, so doctors and nurses on the
+  /// same device can find them.
+  Future<List<({String email, String name, Map<String, String> details})>> patientAccounts() async {
+    try {
+      final all = await _accounts();
+      return [
+        for (final e in all.entries)
+          if (e.value['role'] == Role.patient.name) (email: e.key, name: e.value['name'] as String, details: Map<String, String>.from((e.value['details'] as Map?) ?? {})),
+      ];
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<String?> accessToken() async => _sb?.auth.currentSession?.accessToken;

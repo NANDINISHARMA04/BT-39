@@ -138,12 +138,79 @@ void main() {
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Nurse'));
     await settle(t, 10);
+    expect(find.text('My shift'), findsWidgets);
+    // Tick off the first task.
+    await t.tap(find.textContaining('Vitals round').first);
+    await settle(t);
+    expect(find.textContaining('Done by Nurse Anjali Singh'), findsOneWidget);
+    await t.tap(find.text('Ward').last);
+    await settle(t);
     await openAndBack(t, find.text('Sunita Deshmukh'));
     await t.tap(find.text('Alerts').last);
     await settle(t);
-    await t.tap(find.text('AdaptAlert').last);
+    await t.tap(find.text('Patients').last);
     await settle(t);
-    await t.tap(find.text('Me').last);
+    await openAndBack(t, find.text('Farhan Ali'));
+    await t.tap(find.text('Home band').last);
     await settle(t);
+  });
+
+  testWidgets('doctor portal: today, patients, notes, schedule', (t) async {
+    t.view.physicalSize = const Size(1080, 1920);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Doctor'));
+    await settle(t, 10);
+    expect(find.textContaining('Good'), findsWidgets);
+    expect(find.text('Needs you now'), findsOneWidget);
+
+    await t.tap(find.text('Patients').last);
+    await settle(t);
+    await t.enterText(find.byType(CupertinoSearchTextField), 'nandini');
+    await settle(t);
+    expect(find.text('Farhan Ali'), findsNothing);
+    await t.tap(find.text('Nandini Sharma').hitTestable().first);
+    await settle(t);
+    expect(find.text('Heart valve repair surgery, day 6 at home'), findsWidgets);
+    for (final seg in ['Alerts', 'Records', 'Notes']) {
+      await t.tap(find.text(seg).last);
+      await settle(t);
+    }
+    expect(find.textContaining('mitral valve repair'), findsOneWidget);
+    await t.tap(find.text('Note').first);
+    await settle(t);
+    await t.enterText(find.byType(CupertinoTextField).last, 'Feeling well on the video call.');
+    await t.tap(find.text('Save note'));
+    await settle(t);
+    expect(find.text('Feeling well on the video call.'), findsOneWidget);
+    t.state<NavigatorState>(find.byType(Navigator).last).pop();
+    await settle(t);
+
+    await t.tap(find.text('Schedule').last);
+    await settle(t);
+    await t.tap(find.text('Sunita Verma').hitTestable().first);
+    await settle(t);
+    expect(find.text('Open patient record'), findsOneWidget);
+    await t.tap(find.text('Cancel visit'));
+    await settle(t);
+    expect(find.text('Cancelled'), findsWidgets);
+    await settle(t, 15); // let the toast go
+  });
+
+  testWidgets('doctor portal on a laptop uses the sidebar', (t) async {
+    t.view.physicalSize = const Size(1440, 900);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Doctor'));
+    await settle(t, 10);
+    expect(find.byType(CupertinoTabBar), findsNothing);
+    for (final s in ['Patients', 'Schedule', 'Ward', 'Alerts', 'AdaptAlert review', 'Ward rules', 'Me']) {
+      await t.tap(find.text(s).first);
+      await settle(t, 3);
+    }
   });
 }

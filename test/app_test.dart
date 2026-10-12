@@ -15,7 +15,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const BT39App());
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Watch the 90-second demo'), findsOneWidget);
+    expect(find.text('Watch the demo with voice'), findsOneWidget);
 
     await tester.ensureVisible(find.widgetWithText(CupertinoButton, 'Patient'));
     await tester.pump();
@@ -56,6 +56,11 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(CupertinoButton, 'Doctor'));
     for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.textContaining('Dr. Kavya Rao'), findsWidgets);
+    await tester.tap(find.text('Ward').last);
+    for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }
     expect(find.text('Ward A'), findsWidgets);

@@ -6,12 +6,14 @@ import 'screens/auth/welcome_screen.dart';
 import 'screens/patient/patient_shell.dart';
 import 'screens/patient/sos_screen.dart';
 import 'screens/staff/staff_shell.dart';
+import 'services/clinical_store.dart';
 import 'services/monitor.dart';
 import 'services/patient_store.dart';
 import 'services/session.dart';
 import 'services/staff_controller.dart';
 import 'services/tour.dart';
 import 'theme/ios_theme.dart';
+import 'widgets/shell_navigator.dart';
 
 class BT39App extends StatelessWidget {
   const BT39App({super.key, this.session});
@@ -61,8 +63,9 @@ class RootGate extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => StaffController(demo: s.onDevice, token: s.accessToken, wardId: s.wardId, myName: s.name)..start()),
           // A patient at home on AdaptAlert, whose alerts staff review.
           ChangeNotifierProvider(create: (_) => MonitorController()..start()),
+          ChangeNotifierProvider(create: (_) => ClinicalStore(s)..load()),
         ],
-        child: const StaffShell(),
+        child: const StaffRoot(),
       );
     }
     return AnimatedSwitcher(
@@ -82,7 +85,6 @@ class _PatientRoot extends StatefulWidget {
 
 class _PatientRootState extends State<_PatientRoot> {
   final _nav = GlobalKey<NavigatorState>();
-  bool _innerCanPop = false;
   late final MonitorController _monitor = MonitorController()..start();
   late final TourController _tour = TourController(_monitor, _select);
 
@@ -113,36 +115,7 @@ class _PatientRootState extends State<_PatientRoot> {
     if (!store.loaded) return const _Splash();
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
-    // The browser's back button, Android back and the iOS back swipe close the
-    // open page first, then go back to Today, and only then leave the app.
-    final navigator = ValueListenableBuilder<int>(
-      valueListenable: patientTab,
-      builder: (context, tab, child) => PopScope<Object?>(
-        canPop: !_innerCanPop && tab == PatientTab.today,
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          if (_innerCanPop) {
-            _nav.currentState?.maybePop();
-          } else {
-            patientTab.value = PatientTab.today;
-          }
-        },
-        child: child!,
-      ),
-      child: NotificationListener<NavigationNotification>(
-        onNotification: (n) {
-          if (n.canHandlePop != _innerCanPop) {
-            // Notifications can arrive during a build; update after it.
-            WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? setState(() => _innerCanPop = n.canHandlePop) : null);
-          }
-          return true;
-        },
-        child: HeroControllerScope(
-          controller: MaterialApp.createMaterialHeroController(),
-          child: Navigator(key: _nav, onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const PatientShell())),
-        ),
-      ),
-    );
+    final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell());
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _monitor),

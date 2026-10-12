@@ -46,7 +46,8 @@ class PatientStore extends ChangeNotifier {
   Future<void> load(String account, {required String name, String email = '', Map<String, String> details = const {}}) async {
     _account = account;
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(_k('data'));
+    // The demo account starts from the same example data every time.
+    final raw = account.startsWith('demo-') ? null : sp.getString(_k('data'));
     if (raw == null) {
       _seed(name, email);
       if (details['age'] != null) profile.age = int.tryParse(details['age']!) ?? profile.age;
@@ -62,6 +63,29 @@ class PatientStore extends ChangeNotifier {
     }
     loaded = true;
     notifyListeners();
+  }
+
+  /// Reads another account's saved data without making it the active account,
+  /// e.g. for a doctor opening a patient's record. Null if nothing is saved.
+  static Future<PatientStore?> peek(String account) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final raw = sp.getString('bt39.$account.data');
+      if (raw == null) return null;
+      final s = PatientStore().._account = account;
+      s._fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      s.loaded = true;
+      return s;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The example data for [name], in memory only.
+  static PatientStore example(String name, String email) {
+    final s = PatientStore().._seed(name, email);
+    s.loaded = true;
+    return s;
   }
 
   Future<void> save() async {
@@ -104,29 +128,29 @@ class PatientStore extends ChangeNotifier {
     final now = DateTime.now();
     DateTime day(int d, int h, [int m = 0]) => DateTime(now.year, now.month, now.day + d, h, m);
     profile = UserProfile(
-      name: name, email: email, phone: '+91 98100 12345', age: 58, sex: 'M', bloodGroup: 'B+', heightCm: 172, weightKg: 74, city: 'Noida',
-      conditions: ['Heart bypass surgery (CABG), day 6 at home', 'Type 2 diabetes'],
+      name: name, email: email, phone: '+91 98100 12345', age: 24, sex: 'F', bloodGroup: 'B+', heightCm: 160, weightKg: 54, city: 'Noida',
+      conditions: ['Heart valve repair surgery, day 6 at home', 'Mild asthma'],
       allergies: ['Penicillin'],
       medications: [
         Medication(name: 'Aspirin', dose: '75 mg', schedule: 'Once daily, after breakfast'),
         Medication(name: 'Metoprolol', dose: '25 mg', schedule: 'Twice daily'),
-        Medication(name: 'Atorvastatin', dose: '40 mg', schedule: 'At night'),
-        Medication(name: 'Metformin', dose: '500 mg', schedule: 'Twice daily with meals'),
+        Medication(name: 'Pantoprazole', dose: '40 mg', schedule: 'Before breakfast'),
+        Medication(name: 'Salbutamol inhaler', dose: '100 mcg', schedule: 'When needed for wheeze'),
       ],
     );
     family = [
-      FamilyMember(id: 'f1', name: 'Meera Mehta', relation: 'Daughter', age: 29, bloodGroup: 'B+', phone: '+91 98111 22334', caregiver: true, emergencyContact: true),
-      FamilyMember(id: 'f2', name: 'Sunita Mehta', relation: 'Wife', age: 55, bloodGroup: 'O+', phone: '+91 98111 99887', conditions: ['High blood pressure'], emergencyContact: true),
-      FamilyMember(id: 'f3', name: 'Ishaan Mehta', relation: 'Grandson', age: 6, bloodGroup: 'B+', conditions: ['Asthma (mild)']),
+      FamilyMember(id: 'f1', name: 'Sunita Sharma', relation: 'Mother', age: 50, bloodGroup: 'B+', phone: '+91 98111 22334', caregiver: true, emergencyContact: true),
+      FamilyMember(id: 'f2', name: 'Rajesh Sharma', relation: 'Father', age: 54, bloodGroup: 'O+', phone: '+91 98111 99887', conditions: ['High blood pressure'], emergencyContact: true),
+      FamilyMember(id: 'f3', name: 'Ishaan Sharma', relation: 'Brother', age: 12, bloodGroup: 'B+', conditions: ['Asthma (mild)']),
     ];
     appointments = [
       Appointment(id: 'a1', doctorId: 'd1', forMember: 'self', at: day(1, 11, 30), mode: ApptMode.video, reason: 'Post-surgery review, week 1', notes: 'Share AdaptAlert summary before the call.'),
       Appointment(id: 'a2', doctorId: 'd7', forMember: 'f3', at: day(4, 17), mode: ApptMode.clinic, reason: 'Inhaler check-up'),
-      Appointment(id: 'a3', doctorId: 'd2', forMember: 'self', at: day(-9, 10), mode: ApptMode.clinic, reason: 'Blood sugar follow-up', status: ApptStatus.completed),
+      Appointment(id: 'a3', doctorId: 'd2', forMember: 'self', at: day(-9, 10), mode: ApptMode.clinic, reason: 'Fever follow-up', status: ApptStatus.completed),
     ];
     records = [
-      MedicalRecord(id: 'r1', title: 'Discharge summary, Fortis', category: 'Discharge summary', date: day(-6, 0), forMember: 'self', fileName: 'discharge_summary.pdf', sizeBytes: 482113, notes: 'CABG x3. Follow up with cardiology in 1 week.', shared: true),
-      MedicalRecord(id: 'r2', title: 'HbA1c and lipid profile', category: 'Lab report', date: day(-12, 0), forMember: 'self', fileName: 'lab_report.pdf', sizeBytes: 210554, notes: 'HbA1c 7.4%. LDL 96 mg/dL.', shared: true),
+      MedicalRecord(id: 'r1', title: 'Discharge summary, Fortis', category: 'Discharge summary', date: day(-6, 0), forMember: 'self', fileName: 'discharge_summary.pdf', sizeBytes: 482113, notes: 'Mitral valve repair. Follow up with cardiology in 1 week.', shared: true),
+      MedicalRecord(id: 'r2', title: 'Blood count and INR', category: 'Lab report', date: day(-12, 0), forMember: 'self', fileName: 'lab_report.pdf', sizeBytes: 210554, notes: 'Haemoglobin 11.8 g/dL. INR 1.1.', shared: true),
       MedicalRecord(id: 'r3', title: 'Chest X-ray', category: 'Imaging', date: day(-7, 0), forMember: 'self', fileName: 'chest_xray.jpg', sizeBytes: 1830220),
       MedicalRecord(id: 'r4', title: 'Discharge medicines', category: 'Prescription', date: day(-6, 0), forMember: 'self', fileName: 'prescription.jpg', sizeBytes: 642010, shared: true),
       MedicalRecord(id: 'r5', title: 'Vaccination card', category: 'Vaccination', date: day(-200, 0), forMember: 'f3', fileName: 'vaccines.pdf', sizeBytes: 120044),
@@ -135,7 +159,7 @@ class PatientStore extends ChangeNotifier {
       InsurancePolicy(id: 'p1', insurer: 'Star Health', plan: 'Family Health Optima', policyNo: 'SH-4471-2209-88', sumInsured: 1000000, validTill: DateTime(now.year + 1, 3, 31), members: ['self', 'f2', 'f3'], premium: 28400),
     ];
     claims = [
-      Claim(id: 'c1', policyId: 'p1', title: 'Heart bypass surgery (CABG)', hospital: 'Fortis Heart Institute', amount: 420000, approved: 395000, forMember: 'self', recordIds: ['r1'], timeline: [
+      Claim(id: 'c1', policyId: 'p1', title: 'Heart valve repair surgery', hospital: 'Fortis Heart Institute', amount: 420000, approved: 395000, forMember: 'self', recordIds: ['r1'], timeline: [
         ClaimEvent(ClaimStatus.submitted, day(-6, 9)),
         ClaimEvent(ClaimStatus.underReview, day(-5, 14), 'Documents received'),
         ClaimEvent(ClaimStatus.approved, day(-3, 16), '₹25,000 not covered: room upgrade'),

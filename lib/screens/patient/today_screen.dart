@@ -8,10 +8,13 @@ import 'package:provider/provider.dart';
 import '../../engine/adapt_alert.dart';
 import '../../models/patient_models.dart';
 import '../../services/monitor.dart';
+import '../../services/narrator.dart';
 import '../../services/patient_store.dart';
+import '../../services/session.dart';
 import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/demo_banner.dart';
 import '../../widgets/vitals.dart';
 import 'assistant_screen.dart';
 import 'family_screen.dart';
@@ -49,13 +52,17 @@ class TodayScreen extends StatelessWidget {
         ),
       ]),
       children: [
+        if (context.watch<Session>().demo && !context.watch<TourController>().running) ...[const DemoBanner(), const SizedBox(height: 12)],
         FadeIn(child: _Hero(status: e.status, r: r, tau: e.tau)),
         const SizedBox(height: 12),
         if (!context.watch<TourController>().running) ...[
           FadeIn(
             delay: 30,
             child: IOSCard(
-              onTap: () => context.read<TourController>().start(),
+              onTap: () {
+                Narrator.instance.unlock();
+                context.read<TourController>().start();
+              },
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(children: [
                 Container(
@@ -67,8 +74,8 @@ class TodayScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Watch AdaptAlert in 90 seconds', style: T.headline.copyWith(color: c.label)),
-                    Text('A guided demo: walk, loose band, coffee, a real emergency, and how it learns.', style: T.footnote.copyWith(color: c.label2)),
+                    Text('Watch the guided demo', style: T.headline.copyWith(color: c.label)),
+                    Text('With a voice guide: walk, loose band, coffee, a real emergency, and how AdaptAlert learns.', style: T.footnote.copyWith(color: c.label2)),
                   ]),
                 ),
                 Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),

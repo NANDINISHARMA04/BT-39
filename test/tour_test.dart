@@ -24,6 +24,7 @@ void main() {
 
     final e = m.engine;
     expect(tour.index, TourController.totalSteps);
+    expect(tour.step?.last, isTrue, reason: 'ends by asking to log in');
     expect(e.held, isNotEmpty, reason: 'second coffee is held back');
     expect(e.alerts.any((a) => a.safety && a.level == 4), isTrue, reason: 'safety floor fires');
     expect(e.alerts.any((a) => a.key == 'rest|multi|multi|day'), isTrue, reason: 'real event alerts');

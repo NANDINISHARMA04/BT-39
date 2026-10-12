@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/narrator.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
@@ -67,7 +68,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       FadeIn(
         delay: 180,
         child: Wrap(spacing: 10, runSpacing: 10, alignment: wide ? WrapAlignment.start : WrapAlignment.center, children: [
-          _CtaButton(label: 'Watch the 90-second demo', icon: CupertinoIcons.play_fill, onTap: () => s.startDemo(Role.patient, tour: true)),
+          _CtaButton(
+            label: 'Watch the demo with voice',
+            icon: CupertinoIcons.play_fill,
+            onTap: () {
+              // Browsers allow speech only from a tap, so start the voice here.
+              Narrator.instance.unlock();
+              s.startDemo(Role.patient, tour: true);
+            },
+          ),
           _CtaButton(label: 'Research Lab', icon: CupertinoIcons.lab_flask_solid, tinted: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
         ]),
       ),
