@@ -11,7 +11,8 @@ var _playing = false;
 void unlock(String silentUrl) {
   try {
     _audio.src = silentUrl;
-    _audio.play();
+    // The first clip may interrupt this one; that's fine.
+    _audio.play().toDart.catchError((Object _) => null);
   } catch (_) {}
 }
 

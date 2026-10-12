@@ -146,6 +146,7 @@ flutter run \
 - Text goes through `tr()` in `lib/l10n/l10n.dart`; Hindi lives in `lib/l10n/hi/*.dart`, keyed by the English text. `python3 tool/check_hi.py <files>` lists text without a Hindi translation, and `test/hindi_test.dart` opens every screen in Hindi and fails on any missing translation or overflow.
 - The demo voice-over (`assets/voice/en`, `assets/voice/hi`) was recorded with the open-source Kokoro text-to-speech model. Edit `tool/voice_script.json` and run `tool/make_voice.py` to record it again (instructions at the top of the script).
 - Hindi text uses the bundled Noto Sans Devanagari font, so it works offline.
+- `demo-videos/` has the guided demo recorded with its voice-over in English and in Hindi, ready to send or play in a presentation.
 
 ## Research paper
 
