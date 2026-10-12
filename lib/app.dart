@@ -8,6 +8,7 @@ import 'screens/auth/welcome_screen.dart';
 import 'screens/patient/patient_shell.dart';
 import 'screens/patient/sos_screen.dart';
 import 'screens/staff/staff_shell.dart';
+import 'services/accessibility.dart';
 import 'services/clinical_store.dart';
 import 'services/monitor.dart';
 import 'services/patient_store.dart';
@@ -28,6 +29,8 @@ class BT39App extends StatelessWidget {
         providers: [
           ChangeNotifierProvider(create: (_) => (session ?? Session())..restore()),
           ChangeNotifierProvider(create: (_) => PatientStore()),
+          // Text size, bold text, reduced motion, easy home and alert options.
+          ChangeNotifierProvider(create: (_) => AccessibilitySettings()),
         ],
         child: Consumer2<Session, PatientStore>(
           builder: (context, s, store, _) {
@@ -41,6 +44,8 @@ class BT39App extends StatelessWidget {
               theme: buildTheme(IOS.light),
               darkTheme: buildTheme(IOS.darkTheme),
               themeMode: switch (pref) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system },
+              // Accessibility options apply to every page, for patients and staff.
+              builder: (context, child) => AccessibleMediaQuery(settings: context.read<AccessibilitySettings>(), child: child ?? const SizedBox()),
               home: const RootGate(),
             );
           },

@@ -18,6 +18,7 @@ import '../../widgets/common.dart';
 import '../../widgets/demo_banner.dart';
 import '../../widgets/vitals.dart';
 import 'assistant_screen.dart';
+import 'easy_home_screen.dart';
 import 'family_screen.dart';
 import 'insights_screen.dart';
 import 'insurance_screen.dart';
@@ -43,12 +44,17 @@ class TodayScreen extends StatelessWidget {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         _NavIcon(icon: CupertinoIcons.slider_horizontal_3, label: tr('Simulate'), onTap: () => showSimulator(context)),
         const SizedBox(width: 8),
-        Pressable(
-          onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen())),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(99)),
-            child: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: .5)),
+        Semantics(
+          label: tr('Emergency SOS'),
+          button: true,
+          excludeSemantics: true,
+          child: Pressable(
+            onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen())),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(99)),
+              child: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: .5)),
+            ),
           ),
         ),
       ]),
@@ -317,10 +323,25 @@ class _CardTitle extends StatelessWidget {
   Widget build(BuildContext context) => Row(children: [
         icon,
         const SizedBox(width: 6),
-        Text(title, style: T.sub.copyWith(color: color, fontWeight: FontWeight.w600)),
-        const Spacer(),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.sub.copyWith(color: color, fontWeight: FontWeight.w600))),
         if (trailing != null) Text(trailing!, style: T.caption.copyWith(color: context.ios.label2)),
       ]);
+}
+
+/// "Normal" / "High" / "Low" with an icon, so a vital's state doesn't rely
+/// on colour alone.
+class _StateTag extends StatelessWidget {
+  const _StateTag(this.state);
+  final int? state;
+  @override
+  Widget build(BuildContext context) {
+    final (word, icon, col) = vitalStateLook(context, state);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 15, color: col),
+      const SizedBox(width: 4),
+      Flexible(child: Text(word, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: col, fontWeight: FontWeight.w700))),
+    ]);
+  }
 }
 
 class _HeartCard extends StatelessWidget {
@@ -344,6 +365,8 @@ class _HeartCard extends StatelessWidget {
           Expanded(child: SizedBox(height: 60, child: PpgWave(bpm: r.good ? r.r.hr : 70, color: c.pink, noisy: loose, paused: paused))),
         ]),
         const SizedBox(height: 6),
+        _StateTag(vitalState(r, 'hr')),
+        const SizedBox(height: 2),
         Text.rich(TextSpan(style: T.caption.copyWith(color: c.label2), children: [
           TextSpan(text: tr('Your normal ({ctx}): ', {'ctx': ctx})),
           TextSpan(text: '${(r.mu['hr']! - 2 * r.sd['hr']!).round()}–${(r.mu['hr']! + 2 * r.sd['hr']!).round()} bpm', style: TextStyle(color: c.label, fontWeight: FontWeight.w600)),
@@ -375,6 +398,8 @@ class _SpO2Card extends StatelessWidget {
           Ring(value: r.good ? (r.r.spo2 - 85) / 15 : 0, color: low ? c.red : c.blue, size: 54, stroke: 7),
         ]),
         const SizedBox(height: 6),
+        _StateTag(vitalState(r, 'spo2')),
+        const SizedBox(height: 2),
         Text(tr('Normal {range}', {'range': '${min(100, r.mu['spo2']! - 2 * r.sd['spo2']!).round()}–100%'}), style: T.caption.copyWith(color: c.label2)),
       ]),
     );
@@ -415,6 +440,8 @@ class _TempCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 6),
+        _StateTag(vitalState(r, 'temp')),
+        const SizedBox(height: 2),
         Text(tr('Normal {range}', {'range': '${fmtTemp(r.mu['temp']! - 2 * r.sd['temp']!, fahrenheit, unit: false)}–${fmtTemp(r.mu['temp']! + 2 * r.sd['temp']!, fahrenheit)}'}), style: T.caption.copyWith(color: c.label2)),
       ]),
     );

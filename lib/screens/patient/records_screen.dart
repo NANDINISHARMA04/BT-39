@@ -100,7 +100,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 1.0,
+          // Taller tiles when the text is larger (accessibility text size).
+          childAspectRatio: 1 / MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6),
           children: [
             for (final cat in recordCategories)
               Pressable(

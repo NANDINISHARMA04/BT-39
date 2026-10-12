@@ -1,0 +1,58 @@
+// Hindi strings for this part of the app. Keys are the exact English text.
+const hiAccess = <String, String>{
+  // Accessibility screen
+  'Accessibility': 'सुगमता',
+  'Make PulseOS easier to see, hear and use. Changes apply straight away and are saved on this device.': 'PulseOS को देखना, सुनना और चलाना आसान बनाएं। बदलाव तुरंत लागू होते हैं और इसी डिवाइस पर सेव रहते हैं।',
+  'For low vision': 'कम दिखने वालों के लिए',
+  'Bigger, bolder text, and alerts read aloud, for people who find the screen hard to see.': 'बड़े और गहरे अक्षर, और अलर्ट बोलकर सुनाना, उनके लिए जिन्हें स्क्रीन देखने में मुश्किल होती है।',
+  'Bigger, bolder text for people who find small text hard to read.': 'बड़े और गहरे अक्षर, उनके लिए जिन्हें छोटे अक्षर पढ़ने में मुश्किल होती है।',
+  'Normal': 'सामान्य',
+  'Large': 'बड़ा',
+  'Extra large': 'बहुत बड़ा',
+  'Bold text': 'गहरे अक्षर',
+  'Read alerts aloud': 'अलर्ट बोलकर सुनाएं',
+  'For blind users: new alerts are spoken by the device': 'न देख पाने वालों के लिए: नए अलर्ट डिवाइस बोलकर सुनाएगा',
+  'Alerts will be read aloud like this.': 'अलर्ट ऐसे बोलकर सुनाए जाएंगे।',
+  'For hearing loss': 'कम सुनने वालों के लिए',
+  'For deaf or hard-of-hearing people: the screen flashes, the phone vibrates and the alert stays on screen until you tap it.': 'जो सुन नहीं पाते या कम सुनते हैं: स्क्रीन चमकती है, फ़ोन वाइब्रेट होता है और अलर्ट तब तक स्क्रीन पर रहता है जब तक आप उसे न छुएं।',
+  'Flash the screen for alerts': 'अलर्ट पर स्क्रीन चमकाएं',
+  'For memory or for older users': 'याददाश्त या बुज़ुर्गों के लिए',
+  'Easy home shows one clear status, your three vitals in large numbers and four big buttons: help, family, medicines and SOS.': 'आसान होम में एक साफ़ हालत, आपकी तीन जांचें बड़े अंकों में और चार बड़े बटन होते हैं: मदद, परिवार, दवाइयां और SOS।',
+  'Easy home': 'आसान होम',
+  'For motion sensitivity': 'हिलती चीज़ों से परेशानी वालों के लिए',
+  'Turns off sliding and fading animations, for people who feel dizzy or distracted by movement.': 'खिसकने और धुंधलाने वाले एनिमेशन बंद करता है, उनके लिए जिन्हें हिलती चीज़ों से चक्कर आते हैं या ध्यान भटकता है।',
+  'Reduce motion': 'कम हलचल',
+  'Use the app in the language you read best.': 'ऐप उस भाषा में चलाएं जो आप सबसे अच्छी तरह पढ़ते हैं।',
+  'Preview': 'झलक',
+  'Heart 72 bpm · Normal': 'धड़कन 72 bpm · सामान्य',
+  'This is how text will look across the app.': 'पूरे ऐप में अक्षर ऐसे दिखेंगे।',
+
+  // Me screens
+  'Larger text, easy home, flash and spoken alerts': 'बड़े अक्षर, आसान होम, चमकते और बोलते अलर्ट',
+  'Larger text, bold text, less motion': 'बड़े अक्षर, गहरे अक्षर, कम हलचल',
+
+  // Easy home
+  'No family phone number': 'परिवार का फ़ोन नंबर नहीं है',
+  'Add a caregiver with a phone number in Me › Family.': 'मैं › परिवार में फ़ोन नंबर के साथ देखभाल करने वाले को जोड़ें।',
+  'Call {name}': '{name} को कॉल करें',
+  "This device can't place calls from the app. Dial {phone} from your phone.": 'यह डिवाइस ऐप से कॉल नहीं कर सकता। अपने फ़ोन से {phone} डायल करें।',
+  'Alert: tap to see': 'अलर्ट: देखने के लिए छुएं',
+  "You're OK": 'आप ठीक हैं',
+  'Something needs your attention.': 'किसी चीज़ पर आपका ध्यान चाहिए।',
+  "The band can't read you well. Tighten it a little.": 'बैंड ठीक से पढ़ नहीं पा रहा। इसे थोड़ा कस लें।',
+  'Your readings look normal for you.': 'आपकी रीडिंग आपके लिए सामान्य हैं।',
+  'Ask for help': 'मदद मांगें',
+  'Call family': 'परिवार को कॉल',
+  'My medicines': 'मेरी दवाइयां',
+  'Emergency help': 'इमरजेंसी मदद',
+  'Show full home': 'पूरा होम दिखाएं',
+  'No reading': 'रीडिंग नहीं',
+
+  // Patient shell
+  'Alert: {title}. {reason}': 'अलर्ट: {title}। {reason}',
+  'Tap to see the alert': 'अलर्ट देखने के लिए छुएं',
+  'Help: ask the assistant': 'मदद: असिस्टेंट से पूछें',
+  'Help': 'मदद',
+  'Turn the voice guide on': 'आवाज़ गाइड चालू करें',
+  'Mute the voice guide': 'आवाज़ गाइड बंद करें',
+};

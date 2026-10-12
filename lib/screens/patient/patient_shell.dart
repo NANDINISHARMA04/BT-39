@@ -8,15 +8,19 @@ import 'package:provider/provider.dart';
 import '../../engine/adapt_alert.dart';
 import '../../engine/simulator.dart';
 import '../../l10n/l10n.dart';
+import '../../services/accessibility.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
+import '../../services/speech.dart';
 import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import '../auth/login_now_screen.dart';
 import 'alerts_screen.dart';
+import 'assistant_screen.dart';
 import 'care_screen.dart';
+import 'easy_home_screen.dart';
 import 'insights_screen.dart';
 import 'me_screen.dart';
 import 'sos_screen.dart';
@@ -146,11 +150,16 @@ class PatientSidebar extends StatelessWidget {
                   const Spacer(),
                   CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: onSimulate, child: Text(tr('Simulate a scenario'))),
                   const SizedBox(height: 8),
-                  CupertinoButton.filled(
-                    sizeStyle: CupertinoButtonSize.medium,
-                    color: c.red,
-                    onPressed: onSos,
-                    child: const Text('SOS', style: TextStyle(fontWeight: FontWeight.w800)),
+                  Semantics(
+                    label: tr('Emergency SOS'),
+                    button: true,
+                    excludeSemantics: true,
+                    child: CupertinoButton.filled(
+                      sizeStyle: CupertinoButtonSize.medium,
+                      color: c.red,
+                      onPressed: onSos,
+                      child: const Text('SOS', style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -178,6 +187,10 @@ class _PatientShellState extends State<PatientShell> {
   int get _tab => patientTab.value;
   HealthAlert? _banner;
   Timer? _bannerTimer;
+
+  /// The red/orange screen border shown for a new alert (flash alerts).
+  Color? _flash;
+  Timer? _flashTimer;
   late final MonitorController _m = context.read<MonitorController>();
 
   @override
@@ -208,6 +221,7 @@ class _PatientShellState extends State<PatientShell> {
     _m.badSignal.removeListener(_onBad);
     _m.scenarioEnded.removeListener(_onScenarioEnded);
     _bannerTimer?.cancel();
+    _flashTimer?.cancel();
     super.dispose();
   }
 
@@ -228,9 +242,25 @@ class _PatientShellState extends State<PatientShell> {
     final a = _m.alertEvents.value;
     if (a == null || !mounted) return;
     HapticFeedback.heavyImpact();
+    final a11y = context.read<AccessibilitySettings>();
+    final touring = context.read<TourController>().running;
     setState(() => _banner = a);
     _bannerTimer?.cancel();
-    _bannerTimer = Timer(const Duration(seconds: 6), () => mounted ? setState(() => _banner = null) : null);
+    if (a11y.flashAlerts) {
+      // For deaf or hard-of-hearing people: flash the screen edge, vibrate,
+      // and keep the banner until it is tapped.
+      HapticFeedback.vibrate();
+      setState(() => _flash = a.level >= 3 ? context.ios.red : context.ios.orange);
+      _flashTimer?.cancel();
+      _flashTimer = Timer(const Duration(seconds: 4), () => mounted ? setState(() => _flash = null) : null);
+    } else {
+      _bannerTimer = Timer(const Duration(seconds: 6), () => mounted ? setState(() => _banner = null) : null);
+    }
+    // For blind or low-vision people. Not during the guided demo, which has
+    // its own voice.
+    if (a11y.speakAlerts && !touring) {
+      Speech.instance.speak(tr('Alert: {title}. {reason}', {'title': a.title, 'reason': a.reasons.isEmpty ? '' : a.reasons.first}));
+    }
     final store = context.read<PatientStore>();
     if (a.level >= 4 && store.prefs.autoSos && !context.read<TourController>().running) {
       Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => SosScreen(trigger: a)));
@@ -261,7 +291,9 @@ class _PatientShellState extends State<PatientShell> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final m = context.watch<MonitorController>();
-    final pages = const [TodayScreen(), AlertsScreen(), InsightsScreen(), CareScreen(), MeScreen()];
+    final a11y = context.watch<AccessibilitySettings>();
+    final tour = context.watch<TourController>();
+    final pages = [a11y.easyHome ? const EasyHomeScreen() : const TodayScreen(), const AlertsScreen(), const InsightsScreen(), const CareScreen(), const MeScreen()];
     final items = [
       (CupertinoIcons.heart, CupertinoIcons.heart_fill, tr('Today'), 0),
       (CupertinoIcons.bell, CupertinoIcons.bell_fill, tr('Alerts'), m.needsReply),
@@ -342,10 +374,17 @@ class _PatientShellState extends State<PatientShell> {
                   ),
                 ),
               ),
+            if (!tour.running && tour.step == null) _HelpButton(above: isWide(context) ? 24 : (bottom > 0 ? bottom : 10) + 6 + 28 + MediaQuery.textScalerOf(context).scale(10.5) * 1.3 + 16),
+            if (_flash != null) Positioned.fill(child: _FlashBorder(color: _flash!)),
             _AlertBanner(
               alert: _banner,
+              big: a11y.flashAlerts,
               onTap: () {
-                setState(() => _banner = null);
+                _bannerTimer?.cancel();
+                setState(() {
+                  _banner = null;
+                  _flash = null;
+                });
                 go(PatientTab.alerts);
               },
             ),
@@ -382,9 +421,12 @@ class _TabPage extends StatelessWidget {
 
 /// A Dynamic-Island-style banner that drops in when an alert is sent.
 class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.alert, required this.onTap});
+  const _AlertBanner({required this.alert, required this.onTap, this.big = false});
   final HealthAlert? alert;
   final VoidCallback onTap;
+
+  /// Larger, and stays until tapped (flash alerts).
+  final bool big;
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
@@ -396,14 +438,17 @@ class _AlertBanner extends StatelessWidget {
       curve: Curves.easeOutBack,
       left: 10,
       right: 10,
-      top: a == null ? -140 : top + 6,
+      top: a == null ? (big ? -400 : -140) : top + 6,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: Pressable(
+          child: Semantics(
+            liveRegion: true,
+            button: true,
+            child: Pressable(
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(big ? 18 : 14),
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(30),
@@ -424,17 +469,21 @@ class _AlertBanner extends StatelessWidget {
                       children: [
                         Text(
                           a == null ? '' : '${a.levelLabel} · ${a.title}',
-                          maxLines: 1,
+                          maxLines: big ? 2 : 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: big ? 19 : 15),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          a?.reasons.first ?? '',
-                          maxLines: 2,
+                          a == null || a.reasons.isEmpty ? '' : a.reasons.first,
+                          maxLines: big ? 3 : 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xB3FFFFFF), fontSize: 13),
+                          style: TextStyle(color: const Color(0xB3FFFFFF), fontSize: big ? 16 : 13),
                         ),
+                        if (big) ...[
+                          const SizedBox(height: 6),
+                          Text(tr('Tap to see the alert'), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                        ],
                       ],
                     ),
                   ),
@@ -444,10 +493,98 @@ class _AlertBanner extends StatelessWidget {
               ),
             ),
           ),
+          ),
         ),
       ),
     );
   }
+}
+
+/// The round Help button above the tab bar: opens the assistant.
+class _HelpButton extends StatelessWidget {
+  const _HelpButton({required this.above});
+
+  /// Distance from the bottom of the shell.
+  final double above;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    return Positioned(
+      right: 16,
+      bottom: above,
+      child: Semantics(
+        button: true,
+        label: tr('Help: ask the assistant'),
+        excludeSemantics: true,
+        child: Pressable(
+          scale: .9,
+          onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AssistantScreen())),
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: [c.indigo, c.purple], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 6))],
+            ),
+            padding: const EdgeInsets.all(8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(CupertinoIcons.question, color: Colors.white, size: 26),
+                Text(tr('Help'), maxLines: 1, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A bright pulsing border around the screen for a new alert, for people
+/// who can't hear the alert sound.
+class _FlashBorder extends StatefulWidget {
+  const _FlashBorder({required this.color});
+  final Color color;
+  @override
+  State<_FlashBorder> createState() => _FlashBorderState();
+}
+
+class _FlashBorderState extends State<_FlashBorder> with SingleTickerProviderStateMixin {
+  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // With reduced motion the border stays on instead of flashing.
+    if (MediaQuery.of(context).disableAnimations) {
+      _a.stop();
+      _a.value = 1;
+    } else if (!_a.isAnimating) {
+      _a.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _a.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: FadeTransition(
+          opacity: Tween(begin: .35, end: 1.0).animate(_a),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: widget.color, width: 14),
+              gradient: RadialGradient(radius: 1.2, colors: [widget.color.withValues(alpha: 0), widget.color.withValues(alpha: .28)]),
+            ),
+          ),
+        ),
+      );
 }
 
 Color levelColor(BuildContext context, int level) {
@@ -574,11 +711,16 @@ class TourOverlay extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(tr('{i} of {n}', {'i': tour.index, 'n': TourController.totalSteps}), style: const TextStyle(color: Colors.white60, fontSize: 12, fontFeatures: T.num)),
                         const Spacer(),
-                        CupertinoButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: const Size(30, 30),
-                          onPressed: tour.toggleMute,
-                          child: Icon(tour.narrator.muted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill, color: Colors.white70, size: 20),
+                        Semantics(
+                          label: tour.narrator.muted ? tr('Turn the voice guide on') : tr('Mute the voice guide'),
+                          button: true,
+                          excludeSemantics: true,
+                          child: CupertinoButton(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(30, 30),
+                            onPressed: tour.toggleMute,
+                            child: Icon(tour.narrator.muted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill, color: Colors.white70, size: 20),
+                          ),
                         ),
                         if (tour.running)
                           CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.stop, child: Text(tr('Skip'), style: const TextStyle(color: Colors.white70, fontSize: 14)))

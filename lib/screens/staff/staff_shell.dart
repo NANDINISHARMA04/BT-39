@@ -17,6 +17,7 @@ import '../../widgets/vitals.dart';
 import '../../widgets/demo_banner.dart';
 import '../../widgets/lang_switch.dart';
 import '../../widgets/shell_navigator.dart';
+import '../patient/accessibility_screen.dart';
 import '../patient/patient_shell.dart' show isWide, showSimulator;
 import 'bed_screen.dart';
 import 'home_patients_screen.dart';
@@ -648,7 +649,10 @@ class StaffMeScreen extends StatelessWidget {
           IOSRow(icon: CupertinoIcons.cloud_fill, iconColor: c.blue, title: tr('Source'), subtitle: s.onDevice ? tr('On-device demo ward (12 beds, NEWS2 every second)') : tr('BT39 monitor service + Supabase'), chevron: false),
         ]),
         const SizedBox(height: 20),
-        const GroupedList(children: [LanguageRow()]),
+        GroupedList(children: [
+          const LanguageRow(),
+          IOSRow(icon: CupertinoIcons.person_crop_circle_badge_checkmark, iconColor: c.blue, title: tr('Accessibility'), subtitle: tr('Larger text, bold text, less motion'), onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AccessibilityScreen()))),
+        ]),
         const SizedBox(height: 20),
         GroupedList(children: [
           IOSRow(

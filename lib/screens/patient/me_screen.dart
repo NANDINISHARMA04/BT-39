@@ -10,6 +10,7 @@ import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/lang_switch.dart';
+import 'accessibility_screen.dart';
 import 'family_screen.dart';
 import 'insurance_screen.dart';
 import 'patient_shell.dart';
@@ -108,6 +109,7 @@ class MeScreen extends StatelessWidget {
             ]),
           ),
           const LanguageRow(),
+          IOSRow(icon: CupertinoIcons.person_crop_circle_badge_checkmark, iconColor: c.blue, title: tr('Accessibility'), subtitle: tr('Larger text, easy home, flash and spoken alerts'), onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AccessibilityScreen()))),
         ]),
         FormGroup(header: tr('About'), children: [
           IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'PulseOS', subtitle: tr('Version 1.0 · AdaptAlert engine · student research prototype, not a medical device'), chevron: false),
