@@ -101,8 +101,8 @@ class MonitorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void doctorLabel(HealthAlert a, bool real) {
-    engine.doctorLabel(a, real);
+  void doctorLabel(HealthAlert a, bool real, {String? by}) {
+    engine.doctorLabel(a, real, by: by);
     notifyListeners();
   }
 

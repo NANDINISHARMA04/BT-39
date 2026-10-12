@@ -5,13 +5,16 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../engine/news2.dart';
+import '../../engine/adapt_alert.dart';
 import '../../services/bt39_client.dart';
+import '../../services/monitor.dart';
 import '../../services/session.dart';
 import '../../services/staff_controller.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
 import 'bed_screen.dart';
+import 'home_patients_screen.dart';
 
 Color bandColor(BuildContext context, String? band) {
   final c = context.ios;
@@ -35,7 +38,9 @@ class _StaffShellState extends State<StaffShell> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final sc = context.watch<StaffController>();
-    final pages = const [WardScreen(), StaffAlertsScreen(), LearningScreen(), StaffMeScreen()];
+    final home = context.watch<MonitorController>();
+    final toReview = home.engine.alerts.where((a) => a.doctor == DoctorLabel.pending).length;
+    final pages = const [WardScreen(), HomePatientsScreen(), StaffAlertsScreen(), LearningScreen(), StaffMeScreen()];
     return Scaffold(
       backgroundColor: c.bg,
       body: IndexedStack(index: _tab, children: pages),
@@ -49,6 +54,11 @@ class _StaffShellState extends State<StaffShell> {
         },
         items: [
           const BottomNavigationBarItem(icon: Icon(CupertinoIcons.square_grid_2x2), activeIcon: Icon(CupertinoIcons.square_grid_2x2_fill), label: 'Ward'),
+          BottomNavigationBarItem(
+            icon: Badge(isLabelVisible: toReview > 0, label: Text('$toReview'), child: const Icon(CupertinoIcons.house)),
+            activeIcon: Badge(isLabelVisible: toReview > 0, label: Text('$toReview'), child: const Icon(CupertinoIcons.house_fill)),
+            label: 'Home patients',
+          ),
           BottomNavigationBarItem(
             icon: Badge(isLabelVisible: sc.openUnacked > 0, label: Text('${sc.openUnacked}'), child: const Icon(CupertinoIcons.bell)),
             activeIcon: Badge(isLabelVisible: sc.openUnacked > 0, label: Text('${sc.openUnacked}'), child: const Icon(CupertinoIcons.bell_fill)),
@@ -90,10 +100,10 @@ class WardScreen extends StatelessWidget {
     final cols = width > 1100 ? 4 : width > 760 ? 3 : 2;
     return LargeTitlePage(
       title: 'Ward A',
-      subtitle: '${s.name} · ${s.role == Role.doctor ? 'Doctor' : 'Nurse'}${s.demo ? ' · Demo ward' : ''}',
+      subtitle: '${s.name} · ${s.role == Role.doctor ? 'Doctor' : 'Nurse'}${s.onDevice ? ' · Demo ward' : ''}',
       trailing: StatusPill(status: sc.status),
       children: [
-        if (sc.status == 'connecting' && !s.demo)
+        if (sc.status == 'connecting' && !s.onDevice)
           IOSCard(child: Text('Connecting to the BT39 service. On the free plan it can take about a minute to wake up.', style: T.footnote.copyWith(color: c.label2))),
         if (sc.beds.isNotEmpty) ...[
           Row(children: [
@@ -451,14 +461,14 @@ class StaffMeScreen extends StatelessWidget {
                 Text(s.name, style: T.title2.copyWith(color: c.label)),
                 Text(s.email, style: T.footnote.copyWith(color: c.label2)),
                 const SizedBox(height: 6),
-                Wrap(spacing: 6, children: [Pill(s.role == Role.doctor ? 'Doctor' : 'Nurse', color: c.blue), Pill(s.demo ? 'Demo ward' : 'Ward A', color: s.demo ? c.orange : c.green)]),
+                Wrap(spacing: 6, children: [Pill(s.role == Role.doctor ? 'Doctor' : 'Nurse', color: c.blue), Pill(s.onDevice ? 'Demo ward' : 'Ward A', color: s.onDevice ? c.orange : c.green)]),
               ]),
             ),
           ]),
         ),
         FormGroup(header: 'Connection', children: [
           IOSRow(icon: CupertinoIcons.antenna_radiowaves_left_right, iconColor: c.green, title: 'Live stream', trailing: StatusPill(status: sc.status), chevron: false),
-          IOSRow(icon: CupertinoIcons.cloud_fill, iconColor: c.blue, title: 'Source', subtitle: s.demo ? 'On-device demo ward (12 beds, NEWS2 every second)' : 'BT39 monitor service + Supabase', chevron: false),
+          IOSRow(icon: CupertinoIcons.cloud_fill, iconColor: c.blue, title: 'Source', subtitle: s.onDevice ? 'On-device demo ward (12 beds, NEWS2 every second)' : 'BT39 monitor service + Supabase', chevron: false),
         ]),
         const SizedBox(height: 20),
         GroupedList(children: [

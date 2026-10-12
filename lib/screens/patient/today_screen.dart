@@ -9,6 +9,7 @@ import '../../engine/adapt_alert.dart';
 import '../../models/patient_models.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
+import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
@@ -50,6 +51,32 @@ class TodayScreen extends StatelessWidget {
       children: [
         FadeIn(child: _Hero(status: e.status, r: r, tau: e.tau)),
         const SizedBox(height: 12),
+        if (!context.watch<TourController>().running) ...[
+          FadeIn(
+            delay: 30,
+            child: IOSCard(
+              onTap: () => context.read<TourController>().start(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.indigo, c.purple])),
+                  child: const Icon(CupertinoIcons.play_fill, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Watch AdaptAlert in 90 seconds', style: T.headline.copyWith(color: c.label)),
+                    Text('A guided demo: walk, loose band, coffee, a real emergency, and how it learns.', style: T.footnote.copyWith(color: c.label2)),
+                  ]),
+                ),
+                Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (r != null) ...[
           FadeIn(delay: 60, child: _HeartCard(r: r, paused: m.paused, loose: m.scenarioId == 'loose')),
           const SizedBox(height: 12),

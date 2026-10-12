@@ -86,10 +86,18 @@ class Bucket {
 }
 
 /// Personal estimate from this person's labels for one pattern (Beta(1,1) prior),
-/// and how much to trust it: w = n / (n + 4).
-({double n, double pu, double w}) personal(Bucket? b) {
+/// and how much to trust it: w = n / (n + k), k = 4 by default.
+({double n, double pu, double w}) personal(Bucket? b, {double k = 4}) {
   final n = b == null ? 0.0 : b.r + b.f;
-  return (n: n, pu: b == null ? .5 : (b.r + 1) / (n + 2), w: n / (n + 4));
+  return (n: n, pu: b == null ? .5 : (b.r + 1) / (n + 2), w: n / (n + k));
+}
+
+/// Approximate 90% credible interval of the personal estimate (Beta posterior,
+/// normal approximation). Wide when there are few labels.
+({double lo, double hi}) personalInterval(Bucket? b) {
+  final r = b?.r ?? 0, f = b?.f ?? 0, a = r + 1, c = f + 1;
+  final m = a / (a + c), sd = sqrt(a * c / ((a + c) * (a + c) * (a + c + 1)));
+  return (lo: (m - 1.645 * sd).clamp(0, 1).toDouble(), hi: (m + 1.645 * sd).clamp(0, 1).toDouble());
 }
 
 double nudgedTau(double tau, double weekStartTau, double delta) {
@@ -153,6 +161,9 @@ class HealthAlert {
   final bool safety;
   PatientFeedback? patientFeedback;
   DoctorLabel doctor = DoctorLabel.pending;
+
+  /// Who reviewed it (a doctor or nurse), when known.
+  String? reviewedBy;
   double contribR = 0, contribF = 0;
   final List<EscalationStep> escalation = [];
   static const levelName = {1: 'Check-in', 2: 'Warning', 3: 'Urgent', 4: 'Critical'};
@@ -473,9 +484,10 @@ class AdaptAlertEngine {
   }
 
   /// The doctor's label overrides the wearer's.
-  void doctorLabel(HealthAlert a, bool real) {
+  void doctorLabel(HealthAlert a, bool real, {String? by}) {
     if (a.doctor != DoctorLabel.pending) return;
     a.doctor = real ? DoctorLabel.confirmed : DoctorLabel.rejected;
+    a.reviewedBy = by;
     labels++;
     _setContrib(a, real ? 1 : 0, real ? 0 : 1);
     if (!a.safety) _nudge(real ? -.05 : .03);

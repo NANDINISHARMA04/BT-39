@@ -119,14 +119,20 @@ class TrendChart extends StatelessWidget {
 }
 
 /// The 30-day simulated study: false alarms per patient per day, three systems.
+Color systemColor(BuildContext context, String s) {
+  final c = context.ios;
+  return switch (s) { 'A' => c.gray, 'B' => c.blue, 'C' => c.green, 'D' => c.orange, _ => c.purple };
+}
+
 class StudyChart extends StatelessWidget {
-  const StudyChart({super.key, required this.result});
+  const StudyChart({super.key, required this.result, this.systems = const ['A', 'B', 'C']});
   final StudyResult result;
+  final List<String> systems;
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    final all = [...result.series['A']!, ...result.series['B']!, ...result.series['C']!];
-    final maxY = all.reduce(max).ceilToDouble();
+    final all = [for (final s in systems) ...result.series[s]!];
+    final maxY = max(1.0, all.reduce(max).ceilToDouble());
     LineChartBarData line(String k, Color col, double w) => LineChartBarData(
           spots: [for (var i = 0; i < result.days; i++) FlSpot(i + 1.0, result.series[k]![i])],
           color: col,
@@ -146,14 +152,14 @@ class StudyChart extends StatelessWidget {
           maxX: result.days.toDouble(),
           minY: 0,
           maxY: maxY,
-          lineBarsData: [line('A', c.gray, 2), line('B', c.blue, 2), line('C', c.green, 3)],
+          lineBarsData: [for (final s in systems) line(s, systemColor(context, s), s == 'C' ? 3 : 2)],
           gridData: FlGridData(drawVerticalLine: false, horizontalInterval: 1, getDrawingHorizontalLine: (_) => FlLine(color: c.sep, strokeWidth: 1)),
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => c.card2,
               getTooltipItems: (spots) => [
-                for (final s in spots) LineTooltipItem('${['Fixed', 'Personal', 'AdaptAlert'][s.barIndex]} ${s.y.toStringAsFixed(2)}', T.caption.copyWith(color: s.bar.color, fontWeight: FontWeight.w600)),
+                for (final s in spots) LineTooltipItem('${systemNames[systems[s.barIndex]]} ${s.y.toStringAsFixed(2)}', T.caption.copyWith(color: s.bar.color, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -221,6 +227,48 @@ class AlertLoadChart extends StatelessWidget {
                 BarChartRodData(toY: byHour[hours[i]]!.$2.toDouble(), color: c.green, width: 9, borderRadius: BorderRadius.circular(3)),
               ]),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sensitivity as patients dismiss more real alerts (alarm fatigue).
+class FatigueChart extends StatelessWidget {
+  const FatigueChart({super.key, required this.points});
+  final List<NoisePoint> points;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    LineChartBarData line(double Function(NoisePoint) y, Color col, {bool dashed = false}) => LineChartBarData(
+          spots: [for (final p in points) FlSpot(p.noise * 100, y(p) * 100)],
+          color: col,
+          barWidth: 2.5,
+          dashArray: dashed ? [6, 4] : null,
+          isStrokeCapRound: true,
+          dotData: FlDotData(getDotPainter: (_, _, _, _) => FlDotCirclePainter(radius: 3.5, color: col, strokeWidth: 0)),
+        );
+    final lo = points.map((p) => min(p.sensC, p.sensD)).reduce(min) * 100;
+    return SizedBox(
+      height: 190,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: points.last.noise * 100,
+          minY: (lo - 2).floorToDouble().clamp(0, 98),
+          maxY: 100.5,
+          lineBarsData: [line((p) => p.sensC, c.green), line((p) => p.sensD, c.orange), line((p) => p.critC, c.green, dashed: true), line((p) => p.critD, c.orange, dashed: true)],
+          gridData: FlGridData(drawVerticalLine: false, getDrawingHorizontalLine: (_) => FlLine(color: c.sep, strokeWidth: 1)),
+          borderData: FlBorderData(show: false),
+          lineTouchData: const LineTouchData(enabled: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(),
+            rightTitles: const AxisTitles(),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 34, getTitlesWidget: (v, m) => SideTitleWidget(meta: m, child: Text('${v.round()}%', style: T.caption.copyWith(color: c.label2))))),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true, reservedSize: 24, interval: 10, getTitlesWidget: (v, m) => SideTitleWidget(meta: m, child: Text('${v.round()}%', style: T.caption.copyWith(color: c.label2)))),
+            ),
+          ),
         ),
       ),
     );

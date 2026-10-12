@@ -1,5 +1,5 @@
 import 'package:bt39_care/app.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,9 +15,11 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const BT39App());
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Try the patient demo'), findsOneWidget);
+    expect(find.text('Watch the 90-second demo'), findsOneWidget);
 
-    await tester.tap(find.text('Try the patient demo'));
+    await tester.ensureVisible(find.widgetWithText(CupertinoButton, 'Patient'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(CupertinoButton, 'Patient'));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }
@@ -50,7 +52,9 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const BT39App());
     await tester.pump(const Duration(milliseconds: 600));
-    await tester.tap(find.text('Doctor'));
+    await tester.ensureVisible(find.widgetWithText(CupertinoButton, 'Doctor'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(CupertinoButton, 'Doctor'));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }

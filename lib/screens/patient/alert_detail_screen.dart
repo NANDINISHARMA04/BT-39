@@ -1,0 +1,361 @@
+import 'dart:math';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../engine/adapt_alert.dart';
+import '../../services/monitor.dart';
+import '../../theme/ios_theme.dart';
+import '../../widgets/charts.dart';
+import '../../widgets/common.dart';
+import '../../widgets/vitals.dart';
+import 'alerts_screen.dart';
+import 'patient_shell.dart';
+
+/// Opens the full explanation of one alert. Works from the patient app and the
+/// staff app, so it carries the monitor along to the new page.
+void openAlertDetail(BuildContext context, HealthAlert a, {bool staffMode = false, String reviewer = 'Dr. Kavya Rao'}) {
+  final m = context.read<MonitorController>();
+  Navigator.of(context).push(CupertinoPageRoute(
+    builder: (_) => ChangeNotifierProvider.value(value: m, child: AlertDetailScreen(alert: a, staffMode: staffMode, reviewer: reviewer)),
+  ));
+}
+
+const _unit = {'hr': 'bpm', 'spo2': '%', 'temp': '°C'};
+const _label = {'hr': 'Heart rate', 'spo2': 'Oxygen', 'temp': 'Temperature'};
+
+/// The heart of the project on one page: what the band saw, which signals
+/// drove the alert, how the model and the person's history were combined,
+/// and what would have changed the decision.
+class AlertDetailScreen extends StatelessWidget {
+  const AlertDetailScreen({super.key, required this.alert, this.staffMode = false, this.reviewer = 'Dr. Kavya Rao'});
+  final HealthAlert alert;
+  final bool staffMode;
+  final String reviewer;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final m = context.watch<MonitorController>();
+    final e = m.engine;
+    final a = alert;
+    final rec = e.history.where((h) => h.t == a.t).firstOrNull;
+    final col = levelColor(context, a.level);
+    final primary = _primaryVital(a, rec);
+    final window = e.history.where((h) => h.t >= a.t - 30 && h.t <= a.t + 15).toList();
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      appBar: CupertinoNavigationBar(previousPageTitle: 'Alerts', backgroundColor: c.material, middle: const Text('Why this alert')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 60), children: [
+        FadeIn(child: _Header(a: a, color: col)),
+        if (window.length > 3) ...[
+          SectionHeader('What the band saw', trailing: '${_label[primary]} · ${_unit[primary]}'),
+          FadeIn(
+            delay: 60,
+            child: IOSCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                TrendChart(history: window, vital: primary, color: col),
+                const SizedBox(height: 6),
+                Text('Shaded: this person\'s normal range for the activity at the time. Red dot: the minute the alert was sent.', style: T.caption.copyWith(color: c.label2)),
+              ]),
+            ),
+          ),
+        ],
+        if (rec != null) ...[
+          const SectionHeader('Which signals drove it'),
+          FadeIn(delay: 100, child: _Contributions(rec: rec)),
+        ],
+        const SectionHeader('How AdaptAlert decided'),
+        FadeIn(delay: 140, child: _Decision(a: a, engine: e)),
+        const SectionHeader('What would have changed it'),
+        FadeIn(delay: 180, child: _Counterfactual(a: a, rec: rec, engine: e, primary: primary)),
+        const SectionHeader('Who was told'),
+        FadeIn(delay: 220, child: _Timeline(a: a)),
+        SectionHeader(staffMode ? 'Your review' : 'Your answer'),
+        IOSCard(child: AlertActions(a: a, staffMode: staffMode, reviewer: reviewer)),
+        const SizedBox(height: 12),
+        Text('Explanations are generated from the same numbers the engine used. Research prototype, not a diagnosis.', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+      ]),
+    );
+  }
+}
+
+String _primaryVital(HealthAlert a, WindowRecord? rec) {
+  final parts = a.key.split('|');
+  if (parts.first == 'SAFETY') return parts[1];
+  if (parts[1] != 'multi') return parts[1];
+  if (rec == null) return 'hr';
+  final dev = {'hr': rec.z['hr']!, 'spo2': -rec.z['spo2']!, 'temp': rec.z['temp']!};
+  return dev.entries.reduce((x, y) => x.value >= y.value ? x : y).key;
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.a, required this.color});
+  final HealthAlert a;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(colors: [color, Color.lerp(color, Colors.black, .25)!], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${a.levelLabel.toUpperCase()} · ${hhmm(a.t)}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: .6)),
+            const SizedBox(height: 6),
+            Text(a.title, style: T.title2.copyWith(color: Colors.white)),
+            const SizedBox(height: 8),
+            Text(a.reasons.first, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.35)),
+          ]),
+        ),
+        const SizedBox(width: 14),
+        SizedBox(
+          width: 86,
+          height: 86,
+          child: Stack(alignment: Alignment.center, children: [
+            Ring(value: a.p, color: Colors.white, size: 86, stroke: 9),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(pct(a.p), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, fontFeatures: T.num)),
+              const Text('likely real', style: TextStyle(color: Colors.white70, fontSize: 10)),
+            ]),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+/// How far each vital was from this person's normal, in standard deviations.
+class _Contributions extends StatelessWidget {
+  const _Contributions({required this.rec});
+  final WindowRecord rec;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final dev = {'hr': rec.z['hr']!, 'spo2': -rec.z['spo2']!, 'temp': rec.z['temp']!};
+    final top = max(4.0, dev.values.reduce(max));
+    final colors = {'hr': c.pink, 'spo2': c.blue, 'temp': c.orange};
+    String value(String v) => v == 'temp' ? rec.r.temp.toStringAsFixed(1) : '${v == 'hr' ? rec.r.hr : rec.r.spo2}';
+    String usual(String v) => v == 'temp' ? rec.mu[v]!.toStringAsFixed(1) : '${rec.mu[v]!.round()}';
+    return IOSCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final v in ['hr', 'spo2', 'temp'])
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text(_label[v]!, style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                Text('${value(v)} ${_unit[v]} · usual ${usual(v)}', style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
+              ]),
+              const SizedBox(height: 6),
+              LayoutBuilder(
+                builder: (_, box) => Stack(children: [
+                  Container(height: 10, decoration: BoxDecoration(color: c.fill2, borderRadius: BorderRadius.circular(5))),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: (dev[v]! / top).clamp(0, 1)),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, t, _) => Container(width: box.maxWidth * t, height: 10, decoration: BoxDecoration(color: dev[v]! >= 1.5 ? colors[v] : c.gray, borderRadius: BorderRadius.circular(5))),
+                  ),
+                  // The point where a vital starts counting as abnormal (2.5 SD).
+                  Positioned(left: box.maxWidth * (2.5 / top) - 1, child: Container(width: 2, height: 10, color: c.label)),
+                ]),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                dev[v]! < .5 ? 'Normal for you' : '${dev[v]!.toStringAsFixed(1)} SD ${v == 'spo2' ? 'below' : 'above'} your normal${dev[v]! >= 2.5 ? ' · counted as abnormal' : ''}',
+                style: T.caption.copyWith(color: dev[v]! >= 2.5 ? colors[v] : c.label2, fontWeight: dev[v]! >= 2.5 ? FontWeight.w600 : FontWeight.w400),
+              ),
+            ]),
+          ),
+        Text('The black tick marks 2.5 SD, where a reading starts counting as abnormal for this person. Signal quality was ${rec.sqi.toStringAsFixed(2)}, activity: ${rec.act.toLowerCase()}.', style: T.caption.copyWith(color: c.label2)),
+      ]),
+    );
+  }
+}
+
+/// The decision rule with this alert's numbers filled in.
+class _Decision extends StatelessWidget {
+  const _Decision({required this.a, required this.engine});
+  final HealthAlert a;
+  final AdaptAlertEngine engine;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    if (a.safety) {
+      return IOSCard(
+        color: c.red.withValues(alpha: .1),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(CupertinoIcons.shield_lefthalf_fill, color: c.red, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '${a.path.first}. The safety floor sends this alert without asking the model. No amount of feedback can switch it off, so learning can never hide a critical reading.',
+              style: T.sub.copyWith(color: c.label, height: 1.4),
+            ),
+          ),
+        ]),
+      );
+    }
+    final ci = personalInterval(Bucket()
+      ..r = (a.pu * (a.n + 2) - 1).clamp(0, a.n)
+      ..f = a.n - (a.pu * (a.n + 2) - 1).clamp(0, a.n));
+    Widget box(String title, String value, String sub, Color col) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: col.withValues(alpha: .1), borderRadius: BorderRadius.circular(14)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: T.caption.copyWith(color: c.label2)),
+              Text(value, style: T.title2.copyWith(color: col, fontFeatures: T.num)),
+              Text(sub, style: T.caption.copyWith(color: c.label2)),
+            ]),
+          ),
+        );
+    return IOSCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          box('General model', pct(a.pg), a.path.last, c.blue),
+          const SizedBox(width: 8),
+          box('Your history', a.n == 0 ? '—' : pct(a.pu), a.n == 0 ? 'No labels for this pattern yet' : '${a.n.toStringAsFixed(1)} labels · 90% CI ${pct(ci.lo)}–${pct(ci.hi)}', c.purple),
+        ]),
+        const SizedBox(height: 12),
+        Text('Blend', style: T.caption.copyWith(color: c.label2)),
+        const SizedBox(height: 4),
+        Text.rich(
+          TextSpan(style: T.sub.copyWith(color: c.label, fontFeatures: T.num), children: [
+            const TextSpan(text: 'P(real) = '),
+            TextSpan(text: '${(1 - a.w).toStringAsFixed(2)} × ${pct(a.pg)}', style: TextStyle(color: c.blue, fontWeight: FontWeight.w700)),
+            const TextSpan(text: '  +  '),
+            TextSpan(text: '${a.w.toStringAsFixed(2)} × ${pct(a.pu)}', style: TextStyle(color: c.purple, fontWeight: FontWeight.w700)),
+            const TextSpan(text: '  =  '),
+            TextSpan(text: pct(a.p), style: const TextStyle(fontWeight: FontWeight.w800)),
+          ]),
+        ),
+        const SizedBox(height: 4),
+        Text('Your history counts for w = n / (n + 4) = ${pct(a.w)}. The more answers for this pattern, the more it counts.', style: T.caption.copyWith(color: c.label2)),
+        const SizedBox(height: 14),
+        Row(children: [
+          Text('Likely real', style: T.caption.copyWith(color: c.label2)),
+          const Spacer(),
+          Text('${pct(a.p)} ≥ τ ${pct(a.tau)} → sent', style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 6),
+        ProbabilityBar(p: a.p, tau: a.tau, color: c.green),
+        const SizedBox(height: 10),
+        Text('τ is this person\'s alert threshold. It is learned from feedback, kept between 30% and 75%, and moves at most 10 points a week. Today it is ${pct(engine.tau)}.', style: T.caption.copyWith(color: c.label2)),
+      ]),
+    );
+  }
+}
+
+/// Counterfactuals: the smallest change that would have meant no alert, and
+/// what the next similar pattern would score after each kind of feedback.
+class _Counterfactual extends StatelessWidget {
+  const _Counterfactual({required this.a, required this.rec, required this.engine, required this.primary});
+  final HealthAlert a;
+  final WindowRecord? rec;
+  final AdaptAlertEngine engine;
+  final String primary;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final lines = <(IconData, Color, String)>[];
+    final r = rec;
+    if (a.safety) {
+      lines.add((CupertinoIcons.lock_fill, c.red, 'Nothing. A safety-floor reading always alerts.'));
+    } else {
+      if (r != null) {
+        final mu = r.mu[primary]!, sd = r.sd[primary]!;
+        final limit = primary == 'spo2' ? mu - 2.5 * sd : mu + 2.5 * sd;
+        final shown = primary == 'temp' ? limit.toStringAsFixed(1) : '${limit.round()}';
+        lines.add((
+          CupertinoIcons.arrow_turn_down_right,
+          c.blue,
+          'No alert if ${_label[primary]!.toLowerCase()} had stayed ${primary == 'spo2' ? 'above' : 'below'} $shown ${_unit[primary]} (2.5 SD from this person\'s usual ${primary == 'temp' ? mu.toStringAsFixed(1) : mu.round()}).',
+        ));
+      }
+      final parts = a.key.split('|');
+      if (parts[1] == 'multi' && r != null) {
+        final single = globalTree(Features(act: parts[0], primary: primary, zHR: r.z['hr']!, zSpO2: r.z['spo2']!, zTemp: r.z['temp']!, numAbn: 1, night: parts[3] == 'night'));
+        lines.add((CupertinoIcons.square_stack_3d_up, c.purple, 'If only ${_label[primary]!.toLowerCase()} had changed, the model would rate it ${pct(single.p)} instead of ${pct(a.pg)}. Two vitals moving together is what made it more serious.'));
+      }
+      if (parts[0] != 'rest') {
+        lines.add((CupertinoIcons.person_crop_circle_badge_checkmark, c.green, 'The movement sensor showed activity, so a higher heart rate was expected and weighed less.'));
+      }
+      // What the next similar pattern would score after each kind of feedback.
+      final b = engine.buckets[a.key];
+      Bucket plus({double r = 0, double f = 0}) => Bucket()
+        ..r = (b?.r ?? 0) + r
+        ..f = (b?.f ?? 0) + f;
+      double score(Bucket x) {
+        final q = personal(x);
+        return (1 - q.w) * a.pg + q.w * q.pu;
+      }
+
+      final ifFalse = score(plus(f: 1)), tauFalse = nudgedTau(engine.tau, engine.weekStartTau, .03);
+      final ifReal = score(plus(r: 1)), tauReal = nudgedTau(engine.tau, engine.weekStartTau, -.05);
+      lines.add((CupertinoIcons.xmark_circle, c.green, 'If a clinician marks it a false alarm, the next similar pattern scores ${pct(ifFalse)} against τ ${pct(tauFalse)}: ${ifFalse >= tauFalse ? 'still sent' : 'held back'}.'));
+      lines.add((CupertinoIcons.checkmark_circle, c.red, 'If it is confirmed real, the next one scores ${pct(ifReal)} against τ ${pct(tauReal)}: sent, and sooner.'));
+    }
+    return IOSCard(
+      child: Column(children: [
+        for (final (i, (icon, col, text)) in lines.indexed) ...[
+          if (i > 0) Divider(height: 20, color: c.sep),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(icon, color: col, size: 22),
+            const SizedBox(width: 12),
+            Expanded(child: Text(text, style: T.sub.copyWith(color: c.label, height: 1.4))),
+          ]),
+        ],
+      ]),
+    );
+  }
+}
+
+class _Timeline extends StatelessWidget {
+  const _Timeline({required this.a});
+  final HealthAlert a;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final steps = [
+      ...a.escalation.map((s) => (hhmm(s.t), s.who, s.what)),
+      if (a.patientFeedback != null) ('', 'Patient', AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said', 'Said')),
+      if (a.doctor != DoctorLabel.pending) ('', a.reviewedBy ?? 'Doctor', a.doctor == DoctorLabel.confirmed ? 'Confirmed real' : 'Marked a false alarm'),
+    ];
+    final colors = {'You': c.teal, 'Caregiver': c.orange, 'Doctor': c.blue, 'SOS': c.red, 'Patient': c.teal};
+    return IOSCard(
+      child: Column(children: [
+        for (final (i, (t, who, what)) in steps.indexed)
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(
+                width: 22,
+                child: Column(children: [
+                  Container(width: 12, height: 12, margin: const EdgeInsets.only(top: 4), decoration: BoxDecoration(color: colors[who] ?? c.indigo, shape: BoxShape.circle)),
+                  if (i < steps.length - 1) Expanded(child: Container(width: 2, color: c.sep)),
+                ]),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(who, style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
+                    Text(what, style: T.footnote.copyWith(color: c.label2)),
+                  ]),
+                ),
+              ),
+              if (t.isNotEmpty) Text(t, style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
+            ]),
+          ),
+      ]),
+    );
+  }
+}

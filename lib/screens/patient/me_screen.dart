@@ -40,7 +40,7 @@ class MeScreen extends StatelessWidget {
                   Text(p.email.isEmpty ? 'No email' : p.email, style: T.footnote.copyWith(color: c.label2)),
                   const SizedBox(height: 6),
                   Wrap(spacing: 6, children: [
-                    Pill(s.demo ? 'Demo Mode' : 'Signed in', color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
+                    Pill(switch (s.mode) { AuthMode.demo => 'Demo Mode', AuthMode.local => 'Device account', AuthMode.cloud => 'Signed in' }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
                     Pill('Edit profile', color: c.blue),
                   ]),
                 ]),
@@ -126,7 +126,7 @@ class MeScreen extends StatelessWidget {
         ]),
         FormGroup(header: 'About', children: [
           IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'AdaptAlert', subtitle: 'Version 1.0 · student research prototype, not a medical device', chevron: false),
-          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: 'Privacy', subtitle: s.demo ? 'Demo Mode: all data stays on this device' : 'Signed in with Supabase. Health data in this build stays on this device.', chevron: false),
+          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: 'Privacy', subtitle: switch (s.mode) { AuthMode.demo => 'Demo Mode: all data stays on this device', AuthMode.local => 'Account stored on this device; the password is kept only as a salted hash', AuthMode.cloud => 'Signed in with Supabase. Health data in this build stays on this device.' }, chevron: false),
         ]),
         const SizedBox(height: 20),
         GroupedList(children: [

@@ -11,6 +11,7 @@ import '../../theme/ios_theme.dart';
 import '../../widgets/charts.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
+import '../research/research_lab_screen.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -111,7 +112,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           ]),
         ),
         const SectionHeader('AI engine, live', trailing: 'every minute'),
-        _Pipeline(pipe: e.pipe),
+        PipelineList(pipe: e.pipe),
         const SectionHeader('Your sensitivity'),
         IOSCard(
           child: Column(children: [
@@ -145,6 +146,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 ]),
         ),
         const SectionHeader('30-day study', trailing: 'simulated'),
+        IOSCard(
+          onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
+          color: c.indigo,
+          child: Row(children: [
+            const Icon(CupertinoIcons.lab_flask_solid, color: Colors.white, size: 30),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Open the Research Lab', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
+                Text('Run your own experiments: 5 systems, ablation, alarm fatigue, federated cold start, 95% CIs.', style: T.footnote.copyWith(color: Colors.white.withValues(alpha: .85))),
+              ]),
+            ),
+            const Icon(CupertinoIcons.chevron_forward, color: Colors.white70, size: 18),
+          ]),
+        ),
+        const SizedBox(height: 12),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('False alarms per patient per day', style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
@@ -218,8 +235,8 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
-class _Pipeline extends StatelessWidget {
-  const _Pipeline({required this.pipe});
+class PipelineList extends StatelessWidget {
+  const PipelineList({super.key, required this.pipe});
   final Map<String, Stage> pipe;
   static const names = {'A': 'Signal quality', 'B': 'Activity', 'C': 'Personal normal', 'D': 'Safety floor', 'E': 'Anomaly check', 'F': 'Decision', 'G': 'Explanation'};
   @override

@@ -18,7 +18,11 @@ There are two apps in one, chosen at sign-in.
 
 | Feature | Where |
 |---|---|
-| Secure authentication: Supabase email sign-in and sign-up, password reset, plus **Demo Mode** that needs no network | Welcome and Sign in |
+| Secure authentication: separate **log in and sign up for patients, doctors and nurses** (role-specific fields such as registration number, speciality, ward and shift), salted SHA-256 password hashes on the device, Supabase when a key is set, plus **Demo Mode** that needs no account | Welcome › Log in / Sign up |
+| **Guided 90-second demo**: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions | Welcome › Watch the 90-second demo |
+| **Alert detail "How AdaptAlert decided"**: what the band saw, which signals drove it (SDs from your normal), model vs your history with a confidence interval, the blend formula and threshold, counterfactuals (what would have changed the decision) and who was told | Alerts › See how AdaptAlert decided |
+| **How it works** explainer and the AdaptAlert hero card (fixed monitor vs sent vs held back) | Alerts |
+| **Research Lab**: run the 5-system experiment with your own settings, ablation, label-noise and alarm-fatigue sweeps, bootstrap CIs, copy results as Markdown for the paper | Welcome › Research Lab, Insights |
 | Health dashboard with real-time insights: live heart rate with a pulse waveform, oxygen, temperature, activity, signal quality and the personal normal range | Today |
 | **AdaptAlert** self-learning alerts: plain-language reasons, "likely real" score, feedback buttons (I was active / Sensor was loose / I feel unwell / Not sure), doctor confirm or reject, held-back alerts | Alerts |
 | Health analytics with charts: trends with the personal-normal band, alert load per hour, the live 7-stage AI pipeline, the sensitivity gauge, learned patterns, and a 30-day simulated study | Insights |
@@ -36,6 +40,7 @@ There are two apps in one, chosen at sign-in.
 - Ward grid of 12 beds sorted by risk, live NEWS2 score and band, a pulsing border on unacknowledged emergencies.
 - Bed detail: six vitals with their NEWS2 points, heart-rate trend, alerts, and a patient chat for doctors.
 - Alert feed: acknowledge, resolve with a note, and label each alert *Real* or *False alarm* (AdaptAlert feedback).
+- **Home patients** tab: the doctor or nurse reviews the patient's AdaptAlert alerts (with the patient's own feedback), marks them real or false, and the patient's alerts learn from it.
 - AdaptAlert tab: how often each ward rule was right, so the noisiest rules can be tuned first.
 
 ## How AdaptAlert works
@@ -64,12 +69,21 @@ You need Flutter 3.41 or newer. It was built and tested with Flutter 3.47.7.
 flutter pub get
 flutter run                 # phone or emulator
 flutter run -d chrome       # web
-flutter test                # 17 tests: engine, NEWS2, storage, every screen
+flutter test                # 22 tests: engine, NEWS2, storage, auth, guided demo, every screen
+dart run tool/run_study.dart # prints the research results as Markdown
 flutter build apk --release
 flutter build web --release --no-web-resources-cdn   # works offline, good for a viva
 ```
 
-With no settings, the app runs in **Demo Mode**: pick *Try the patient demo*, *Doctor* or *Nurse* on the welcome screen.
+With no settings, accounts are stored on the device. Three demo accounts always exist:
+
+| Role | Email | Password |
+|---|---|---|
+| Patient | patient@adaptalert.app | patient123 |
+| Doctor | doctor@adaptalert.app | doctor123 |
+| Nurse | nurse@adaptalert.app | nurse123 |
+
+You can also sign up as any role, or tap *Try without an account*.
 
 ### Demo script (5 minutes)
 
@@ -120,6 +134,10 @@ flutter run \
 - For the web build, add its exact origin to the service's `APP_ORIGIN` and to Supabase's Site URL and Redirect URLs (see the BT39 README, sections 2 and 5).
 - The free Render plan sleeps after 15 minutes. The ward shows "Connecting…" for about a minute while it wakes.
 
+## Research paper
+
+`docs/RESEARCH.md` has the problem, the research gaps it addresses, the method, the simulation design, results tables, limitations and a paper outline. The numbers come from `lib/engine/study.dart`; rerun them with `dart run tool/run_study.dart` or the Research Lab. They are from simulated patients, and the references must be checked before submission.
+
 ## What is simulated in this version
 
 - **The wearable band.** `BandSimulator` stands in for an ESP32 band (MAX30102 for HR and SpO₂, MLX90614 for temperature, MPU6050 for motion). To use real hardware, replace it with a BLE source that produces the same `Reading` objects; the engine doesn't change.
@@ -133,9 +151,9 @@ flutter run \
 ```
 lib/
   engine/      adapt_alert.dart (7-stage engine), simulator.dart (band), study.dart (30-day study), news2.dart
-  services/    session.dart (auth), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
+  services/    session.dart (auth), tour.dart (guided demo), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
   models/      patient_models.dart
-  screens/     auth/, patient/ (today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
+  screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
   widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart
   theme/       ios_theme.dart (iOS colours, light and dark)
 test/          engine, NEWS2, storage, monitor story, and a test that opens every screen

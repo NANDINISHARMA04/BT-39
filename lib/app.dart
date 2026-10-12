@@ -10,6 +10,7 @@ import 'services/monitor.dart';
 import 'services/patient_store.dart';
 import 'services/session.dart';
 import 'services/staff_controller.dart';
+import 'services/tour.dart';
 import 'theme/ios_theme.dart';
 
 class BT39App extends StatelessWidget {
@@ -54,9 +55,13 @@ class RootGate extends StatelessWidget {
     } else if (s.role == Role.patient) {
       child = _PatientRoot(key: ValueKey('patient-${s.accountId}'));
     } else {
-      child = ChangeNotifierProvider(
+      child = MultiProvider(
         key: ValueKey('staff-${s.accountId}'),
-        create: (_) => StaffController(demo: s.demo, token: s.accessToken, wardId: s.wardId, myName: s.name)..start(),
+        providers: [
+          ChangeNotifierProvider(create: (_) => StaffController(demo: s.onDevice, token: s.accessToken, wardId: s.wardId, myName: s.name)..start()),
+          // A patient at home on AdaptAlert, whose alerts staff review.
+          ChangeNotifierProvider(create: (_) => MonitorController()..start()),
+        ],
         child: const StaffShell(),
       );
     }
@@ -78,13 +83,22 @@ class _PatientRoot extends StatefulWidget {
 class _PatientRootState extends State<_PatientRoot> {
   final _nav = GlobalKey<NavigatorState>();
   bool _innerCanPop = false;
+  late final MonitorController _monitor = MonitorController()..start();
+  late final TourController _tour = TourController(_monitor, _select);
+
+  @override
+  void dispose() {
+    _tour.dispose();
+    _monitor.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     patientTab.value = PatientTab.today;
     final s = context.read<Session>();
-    context.read<PatientStore>().load(s.accountId, name: s.name, email: s.email);
+    context.read<PatientStore>().load(s.accountId, name: s.name, email: s.email, details: s.details);
   }
 
   /// Sidebar tap: close any open page, then show the tab.
@@ -129,8 +143,11 @@ class _PatientRootState extends State<_PatientRoot> {
         ),
       ),
     );
-    return ChangeNotifierProvider(
-      create: (_) => MonitorController()..start(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _monitor),
+        ChangeNotifierProvider.value(value: _tour),
+      ],
       child: Builder(builder: (context) {
         if (!isWide(context)) return navigator;
         // Laptop layout: sidebar on the left, content in a readable column.

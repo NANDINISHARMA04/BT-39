@@ -9,6 +9,8 @@ import '../../engine/adapt_alert.dart';
 import '../../engine/simulator.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
+import '../../services/session.dart';
+import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import 'alerts_screen.dart';
@@ -180,6 +182,14 @@ class _PatientShellState extends State<PatientShell> {
   void initState() {
     super.initState();
     patientTab.addListener(_onTab);
+    // Start the guided demo if the person asked for it on the welcome screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final s = context.read<Session>();
+      if (s.pendingTour) {
+        s.pendingTour = false;
+        Future.delayed(const Duration(milliseconds: 800), () => mounted ? context.read<TourController>().start() : null);
+      }
+    });
     _m.alertEvents.addListener(_onAlert);
     _m.heldEvents.addListener(_onHeld);
     _m.badSignal.addListener(_onBad);
@@ -207,7 +217,7 @@ class _PatientShellState extends State<PatientShell> {
     _bannerTimer?.cancel();
     _bannerTimer = Timer(const Duration(seconds: 6), () => mounted ? setState(() => _banner = null) : null);
     final store = context.read<PatientStore>();
-    if (a.level >= 4 && store.prefs.autoSos) {
+    if (a.level >= 4 && store.prefs.autoSos && !context.read<TourController>().running) {
       Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => SosScreen(trigger: a)));
     }
   }
@@ -324,6 +334,7 @@ class _PatientShellState extends State<PatientShell> {
                 go(PatientTab.alerts);
               },
             ),
+            const TourOverlay(),
           ],
         ),
       ),
@@ -448,8 +459,10 @@ Color scenarioColor(BuildContext context, Scenario s) {
 
 /// The sheet that drives the simulated band.
 void showSimulator(BuildContext context) {
+  final monitor = context.read<MonitorController>();
   showSheet(context, (ctx) {
-    return Consumer<MonitorController>(
+    // The sheet can open on a navigator above the provider, so pass it along.
+    return ChangeNotifierProvider.value(value: monitor, child: Consumer<MonitorController>(
       builder: (ctx, m, _) {
         final c = ctx.ios;
         return ListView(
@@ -502,6 +515,73 @@ void showSimulator(BuildContext context) {
           ],
         );
       },
-    );
+    ));
   });
+}
+
+/// The caption card of the guided demo.
+class TourOverlay extends StatelessWidget {
+  const TourOverlay({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final tour = context.watch<TourController>();
+    final s = tour.step;
+    final bottom = isWide(context) ? 24.0 : MediaQuery.of(context).padding.bottom + 74;
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutBack,
+      left: 12,
+      right: 12,
+      bottom: s == null ? -320 : bottom,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            decoration: BoxDecoration(
+              color: const Color(0xF2111114),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 30, offset: Offset(0, 10))],
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              transitionBuilder: (ch, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(.06, 0), end: Offset.zero).animate(a), child: ch)),
+              child: s == null
+                  ? const SizedBox(height: 120)
+                  : Column(key: ValueKey(s.title), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(6)),
+                          child: const Text('GUIDED DEMO', style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: .6)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('${tour.index} of ${TourController.totalSteps}', style: const TextStyle(color: Colors.white60, fontSize: 12, fontFeatures: T.num)),
+                        const Spacer(),
+                        if (tour.running)
+                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.stop, child: const Text('Skip', style: TextStyle(color: Colors.white70, fontSize: 14)))
+                        else
+                          CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 30), onPressed: tour.finish, child: Text('Done', style: TextStyle(color: c.blue, fontSize: 15, fontWeight: FontWeight.w700))),
+                      ]),
+                      const SizedBox(height: 6),
+                      Text(s.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.3)),
+                      const SizedBox(height: 4),
+                      Text(s.body, style: const TextStyle(color: Color(0xDDFFFFFF), fontSize: 14, height: 1.4)),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(end: tour.index / TourController.totalSteps),
+                          duration: const Duration(milliseconds: 600),
+                          builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 3, backgroundColor: Colors.white12, color: c.green),
+                        ),
+                      ),
+                    ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

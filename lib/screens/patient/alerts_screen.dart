@@ -9,7 +9,9 @@ import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import 'alert_detail_screen.dart';
 import 'appointment_editor.dart';
+import 'how_it_works_screen.dart';
 import 'patient_shell.dart';
 
 class AlertsScreen extends StatefulWidget {
@@ -23,7 +25,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.ios;
     final m = context.watch<MonitorController>();
     final e = m.engine;
     final list = _filter == 'open' ? e.alerts.where((a) => a.patientFeedback == null).toList() : e.alerts;
@@ -31,15 +32,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       title: 'Alerts',
       subtitle: 'Explained, and learning from your answers',
       children: [
-        FadeIn(
-          child: IOSCard(
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _Stat(value: e.sentCount, label: 'Sent', color: c.red),
-              _Stat(value: e.held.length, label: 'Held back', color: c.indigo),
-              _Stat(value: e.fixedCount, label: 'A fixed monitor\nwould alarm', color: c.gray),
-            ]),
-          ),
-        ),
+        const FadeIn(child: AdaptAlertHero()),
         const SizedBox(height: 14),
         CupertinoSlidingSegmentedControl<String>(
           groupValue: _filter,
@@ -77,25 +70,16 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label, required this.color});
-  final int value;
-  final String label;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(children: [
-          AnimatedNumber(value.toDouble(), style: T.title1.copyWith(color: color)),
-          Text(label, textAlign: TextAlign.center, style: T.caption.copyWith(color: context.ios.label2)),
-        ]),
-      );
-}
-
 class AlertCard extends StatelessWidget {
-  const AlertCard({super.key, required this.a});
+  const AlertCard({super.key, required this.a, this.staffMode = false, this.reviewer = 'Dr. Kavya Rao'});
   final HealthAlert a;
 
-  static const _fb = [
+  /// Doctors and nurses see the patient's answer and review buttons instead of
+  /// the patient's own feedback buttons.
+  final bool staffMode;
+  final String reviewer;
+
+  static const feedbackOptions = [
     (PatientFeedback.active, '🏃', 'I was active'),
     (PatientFeedback.loose, '⌚', 'Sensor was loose'),
     (PatientFeedback.unwell, '🤒', 'I feel unwell'),
@@ -111,7 +95,6 @@ class AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    final m = context.read<MonitorController>();
     final col = levelColor(context, a.level);
     final ai = a.safety
         ? 'Safety floor. Sent without asking the model, whatever the feedback history.'
@@ -162,8 +145,45 @@ class AlertCard extends StatelessWidget {
               for (final s in a.escalation)
                 Pill('${s.who} · ${s.what}', color: switch (s.who) { 'Doctor' => c.blue, 'Caregiver' => c.orange, 'SOS' => c.red, _ => null }),
             ]),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => openAlertDetail(context, a, staffMode: staffMode, reviewer: reviewer),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(CupertinoIcons.sparkles, size: 16, color: c.indigo),
+                  const SizedBox(width: 6),
+                  Text('See how AdaptAlert decided', style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
+                  Icon(CupertinoIcons.chevron_forward, size: 14, color: c.indigo),
+                ]),
+              ),
+            ),
+            AlertActions(a: a, staffMode: staffMode, reviewer: reviewer),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Feedback and review controls for one alert, shared by the alert card and
+/// the alert detail page.
+class AlertActions extends StatelessWidget {
+  const AlertActions({super.key, required this.a, this.staffMode = false, this.reviewer = 'Dr. Kavya Rao'});
+  final HealthAlert a;
+  final bool staffMode;
+  final String reviewer;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final m = context.watch<MonitorController>();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const SizedBox(height: 12),
-            if (a.patientFeedback == null) ...[
+            if (staffMode)
+              Text(a.patientFeedback == null ? 'The patient hasn\'t answered yet.' : AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said you were', 'Patient said they were').replaceFirst('You said you', 'Patient said they').replaceFirst('You said the', 'Patient said the').replaceFirst('You weren\'t', 'Patient wasn\'t'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))
+            else if (a.patientFeedback == null) ...[
               Text('What was happening?', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               GridView.count(
@@ -174,7 +194,7 @@ class AlertCard extends StatelessWidget {
                 crossAxisSpacing: 8,
                 childAspectRatio: 3.4,
                 children: [
-                  for (final (k, emoji, label) in _fb)
+                  for (final (k, emoji, label) in AlertCard.feedbackOptions)
                     Pressable(
                       scale: .93,
                       onTap: () {
@@ -199,8 +219,8 @@ class AlertCard extends StatelessWidget {
                 ],
               ),
             ] else
-              Text(fbText[a.patientFeedback]!, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
-            if (a.level >= 2) ...[
+              Text(AlertCard.fbText[a.patientFeedback]!, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+            if (a.level >= 2 && !staffMode) ...[
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
@@ -224,14 +244,14 @@ class AlertCard extends StatelessWidget {
               Text('Doctor review', style: T.footnote.copyWith(color: c.label2)),
               const Spacer(),
               switch (a.doctor) {
-                DoctorLabel.confirmed => Pill('Confirmed real', color: c.red),
-                DoctorLabel.rejected => Pill('False alarm', color: c.green),
+                DoctorLabel.confirmed => Flexible(child: Pill('Confirmed real${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.red)),
+                DoctorLabel.rejected => Flexible(child: Pill('False alarm${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.green)),
                 DoctorLabel.pending => Pill('Pending', color: c.gray),
               },
             ]),
             if (a.doctor == DoctorLabel.pending) ...[
               const SizedBox(height: 8),
-              Text('Demo control: answer as Dr. Kavya Rao', style: T.caption.copyWith(color: c.label3)),
+              Text(staffMode ? 'Your review teaches AdaptAlert about this patient.' : 'Demo control: answer as $reviewer', style: T.caption.copyWith(color: c.label3)),
               const SizedBox(height: 6),
               Row(children: [
                 Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.red, onPressed: () => _label(context, m, true), child: Text('Confirm real', style: TextStyle(color: c.red)))),
@@ -239,15 +259,12 @@ class AlertCard extends StatelessWidget {
                 Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.green, onPressed: () => _label(context, m, false), child: Text('False alarm', style: TextStyle(color: c.green)))),
               ]),
             ],
-          ]),
-        ),
-      ),
-    );
+    ]);
   }
 
   void _label(BuildContext context, MonitorController m, bool real) {
     HapticFeedback.mediumImpact();
-    m.doctorLabel(a, real);
+    m.doctorLabel(a, real, by: reviewer);
     toast(context, real ? 'Confirmed as real' : 'Marked as a false alarm', real ? 'Similar patterns will alert sooner.' : 'Similar patterns will be held back. Safety limits still apply.');
   }
 }

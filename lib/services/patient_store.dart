@@ -43,12 +43,15 @@ class PatientStore extends ChangeNotifier {
 
   String _k(String part) => 'bt39.$_account.$part';
 
-  Future<void> load(String account, {required String name, String email = ''}) async {
+  Future<void> load(String account, {required String name, String email = '', Map<String, String> details = const {}}) async {
     _account = account;
     final sp = await SharedPreferences.getInstance();
     final raw = sp.getString(_k('data'));
     if (raw == null) {
       _seed(name, email);
+      if (details['age'] != null) profile.age = int.tryParse(details['age']!) ?? profile.age;
+      if (details['sex'] != null) profile.sex = details['sex']!;
+      if (details['phone'] != null && details['phone']!.isNotEmpty) profile.phone = details['phone']!;
       await save();
     } else {
       try {

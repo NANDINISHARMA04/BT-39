@@ -1,5 +1,5 @@
 import 'package:bt39_care/app.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,9 +21,12 @@ Future<void> tapScrolled(WidgetTester t, Finder f) async {
 }
 
 Future<void> openAndBack(WidgetTester t, Finder f, {bool dialog = false}) async {
-  for (var i = 0; i < 25 && f.hitTestable().evaluate().isEmpty; i++) {
-    await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, -250));
-    await t.pump(const Duration(milliseconds: 100));
+  // Scroll down to find it, then back up if it was above.
+  for (final dy in [-250.0, 250.0]) {
+    for (var i = 0; i < 30 && f.hitTestable().evaluate().isEmpty; i++) {
+      await t.drag(find.byType(Scrollable).hitTestable().first, Offset(0, dy));
+      await t.pump(const Duration(milliseconds: 100));
+    }
   }
   await t.pump(const Duration(milliseconds: 300));
   await t.tap(f.hitTestable().first);
@@ -46,13 +49,15 @@ void main() {
       addTearDown(t.view.reset);
       await t.pumpWidget(const BT39App());
       await settle(t, 3);
-      await tapScrolled(t, find.text('Try the patient demo'));
+      await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
       await settle(t, 10);
 
       await t.tap(find.text('Alerts').last);
       await settle(t);
+      await openAndBack(t, find.text('See how AdaptAlert works'));
       await t.tap(find.text('All').first);
       await settle(t);
+      await openAndBack(t, find.text('See how AdaptAlert decided'));
 
       await t.tap(find.text('Insights').last);
       await settle(t);
@@ -61,6 +66,8 @@ void main() {
       await settle(t);
       await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, -1500));
       await settle(t);
+
+      await openAndBack(t, find.text('Open the Research Lab'));
 
       await t.tap(find.text('Care').last);
       await settle(t);
@@ -87,7 +94,7 @@ void main() {
     addTearDown(t.view.reset);
     await t.pumpWidget(const BT39App());
     await settle(t, 3);
-    await tapScrolled(t, find.text('Try the patient demo'));
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
     expect(find.text('Simulate a scenario'), findsOneWidget);
     for (final tab in ['Alerts', 'Insights', 'Care', 'Me', 'Today']) {
@@ -106,7 +113,7 @@ void main() {
     addTearDown(t.view.reset);
     await t.pumpWidget(const BT39App());
     await settle(t, 3);
-    await tapScrolled(t, find.text('Try the patient demo'));
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
     await t.tap(find.text('Me').last);
     await settle(t);
@@ -129,7 +136,7 @@ void main() {
     addTearDown(t.view.reset);
     await t.pumpWidget(const BT39App());
     await settle(t, 3);
-    await tapScrolled(t, find.text('Nurse'));
+    await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Nurse'));
     await settle(t, 10);
     await openAndBack(t, find.text('Sunita Deshmukh'));
     await t.tap(find.text('Alerts').last);
