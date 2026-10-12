@@ -77,6 +77,7 @@ class _PatientRoot extends StatefulWidget {
 
 class _PatientRootState extends State<_PatientRoot> {
   final _nav = GlobalKey<NavigatorState>();
+  bool _innerCanPop = false;
 
   @override
   void initState() {
@@ -98,9 +99,35 @@ class _PatientRootState extends State<_PatientRoot> {
     if (!store.loaded) return const _Splash();
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
-    final navigator = HeroControllerScope(
-      controller: MaterialApp.createMaterialHeroController(),
-      child: Navigator(key: _nav, onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const PatientShell())),
+    // The browser's back button, Android back and the iOS back swipe close the
+    // open page first, then go back to Today, and only then leave the app.
+    final navigator = ValueListenableBuilder<int>(
+      valueListenable: patientTab,
+      builder: (context, tab, child) => PopScope<Object?>(
+        canPop: !_innerCanPop && tab == PatientTab.today,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (_innerCanPop) {
+            _nav.currentState?.maybePop();
+          } else {
+            patientTab.value = PatientTab.today;
+          }
+        },
+        child: child!,
+      ),
+      child: NotificationListener<NavigationNotification>(
+        onNotification: (n) {
+          if (n.canHandlePop != _innerCanPop) {
+            // Notifications can arrive during a build; update after it.
+            WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? setState(() => _innerCanPop = n.canHandlePop) : null);
+          }
+          return true;
+        },
+        child: HeroControllerScope(
+          controller: MaterialApp.createMaterialHeroController(),
+          child: Navigator(key: _nav, onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const PatientShell())),
+        ),
+      ),
     );
     return ChangeNotifierProvider(
       create: (_) => MonitorController()..start(),

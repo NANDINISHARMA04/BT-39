@@ -100,6 +100,29 @@ void main() {
     expect(find.text('Simulate a scenario'), findsOneWidget);
   });
 
+  testWidgets('system back closes the open page, then returns to Today', (t) async {
+    t.view.physicalSize = const Size(1179, 2556);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(const BT39App());
+    await settle(t, 3);
+    await tapScrolled(t, find.text('Try the patient demo'));
+    await settle(t, 10);
+    await t.tap(find.text('Me').last);
+    await settle(t);
+    await tapScrolled(t, find.text('Medical records'));
+    await settle(t);
+    expect(find.text('Upload a record'), findsOneWidget);
+    // The browser back button / Android back arrive as a route pop request.
+    await t.binding.handlePopRoute();
+    await settle(t);
+    expect(find.text('Upload a record'), findsNothing);
+    expect(find.text('Medical records'), findsOneWidget);
+    await t.binding.handlePopRoute();
+    await settle(t);
+    expect(find.text('Heart Rate'), findsOneWidget, reason: 'second back goes to Today');
+  });
+
   testWidgets('nurse screens render', (t) async {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;
