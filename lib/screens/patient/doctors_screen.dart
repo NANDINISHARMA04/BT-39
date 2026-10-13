@@ -210,10 +210,12 @@ class DoctorDetail extends StatelessWidget {
         AppButton(
           tr('Book appointment'),
           expand: true,
-          onTap: () => Navigator.of(context).push(CupertinoPageRoute(
-            fullscreenDialog: true,
-            builder: (_) => AppointmentEditor(initial: Appointment(id: store.newId(), doctorId: d.id, forMember: 'self', at: DateTime.now(), mode: d.clinic ? ApptMode.clinic : ApptMode.video, reason: ''), isNew: true),
-          )),
+          onTap: () {
+            // Made here, once. A page builder runs again whenever the app above it rebuilds, which would hand the
+            // form a new id each time and make it ask for free times again.
+            final draft = Appointment(id: store.newId(), doctorId: d.id, forMember: 'self', at: DateTime.now(), mode: d.clinic ? ApptMode.clinic : ApptMode.video, reason: '');
+            Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => AppointmentEditor(initial: draft, isNew: true)));
+          },
         ),
       ],
     );

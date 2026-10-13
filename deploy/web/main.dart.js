@@ -9029,8 +9029,7 @@ _.c=c
 _.d=d},
 ajM:function ajM(a,b){this.a=a
 this.b=b},
-ajK:function ajK(a,b){this.a=a
-this.b=b},
+ajK:function ajK(a){this.a=a},
 ajN:function ajN(a,b,c){this.a=a
 this.b=b
 this.c=c},
@@ -9190,8 +9189,7 @@ this.a=b},
 aon:function aon(a,b,c){this.a=a
 this.b=b
 this.c=c},
-aom:function aom(a,b){this.a=a
-this.b=b},
+aom:function aom(a){this.a=a},
 T_(a,b){var s,r
 if(a==null||!a.f)return null
 s=a.y.h(0,b)
@@ -55224,12 +55222,11 @@ break A}s=A.c("AdaptAlert will learn from this.",o)
 break A}A.cq(p.d,r,s)},
 $S:0}
 A.ajM.prototype={
-$0(){var s=this.b
-return A.aJ(s,!1).c1(A.cg(new A.ajK(this.a,s),!0,t.z))},
+$0(){var s=this.b,r=A.as(s,!1,t.u).vB(),q=Date.now(),p=this.a.c,o=A.c("Follow-up after alert: {title}",A.y(["title",A.dp(p.ax)],t.N,t.X))
+A.aJ(s,!1).c1(A.cg(new A.ajK(new A.ia(r,"d1","self",o,"",new A.b_(q,0,!1),B.cS,B.h_,""+p.a)),!0,t.z))},
 $S:0}
 A.ajK.prototype={
-$1(a){var s=A.as(this.b,!1,t.u).vB(),r=Date.now(),q=this.a.c
-return new A.o5(new A.ia(s,"d1","self",A.c("Follow-up after alert: {title}",A.y(["title",A.dp(q.ax)],t.N,t.X)),"",new A.b_(r,0,!1),B.cS,B.h_,""+q.a),!0,null)},
+$1(a){return new A.o5(this.a,!0,null)},
 $S:184}
 A.ajN.prototype={
 $0(){return this.a.Z8(this.b,this.c,!0)},
@@ -56104,13 +56101,13 @@ if(r.ax)n.push(A.c("In clinic",b))
 if(r.at)n.push(A.c("Video",b))
 o=A.bi(!1,!1,B.hz,o,b,b,B.b.bJ(n," \xb7 "),c,b,b)
 r=A.blJ(r)
-return A.kP(A.a([m,B.R,k,i,B.fI,j,new A.bS(g,b,b,b),l,new A.bS(f,b,b,b),new A.dl(A.a([d,o,A.bi(!1,!1,B.x6,a.Q,b,b,A.c("Mon\u2013Sat, 9 AM to 6 PM",b),r,b,b)],h),b,b),B.fJ,A.c5(A.c("Book appointment",b),!1,b,!1,!0,b,B.bA,new A.aon(this,a0,s),B.aW)],h),b,b,B.WW,p,q,b)}}
+return A.kP(A.a([m,B.R,k,i,B.fI,j,new A.bS(g,b,b,b),l,new A.bS(f,b,b,b),new A.dl(A.a([d,o,A.bi(!1,!1,B.x6,a.Q,b,b,A.c("Mon\u2013Sat, 9 AM to 6 PM",b),r,b,b)],h),b,b),B.fJ,A.c5(A.c("Book appointment",b),!1,b,!1,!0,b,B.bA,new A.aon(this,s,a0),B.aW)],h),b,b,B.WW,p,q,b)}}
 A.aon.prototype={
-$0(){return A.aJ(this.b,!1).c1(A.cg(new A.aom(this.a,this.c),!0,t.z))},
+$0(){var s=this.b.vB(),r=this.a.c,q=Date.now(),p=r.ax?B.f_:B.cS
+A.aJ(this.c,!1).c1(A.cg(new A.aom(new A.ia(s,r.a,"self","","",new A.b_(q,0,!1),p,B.h_,null)),!0,t.z))},
 $S:0}
 A.aom.prototype={
-$1(a){var s=this.b.vB(),r=this.a.c,q=Date.now(),p=r.ax?B.f_:B.cS
-return new A.o5(new A.ia(s,r.a,"self","","",new A.b_(q,0,!1),p,B.h_,null),!0,null)},
+$1(a){return new A.o5(this.a,!0,null)},
 $S:184}
 A.Xn.prototype={
 xb(a){return this.aiJ(a)},

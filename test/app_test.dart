@@ -176,6 +176,21 @@ void main() {
     expect(find.text('Safety floor'), findsOneWidget);
   });
 
+  testWidgets('booking from a doctor page asks for the free times once and offers them', (tester) async {
+    final svc = await startPatient(tester);
+    await tester.tap(find.text('Care').last);
+    await settle(tester);
+    await tester.tap(find.byIcon(CupertinoIcons.add_circled_solid).first);
+    await settle(tester);
+    await tester.tap(find.text('Dr. Kavya Rao').first);
+    await settle(tester);
+    await tapScrolled(tester, find.text('Book appointment'));
+    // Eight seconds is long enough for a loop of requests to show: the form once asked on every frame.
+    await settle(tester, 40);
+    expect(svc.to('GET /doctors/d1/slots'), hasLength(1));
+    expect(find.textContaining('free slots'), findsOneWidget);
+  });
+
   testWidgets('rescheduling offers the free times from the service and saves the new one', (tester) async {
     final svc = await startPatient(tester);
     await tester.tap(find.text('Care').last);

@@ -246,13 +246,11 @@ class AlertActions extends StatelessWidget {
           kind: ButtonKind.tinted,
           size: ButtonSize.medium,
           expand: true,
-          onTap: () => Navigator.of(context).push(CupertinoPageRoute(
-            fullscreenDialog: true,
-            builder: (_) => AppointmentEditor(
-              initial: Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: tr('Follow-up after alert: {title}', {'title': a.title}), fromAlert: '${a.id}'),
-              isNew: true,
-            ),
-          )),
+          onTap: () {
+            // Made here, once: see the Book button on a doctor's page.
+            final draft = Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: tr('Follow-up after alert: {title}', {'title': a.title}), fromAlert: '${a.id}');
+            Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => AppointmentEditor(initial: draft, isNew: true)));
+          },
         ),
       ],
       const SizedBox(height: 12),
