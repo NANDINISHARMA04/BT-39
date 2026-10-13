@@ -1,527 +1,424 @@
-import 'dart:math';
+import '../l10n/l10n.dart';
+import '../l10n/msg.dart';
 
-/// AdaptAlert: a self-learning, explainable alert engine for one wearer.
+/// A mirror of the AdaptAlert engine that runs on the PulseOS service.
 ///
-/// Every reading window (one simulated minute) goes through seven stages:
-///   A signal quality, B activity, C personal normal, D safety floor,
-///   E anomaly check, F decision (learns from feedback), G explanation.
+/// The engine itself (seven stages, learning, safety floor, explanations)
+/// lives on the server, one per wearer. This file only holds what the server
+/// sends, in the shapes the screens already read: the snapshot at connect, then
+/// one update per tick (see `docs/pulseos.md`, section 5). It makes no decision.
 ///
-/// The decision blends a fixed global decision tree with what this person's
-/// feedback says about the same pattern, and compares it with a personal
-/// threshold τ. Safety-floor alerts skip the model and can never be learned away.
-
-/// Translates engine text. The app sets this to its `tr` (see MonitorController);
-/// it stays plain English elsewhere, so the engine runs without Flutter
-/// (for example `dart run tool/run_study.dart`).
-String Function(String en, [Map<String, Object?>? args]) engineTr = _english;
-
-String _english(String en, [Map<String, Object?>? args]) {
-  var s = en;
-  args?.forEach((k, v) => s = s.replaceAll('{$k}', '$v'));
-  return s;
-}
-
-String _tr(String en, [Map<String, Object?>? args]) => engineTr(en, args);
+/// Text arrives as messages and is rendered when it is read, so switching the
+/// language changes alerts that are already on screen.
 
 const tauMin = .30, tauMax = .75, tauWeekCap = .10;
 const vitals = ['hr', 'spo2', 'temp'];
 const vitalName = {'hr': 'heart rate', 'spo2': 'oxygen', 'temp': 'temperature'};
 
-class Features {
-  Features({required this.act, required this.primary, required this.zHR, required this.zSpO2, required this.zTemp, required this.numAbn, this.sqi = 1, this.dur = 0, this.night = false});
-  final String act; // rest | light | active
-  final String primary; // hr | spo2 | temp | multi
-  final double zHR, zSpO2, zTemp, sqi;
-  final int numAbn, dur;
-  final bool night;
-}
+/// The history the engine keeps for charts: four hours of one-minute windows.
+const maxHistory = 240;
 
-class TreeResult {
-  const TreeResult(this.p, this.path);
-  final double p;
-  final List<String> path;
-}
+/// The service keeps at most this many alerts and held events per wearer.
+const maxKept = 200;
 
-/// The global model: a small, readable decision tree. Every leaf has a reason.
-TreeResult globalTree(Features f) {
-  if (f.sqi < .6) return TreeResult(.10, [_tr('Signal quality below 0.6')]);
-  if (f.act != 'rest' && f.primary == 'hr') return TreeResult(.18, [_tr('Heart-rate rise while moving or cooling down')]);
-  if (f.numAbn >= 2) {
-    if (f.zSpO2 <= -2) return TreeResult(.90, [_tr('Two or more vitals abnormal together'), _tr('Oxygen is part of it')]);
-    return TreeResult(.82, [_tr('Two or more vitals abnormal together')]);
-  }
-  if (f.primary == 'spo2') {
-    if (f.zSpO2 <= -3.5) return TreeResult(.84, [_tr('Oxygen far below your normal')]);
-    if (f.night) return TreeResult(.55, [_tr('Mild oxygen dip during sleep')]);
-    return TreeResult(.62, [_tr('Oxygen slightly below your normal')]);
-  }
-  if (f.primary == 'temp') {
-    if (f.zTemp >= 3.5) return TreeResult(.82, [_tr('Temperature well above your normal')]);
-    return TreeResult(.56, [_tr('Temperature slightly raised')]);
-  }
-  if (f.zHR >= 5) return TreeResult(.80, [_tr('Heart rate far above your resting normal')]);
-  return TreeResult(.58, [_tr('Moderate heart-rate rise at rest')]);
-}
-
-/// Groups similar situations, so feedback on one applies to the next.
-String bucketKey(Features f) {
-  final zp = switch (f.primary) { 'hr' => f.zHR, 'spo2' => -f.zSpO2, 'temp' => f.zTemp, _ => 0.0 };
-  final band = f.primary == 'multi' ? 'multi' : (zp >= 5 ? 'high' : 'mod');
-  return '${f.act}|${f.primary}|$band|${f.night ? 'night' : 'day'}';
-}
+double _d(Object? v) => (v as num?)?.toDouble() ?? 0;
+int _i(Object? v) => (v as num?)?.round() ?? 0;
+Map<String, dynamic> _obj(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
 
 String bucketLabel(String key) {
   final p = key.split('|');
-  if (p.first == 'SAFETY') return '${_tr('Safety floor')} · ${_tr(vitalName[p[1]]!)}';
+  if (p.first == 'SAFETY') return '${tr('Safety floor')} · ${tr(vitalName[p[1]]!)}';
   final act = {'rest': 'Resting', 'light': 'Light activity or cooling down', 'active': 'Active'}[p[0]]!;
   final what = {'hr': 'heart rate up', 'spo2': 'oxygen down', 'temp': 'temperature up', 'multi': 'several vitals together'}[p[1]]!;
   final band = p[2] == 'multi' ? '' : (p[2] == 'high' ? ' a lot' : ' a little');
   // Hindi keys: every act value, every what+band combination, 'day' and 'night'.
   final whatBand = '$what$band';
-  return '${_tr(act)} · ${_tr(whatBand)} · ${_tr(p[3])}';
+  return '${tr(act)} · ${tr(whatBand)} · ${tr(p[3])}';
 }
 
-Features featuresFromKey(String key) {
-  final p = key.split('|');
-  final hi = p[2] == 'high';
-  return Features(
-    act: p[0],
-    primary: p[1],
-    numAbn: p[1] == 'multi' ? 2 : 1,
-    night: p[3] == 'night',
-    zHR: p[1] == 'hr' ? (hi ? 6 : 3.5) : (p[1] == 'multi' ? 4 : 0),
-    zSpO2: p[1] == 'spo2' ? (hi ? -4 : -3) : (p[1] == 'multi' ? -2.5 : 0),
-    zTemp: p[1] == 'temp' ? (hi ? 4 : 3) : 0,
-  );
-}
-
-class Bucket {
-  double r = 0, f = 0;
-  Map<String, dynamic> toJson() => {'r': r, 'f': f};
-}
-
-/// Personal estimate from this person's labels for one pattern (Beta(1,1) prior),
-/// and how much to trust it: w = n / (n + k), k = 4 by default.
-({double n, double pu, double w}) personal(Bucket? b, {double k = 4}) {
-  final n = b == null ? 0.0 : b.r + b.f;
-  return (n: n, pu: b == null ? .5 : (b.r + 1) / (n + 2), w: n / (n + k));
-}
-
-/// Approximate 90% credible interval of the personal estimate (Beta posterior,
-/// normal approximation). Wide when there are few labels.
-({double lo, double hi}) personalInterval(Bucket? b) {
-  final r = b?.r ?? 0, f = b?.f ?? 0, a = r + 1, c = f + 1;
-  final m = a / (a + c), sd = sqrt(a * c / ((a + c) * (a + c) * (a + c + 1)));
-  return (lo: (m - 1.645 * sd).clamp(0, 1).toDouble(), hi: (m + 1.645 * sd).clamp(0, 1).toDouble());
-}
-
-double nudgedTau(double tau, double weekStartTau, double delta) {
-  var t = (tau + delta).clamp(tauMin, tauMax).toDouble();
-  if (t - weekStartTau > tauWeekCap) t = weekStartTau + tauWeekCap;
-  return t;
-}
-
-// ---------------------------------------------------------------------------
-// Live engine
-
+/// One sensor reading from the band.
 class Reading {
   const Reading({required this.hr, required this.spo2, required this.temp, required this.motion, required this.contact});
   final int hr, spo2;
   final double temp, motion, contact;
 }
 
+/// The person's usual value and spread for one vital in one activity.
 class Baseline {
-  Baseline(this.mu, double sd) : v = sd * sd;
-  double mu, v;
-  double get sd => sqrt(v);
+  const Baseline(this.mu, this.sd);
+  final double mu, sd;
+  factory Baseline.fromJson(Map<String, dynamic> j) => Baseline(_d(j['mu']), _d(j['sd']));
 }
 
+/// One reading window (a simulated minute) with what the engine made of it.
 class WindowRecord {
-  WindowRecord({required this.t, required this.r, required this.sqi, required this.act, required this.ctx, required this.good, required this.mu, required this.sd, required this.z, required this.fixed});
+  WindowRecord({required this.t, required this.r, required this.sqi, required this.act, required this.ctx, required this.good, required this.mu, required this.sd, required this.z, required this.fixed, this.alert = 0, this.held = false});
   final int t;
   final Reading r;
   final double sqi;
   final String act, ctx;
   final bool good, fixed;
   final Map<String, double> mu, sd, z;
-  int alert = 0;
-  bool held = false;
+
+  /// The level of the alert sent in this window (0 for none).
+  int alert;
+  bool held;
+
   double value(String v) => switch (v) { 'hr' => r.hr.toDouble(), 'spo2' => r.spo2.toDouble(), _ => r.temp };
+
+  factory WindowRecord.fromJson(Map<String, dynamic> j) {
+    Map<String, double> vit(Object? o) => {for (final e in _obj(o).entries) e.key: _d(e.value)};
+    return WindowRecord(
+      t: _i(j['t']),
+      r: Reading(hr: _i(j['hr']), spo2: _i(j['spo2']), temp: _d(j['temp']), motion: _d(j['motion']), contact: _d(j['contact'])),
+      sqi: _d(j['sqi']),
+      act: '${j['act'] ?? ''}',
+      ctx: '${j['ctx'] ?? ''}',
+      good: j['good'] == true,
+      fixed: j['fixed'] == true,
+      mu: vit(j['mu']),
+      sd: vit(j['sd']),
+      z: vit(j['z']),
+      alert: _i(j['alert']),
+      held: j['held'] == true,
+    );
+  }
 }
 
 enum StageState { idle, ok, watch, warn, send, hold, crit, bad }
 
+/// One step of the pipeline (A signal quality ... G explanation).
 class Stage {
-  const Stage(this.state, this.text);
+  const Stage(this.state, String text) : _text = text;
+  const Stage._(this.state, this._text);
   final StageState state;
-  final String text;
+  final Object? _text;
+
+  /// The step's text in the app's language, rendered on every read.
+  String get text => msg(_text);
+
+  factory Stage.fromJson(Map<String, dynamic> j) => Stage._(StageState.values.asNameMap()['${j['s']}'] ?? StageState.idle, j['x']);
 }
 
 enum PatientFeedback { active, loose, unwell, notSure }
 
 enum DoctorLabel { pending, confirmed, rejected }
 
+/// One line of "who was told".
 class EscalationStep {
-  const EscalationStep(this.t, this.who, this.what);
+  const EscalationStep(this.t, this.who, Object? what) : _what = what;
   final int t;
-  final String who, what;
+
+  /// English ('You', 'Caregiver', 'Doctor', 'SOS'); screens translate it.
+  final String who;
+  final Object? _what;
+
+  /// What happened, in the app's language.
+  String get what => msg(_what);
+
+  factory EscalationStep.fromJson(Map<String, dynamic> j) => EscalationStep(_i(j['t']), '${j['who'] ?? ''}', j['what']);
 }
 
+/// What the alert page shows beyond the alert itself: how sure the personal
+/// estimate is, and what feedback would change. All numbers come from the server.
+class AlertExplain {
+  const AlertExplain({required this.ci, this.singleP, required this.ifFalse, required this.tauFalse, required this.ifReal, required this.tauReal});
+
+  /// The 90% interval of the personal estimate.
+  final ({double lo, double hi}) ci;
+
+  /// The model's score if only the main vital had changed (alerts with several vitals only).
+  final double? singleP;
+
+  /// The next similar pattern's score and the threshold after a false-alarm label.
+  final double ifFalse, tauFalse;
+
+  /// The same after a real label.
+  final double ifReal, tauReal;
+
+  /// Whether the next similar pattern would still be sent after a false-alarm label.
+  bool get ifFalseSends => ifFalse >= tauFalse;
+
+  factory AlertExplain.fromJson(Map<String, dynamic> j) {
+    final ci = _obj(j['ci']);
+    return AlertExplain(
+      ci: (lo: _d(ci['lo']), hi: ci.containsKey('hi') ? _d(ci['hi']) : 1.0),
+      singleP: j['single_p'] == null ? null : _d(j['single_p']),
+      ifFalse: _d(j['if_false']),
+      tauFalse: _d(j['tau_false']),
+      ifReal: _d(j['if_real']),
+      tauReal: _d(j['tau_real']),
+    );
+  }
+}
+
+/// An alert the engine sent.
 class HealthAlert {
-  HealthAlert({required this.id, required this.t, required this.level, required this.title, required this.reasons, required this.path, required this.p, required this.pg, required this.pu, required this.w, required this.n, required this.tau, required this.key, required this.safety, required this.hr, required this.spo2, required this.temp});
+  HealthAlert({
+    required this.id,
+    required this.t,
+    required this.level,
+    required Object? title,
+    List<Object?> reasons = const [],
+    List<Object?> path = const [],
+    required this.p,
+    required this.pg,
+    required this.pu,
+    required this.w,
+    required this.n,
+    required this.tau,
+    required this.key,
+    required this.safety,
+    required this.hr,
+    required this.spo2,
+    required this.temp,
+    this.autoSos = false,
+    this.explain,
+  })  : _title = title,
+        _reasons = reasons,
+        _path = path;
+
   final int id, t, level, hr, spo2;
-  final String title, key;
-  final List<String> reasons, path;
+  final String key;
   final double p, pg, pu, w, n, tau, temp;
   final bool safety;
+  Object? _title;
+  List<Object?> _reasons, _path;
+
+  /// True for a level-4 alert when the patient's "Auto SOS" preference is on.
+  bool autoSos;
+  AlertExplain? explain;
   PatientFeedback? patientFeedback;
   DoctorLabel doctor = DoctorLabel.pending;
 
   /// Who reviewed it (a doctor or nurse), when known.
   String? reviewedBy;
-  double contribR = 0, contribF = 0;
   final List<EscalationStep> escalation = [];
   static const levelName = {1: 'Check-in', 2: 'Warning', 3: 'Urgent', 4: 'Critical'};
+
+  /// The words below are rendered when read, so a language switch shows at once.
+  String get title => msg(_title);
+  List<String> get reasons => [for (final r in _reasons) msg(r)];
+  List<String> get path => [for (final r in _path) msg(r)];
+
   /// The level's name in the app's language ([levelName] stays English).
-  String get levelLabel => _tr(levelName[level]!);
+  String get levelLabel => tr(levelName[level]!);
+
+  factory HealthAlert.fromJson(Map<String, dynamic> j) {
+    final fb = PatientFeedback.values.asNameMap()['${j['feedback']}'];
+    final a = HealthAlert(
+      id: _i(j['id']), t: _i(j['t']), level: _i(j['level']), title: j['title'],
+      reasons: j['reasons'] is List ? List<Object?>.from(j['reasons'] as List) : const [],
+      path: j['path'] is List ? List<Object?>.from(j['path'] as List) : const [],
+      p: _d(j['p']), pg: _d(j['pg']), pu: _d(j['pu']), w: _d(j['w']), n: _d(j['n']), tau: _d(j['tau']),
+      key: '${j['key']}', safety: j['safety'] == true, hr: _i(j['hr']), spo2: _i(j['spo2']), temp: _d(j['temp']),
+      autoSos: j['auto_sos'] == true,
+      explain: j['explain'] is Map ? AlertExplain.fromJson(_obj(j['explain'])) : null,
+    );
+    a.patientFeedback = fb;
+    a.doctor = DoctorLabel.values.asNameMap()['${j['doctor']}'] ?? DoctorLabel.pending;
+    a.reviewedBy = j['reviewed_by'] as String?;
+    if (j['escalation'] is List) {
+      a.escalation.addAll([for (final e in j['escalation'] as List) EscalationStep.fromJson(_obj(e))]);
+    }
+    return a;
+  }
+
+  /// Takes in the newer copy the server sent of this same alert, so screens
+  /// that hold this object see the change. [authoritative] is true for a
+  /// snapshot (the server's word is final); otherwise a feedback or label that
+  /// is already set is kept, because the server never takes one back and a line
+  /// that was already on its way can predate the answer the person just gave.
+  void absorb(HealthAlert o, {bool authoritative = false}) {
+    _title = o._title;
+    _reasons = o._reasons;
+    _path = o._path;
+    autoSos = o.autoSos;
+    explain = o.explain;
+    escalation
+      ..clear()
+      ..addAll(o.escalation);
+    if (authoritative) {
+      patientFeedback = o.patientFeedback;
+      doctor = o.doctor;
+      reviewedBy = o.reviewedBy;
+    } else {
+      patientFeedback = o.patientFeedback ?? patientFeedback;
+      if (o.doctor != DoctorLabel.pending || doctor == DoctorLabel.pending) {
+        doctor = o.doctor;
+        reviewedBy = o.reviewedBy ?? reviewedBy;
+      }
+    }
+  }
 }
 
+/// An alert the engine held back because the person's history says it is harmless.
 class HeldEvent {
   HeldEvent({required this.t, required this.key, required this.p, required this.tau, required this.pg, required this.pu, required this.n, required this.rec});
   final int t;
   final String key;
   final double p, tau, pg, pu, n;
   final WindowRecord rec;
+
+  factory HeldEvent.fromJson(Map<String, dynamic> j) => HeldEvent(
+        t: _i(j['t']), key: '${j['key']}', p: _d(j['p']), tau: _d(j['tau']), pg: _d(j['pg']), pu: _d(j['pu']), n: _d(j['n']),
+        rec: WindowRecord.fromJson(_obj(j['rec'])),
+      );
 }
 
-class _Episode {
-  _Episode(this.start);
-  final int start;
-  String? lastKey;
-  int sentLevel = 0, calm = 0;
-  final Set<String> vit = {};
+/// What the engine has learned about one pattern: feedback counts, the score it
+/// gives the pattern now, and whether that score would still send an alert.
+class Bucket {
+  const Bucket({this.r = 0, this.f = 0, this.p = .5, this.send = false});
+  final double r, f, p;
+  final bool send;
+  factory Bucket.fromJson(Map<String, dynamic> j) => Bucket(r: _d(j['r']), f: _d(j['f']), p: j.containsKey('p') ? _d(j['p']) : .5, send: j['send'] == true);
 }
 
-typedef AlertCallback = void Function(HealthAlert a);
-
+/// The engine's state as the server last described it.
 class AdaptAlertEngine {
-  AdaptAlertEngine({this.onAlert, this.onHeld, this.onBadSignal});
-
-  AlertCallback? onAlert;
-  void Function(HeldEvent h)? onHeld;
-  void Function()? onBadSignal;
-
   /// Simulated clock in minutes since midnight.
-  int t = 7 * 60;
-  final Map<String, Map<String, Baseline>> base = {
-    'rest': {'hr': Baseline(66, 6), 'spo2': Baseline(97.3, 1), 'temp': Baseline(36.55, .22)},
-    'light': {'hr': Baseline(86, 8), 'spo2': Baseline(97.2, .9), 'temp': Baseline(36.6, .25)},
-    'active': {'hr': Baseline(110, 10), 'spo2': Baseline(97, 1), 'temp': Baseline(36.7, .3)},
+  int t = 0;
+
+  /// Shown until the first snapshot arrives; the server's own starting values.
+  Map<String, Map<String, Baseline>> base = {
+    'rest': {'hr': const Baseline(66, 6), 'spo2': const Baseline(97.3, 1), 'temp': const Baseline(36.55, .22)},
+    'light': {'hr': const Baseline(86, 8), 'spo2': const Baseline(97.2, .9), 'temp': const Baseline(36.6, .25)},
+    'active': {'hr': const Baseline(110, 10), 'spo2': const Baseline(97, 1), 'temp': const Baseline(36.7, .3)},
   };
-  // SpO₂ is read in whole percent, so its spread can't be tighter than 1 point.
-  static const minSd = {'hr': 6.0, 'spo2': 1.0, 'temp': .2};
   double tau = .5, weekStartTau = .5, sqiMin = .5;
-  int labels = 0;
-  final Map<String, Bucket> buckets = {};
+  int labels = 0, fixedCount = 0, sentCount = 0;
+  Map<String, Bucket> buckets = {};
+
+  /// Newest first.
   final List<HealthAlert> alerts = [];
+
+  /// Newest first.
   final List<HeldEvent> held = [];
+
+  /// Oldest first, at most [maxHistory].
   final List<WindowRecord> history = [];
-  final Map<String, int> cnt = {'hr': 0, 'spo2': 0, 'temp': 0};
-  final Map<String, Stage> pipe = {};
-  int lowSpo2 = 0, badRun = 0, lastActive = -99, fixedCount = 0, lastFixed = -99, sentCount = 0, _nextId = 1;
-  Reading? _prev;
-  _Episode? _ep;
+  Map<String, Stage> pipe = {};
 
   /// ok | watch | held | alert | band
   String status = 'ok';
 
-  bool isNight(int t) {
-    final h = (t ~/ 60) % 24;
-    return h < 6 || h >= 22;
-  }
+  WindowRecord? get last => history.isEmpty ? null : history.last;
 
-  double computeSqi(Reading r, Reading? prev) {
-    var q = r.contact;
-    if (r.hr < 30 || r.hr > 220 || r.spo2 < 70 || r.spo2 > 100 || r.temp < 30 || r.temp > 43) q -= .4;
-    if (prev != null && (r.hr - prev.hr).abs() > 30) q -= .3;
-    if (r.motion > .8) q -= .2;
-    return q.clamp(0, 1).toDouble();
-  }
-
-  void _updateBaseline(String ctx, Reading r) {
-    final b = base[ctx]!;
-    for (final v in vitals) {
-      final x = v == 'hr' ? r.hr.toDouble() : v == 'spo2' ? r.spo2.toDouble() : r.temp;
-      final bl = b[v]!;
-      final mu = .98 * bl.mu + .02 * x;
-      bl.v = max(minSd[v]! * minSd[v]!, .98 * bl.v + .02 * (x - mu) * (x - mu));
-      bl.mu = mu;
+  HealthAlert? alertById(int id) {
+    for (final a in alerts) {
+      if (a.id == id) return a;
     }
+    return null;
   }
 
-  static String fmtZ(double z) => '${z >= 0 ? '+' : '−'}${z.abs().toStringAsFixed(1)}';
+  /// The score the engine gives a learned pattern now, from the server.
+  double bucketP(String key) => buckets[key]?.p ?? .5;
 
-  /// Process one reading window. Returns the stored record.
-  WindowRecord process(Reading r) {
-    if (t % (7 * 1440) == 0) weekStartTau = tau;
-    final sqi = computeSqi(r, _prev);
-    _prev = r;
-    final act = r.motion < .15 ? 'rest' : r.motion < .45 ? 'light' : 'active';
-    if (act != 'rest') lastActive = t;
-    var ctx = act;
-    if (act == 'rest' && t - lastActive <= 5) ctx = 'light';
-    final actLabel = act == 'active' ? 'Active' : act == 'light' ? 'Light activity' : ctx == 'light' ? 'Cooling down' : 'Resting';
-    final good = sqi >= sqiMin;
-    final b = base[ctx]!;
-    final mu = {for (final v in vitals) v: b[v]!.mu};
-    final sd = {for (final v in vitals) v: b[v]!.sd};
-    final z = {
-      'hr': (r.hr - mu['hr']!) / sd['hr']!,
-      'spo2': (r.spo2 - mu['spo2']!) / sd['spo2']!,
-      'temp': (r.temp - mu['temp']!) / sd['temp']!,
-    };
-    var fixed = false;
-    if ((r.hr > 100 || r.hr < 50 || r.spo2 < 94 || r.temp > 37.8) && t - lastFixed >= 10) {
-      fixed = true;
-      lastFixed = t;
-      fixedCount++;
-    }
-    final rec = WindowRecord(t: t, r: r, sqi: sqi, act: actLabel, ctx: ctx, good: good, mu: mu, sd: sd, z: z, fixed: fixed);
-    history.add(rec);
-    if (history.length > 240) history.removeAt(0);
-    pipe
+  /// Replaces everything with the server's snapshot (the `state` of the first
+  /// line on a connection). Alerts that are already known keep their object.
+  void applySnapshot(Map state) {
+    final s = _obj(state);
+    _scalars(s);
+    _lists(s);
+    _syncAlerts([for (final a in (s['alerts'] as List? ?? const [])) HealthAlert.fromJson(_obj(a))], replace: true);
+    held
       ..clear()
-      ..['A'] = Stage(good ? StageState.ok : StageState.bad, good ? _tr('Quality {q} · good, use it', {'q': sqi.toStringAsFixed(2)}) : _tr('Quality {q} · unreliable, ignore it', {'q': sqi.toStringAsFixed(2)}))
-      ..['B'] = Stage(StageState.ok, '${_tr(actLabel)} · ${_tr('motion {m} g', {'m': r.motion.toStringAsFixed(2)})}');
-    t++;
-
-    if (!good) {
-      badRun++;
-      cnt.updateAll((_, _) => 0);
-      lowSpo2 = 0;
-      pipe['C'] = Stage(StageState.idle, _tr('Skipped. Bad data never changes your normal'));
-      pipe['D'] = Stage(StageState.idle, _tr('Paused until the signal is reliable'));
-      pipe['E'] = Stage(StageState.idle, _tr('Skipped'));
-      pipe['F'] = Stage(StageState.idle, _tr('No decision on bad data'));
-      pipe['G'] = const Stage(StageState.idle, '—');
-      status = 'band';
-      if (badRun == 4) onBadSignal?.call();
-      _escalate();
-      return rec;
-    }
-    badRun = 0;
-    pipe['C'] = Stage(StageState.ok, _tr('z · HR {hr} · SpO₂ {spo2} · Temp {temp}', {'hr': fmtZ(z['hr']!), 'spo2': fmtZ(z['spo2']!), 'temp': fmtZ(z['temp']!)}));
-
-    lowSpo2 = r.spo2 <= 91 ? lowSpo2 + 1 : 0;
-    ({String v, String title, String rule})? safety;
-    if (lowSpo2 >= 2) {
-      safety = (v: 'spo2', title: 'Oxygen critically low', rule: 'SpO₂ ≤ 91% for 2 min');
-    } else if (act == 'rest' && (r.hr >= 131 || r.hr <= 40)) {
-      safety = (v: 'hr', title: r.hr >= 131 ? 'Heart rate critically high' : 'Heart rate critically low', rule: 'Resting HR ≥ 131 or ≤ 40 bpm');
-    } else if (r.temp >= 39.1 || r.temp <= 35) {
-      safety = (v: 'temp', title: r.temp >= 39.1 ? 'Temperature critically high' : 'Temperature critically low', rule: 'Temp ≥ 39.1 or ≤ 35.0 °C');
-    }
-    pipe['D'] = safety != null ? Stage(StageState.crit, _tr('Triggered · {rule}', {'rule': _tr(safety.rule)})) : Stage(StageState.ok, _tr('Clear · SpO₂ > 91%, HR 41–130, Temp 35.1–39.0 °C'));
-
-    final hard = {'hr': z['hr']! >= 2.5, 'spo2': z['spo2']! <= -2.5, 'temp': z['temp']! >= 2.5};
-    for (final v in vitals) {
-      cnt[v] = hard[v]! ? cnt[v]! + 1 : 0;
-    }
-    final soft = {'hr': z['hr']! >= 1.5, 'spo2': z['spo2']! <= -1.5, 'temp': z['temp']! >= 1.5};
-    final numAbn = vitals.where((v) => soft[v]!).length;
-    final maxCnt = cnt.values.reduce(max);
-    final sustained = vitals.where((v) => cnt[v]! >= 3).toList();
-    final candidate = safety != null || sustained.isNotEmpty || (numAbn >= 2 && maxCnt >= 2);
-
-    if (candidate) {
-      final names = (sustained.isNotEmpty ? sustained : vitals.where((v) => soft[v]!)).map((v) => _tr(vitalName[v]!)).join(' + ');
-      pipe['E'] = Stage(StageState.warn, _tr('Unusual for you · {what}', {'what': names.isEmpty ? _tr(vitalName[safety!.v]!) : names}));
-      _handleCandidate(rec, z, numAbn, safety, ctx);
-    } else {
-      final w = vitals.where((v) => cnt[v]! > 0).map((v) => _tr(vitalName[v]!)).join(' + ');
-      pipe['E'] = maxCnt > 0 ? Stage(StageState.watch, _tr('Watching {what} · {n} of 3 min', {'what': w, 'n': maxCnt})) : Stage(StageState.ok, _tr('Within your normal range'));
-      pipe['F'] = Stage(StageState.idle, _tr('No decision needed'));
-      pipe['G'] = const Stage(StageState.idle, '—');
-      status = maxCnt > 0 ? 'watch' : 'ok';
-      if (_ep != null && ++_ep!.calm >= 3) _ep = null;
-      if (maxCnt == 0 && numAbn == 0 && _ep == null) _updateBaseline(ctx, r);
-    }
-    _escalate();
-    return rec;
+      ..addAll([for (final h in (s['held'] as List? ?? const [])) HeldEvent.fromJson(_obj(h))].take(maxKept));
+    history
+      ..clear()
+      ..addAll([for (final r in (s['history'] as List? ?? const [])) WindowRecord.fromJson(_obj(r))]);
+    _trimHistory();
   }
 
-  void _handleCandidate(WindowRecord rec, Map<String, double> z, int numAbn, ({String v, String title, String rule})? safety, String ctx) {
-    final ep = _ep ??= _Episode(rec.t);
-    ep.calm = 0;
-    final involvedNow = vitals.where((v) => cnt[v]! >= 1).toList()..sort((a, b) => z[b]!.abs().compareTo(z[a]!.abs()));
-    final lead = involvedNow.isEmpty ? 'hr' : involvedNow.first;
-    final f = Features(act: ctx, primary: numAbn >= 2 ? 'multi' : lead, zHR: z['hr']!, zSpO2: z['spo2']!, zTemp: z['temp']!, numAbn: numAbn, sqi: rec.sqi, dur: cnt.values.reduce(max), night: isNight(rec.t));
-    final key = safety != null ? 'SAFETY|${safety.v}' : bucketKey(f);
-    if (key == ep.lastKey) {
-      final sent = ep.sentLevel > 0;
-      pipe['F'] = Stage(sent ? StageState.send : StageState.hold, _tr('Same pattern since {time} · decision stands', {'time': hhmm(ep.start)}));
-      pipe['G'] = Stage(sent ? StageState.send : StageState.hold, sent ? _tr('Alert already sent') : _tr('Held back, still watching'));
-      status = sent ? 'alert' : 'held';
-      if (sent) {
-        rec.alert = ep.sentLevel;
-      } else {
-        rec.held = true;
+  /// Applies one update line: the new window, the figures that changed, alerts
+  /// that are new or changed, and held events. Returns the held events this
+  /// line added, oldest first.
+  List<HeldEvent> applyUpdate(Map line) {
+    final u = _obj(line);
+    _scalars(u);
+    _lists(u);
+    if (u['rec'] is Map) {
+      history.add(WindowRecord.fromJson(_obj(u['rec'])));
+      _trimHistory();
+    }
+    _syncAlerts([for (final a in (u['alerts'] as List? ?? const [])) HealthAlert.fromJson(_obj(a))], replace: false);
+    final added = [for (final h in (u['held_new'] as List? ?? const [])) HeldEvent.fromJson(_obj(h))];
+    for (final h in added) {
+      held.insert(0, h);
+    }
+    if (held.length > maxKept) held.removeRange(maxKept, held.length);
+    return added;
+  }
+
+  void _trimHistory() {
+    if (history.length > maxHistory) history.removeRange(0, history.length - maxHistory);
+  }
+
+  /// The single figures, each only when the line carries it.
+  void _scalars(Map<String, dynamic> s) {
+    if (s['t'] != null) t = _i(s['t']);
+    if (s['tau'] != null) tau = _d(s['tau']);
+    if (s['week_start_tau'] != null) weekStartTau = _d(s['week_start_tau']);
+    if (s['sqi_min'] != null) sqiMin = _d(s['sqi_min']);
+    if (s['labels'] != null) labels = _i(s['labels']);
+    if (s['fixed'] != null) fixedCount = _i(s['fixed']);
+    if (s['sent'] != null) sentCount = _i(s['sent']);
+    if (s['status'] != null) status = '${s['status']}';
+  }
+
+  /// The tables that are replaced whole when present: baselines, learned
+  /// patterns and the pipeline.
+  void _lists(Map<String, dynamic> s) {
+    if (s['base'] is Map) {
+      base = {
+        for (final c in _obj(s['base']).entries) c.key: {for (final v in _obj(c.value).entries) v.key: Baseline.fromJson(_obj(v.value))},
+      };
+    }
+    if (s['buckets'] is List) {
+      buckets = {};
+      for (final b in s['buckets'] as List) {
+        final j = _obj(b);
+        buckets['${j['key']}'] = Bucket.fromJson(j);
       }
+    }
+    if (s['pipe'] is Map) {
+      pipe = {for (final e in _obj(s['pipe']).entries) e.key: Stage.fromJson(_obj(e.value))};
+    }
+  }
+
+  /// Puts [incoming] alerts into the list, newest first by id. An alert that
+  /// is already known is updated in place; with [replace], known alerts the
+  /// server no longer lists are dropped.
+  void _syncAlerts(List<HealthAlert> incoming, {required bool replace}) {
+    if (replace) {
+      final known = {for (final a in alerts) a.id: a};
+      final next = <HealthAlert>[];
+      for (final a in incoming) {
+        final old = known[a.id];
+        if (old == null) {
+          next.add(a);
+        } else {
+          old.absorb(a, authoritative: true);
+          next.add(old);
+        }
+      }
+      alerts
+        ..clear()
+        ..addAll(next.take(maxKept));
       return;
     }
-    ep.lastKey = key;
-
-    late bool send;
-    late int level;
-    late double p, pg, pu, w, n;
-    late List<String> path;
-    if (safety != null) {
-      send = true;
-      level = 4;
-      p = pg = 1;
-      pu = 0;
-      w = 0;
-      n = 0;
-      path = [_tr('Safety floor: {rule}', {'rule': _tr(safety.rule)})];
-      pipe['F'] = Stage(StageState.crit, _tr('Safety floor · sent without asking the model'));
-    } else {
-      final g = globalTree(f);
-      final q = personal(buckets[key]);
-      pg = g.p;
-      pu = q.pu;
-      w = q.w;
-      n = q.n;
-      path = g.path;
-      p = (1 - w) * pg + w * pu;
-      send = p >= tau;
-      level = p >= .8 ? 3 : (numAbn >= 2 ? 2 : 1);
-      pipe['F'] = Stage(send ? StageState.send : StageState.hold, send ? _tr('P(real) {p} ≥ τ {tau} · send', {'p': pct(p), 'tau': pct(tau)}) : _tr('P(real) {p} < τ {tau} · hold back', {'p': pct(p), 'tau': pct(tau)}));
-    }
-
-    final involved = safety != null ? [safety.v] : vitals.where((v) => v == 'spo2' ? z[v]! <= -1.5 : z[v]! >= 1.5).toList();
-    final newVital = ep.sentLevel > 0 && involved.any((v) => !ep.vit.contains(v));
-    if (send && (level > ep.sentLevel || newVital)) {
-      final a = HealthAlert(
-        id: _nextId++, t: rec.t, level: level, title: _title(f, safety?.title), reasons: _reasons(rec, f, safety?.rule), path: path,
-        p: p, pg: pg, pu: pu, w: w, n: n, tau: tau, key: key, safety: safety != null, hr: rec.r.hr, spo2: rec.r.spo2, temp: rec.r.temp,
-      );
-      // `who` stays English (it is matched in logic); screens translate it.
-      a.escalation.add(EscalationStep(rec.t, 'You', _tr('Phone notification')));
-      if (level >= 2) a.escalation.add(EscalationStep(rec.t, 'Caregiver', _tr('Family caregiver notified')));
-      a.escalation.add(EscalationStep(rec.t, 'Doctor', level >= 3 ? _tr('Flagged urgent for your doctor') : _tr('Added to doctor review')));
-      if (level >= 4) a.escalation.add(EscalationStep(rec.t, 'SOS', _tr('Emergency contacts alerted')));
-      alerts.insert(0, a);
-      sentCount++;
-      ep.sentLevel = max(ep.sentLevel, level);
-      ep.vit.addAll(involved);
-      rec.alert = level;
-      pipe['G'] = Stage(StageState.send, a.reasons.first);
-      status = 'alert';
-      onAlert?.call(a);
-    } else if (!send && ep.sentLevel == 0) {
-      final h = HeldEvent(t: rec.t, key: key, p: p, tau: tau, pg: pg, pu: pu, n: n, rec: rec);
-      held.insert(0, h);
-      rec.held = true;
-      final k = n.round();
-      pipe['G'] = Stage(StageState.hold, k == 1 ? _tr('Held back · matches {k} past false alarm', {'k': k}) : _tr('Held back · matches {k} past false alarms', {'k': k}));
-      status = 'held';
-      onHeld?.call(h);
-    } else {
-      pipe['G'] = Stage(StageState.send, _tr('Alert already sent for this episode'));
-      status = 'alert';
-      rec.alert = ep.sentLevel;
-    }
-  }
-
-  String _title(Features f, String? safetyTitle) {
-    if (safetyTitle != null) return _tr(safetyTitle);
-    if (f.primary == 'multi') {
-      final vs = [if (f.zHR >= 1.5) _tr('heart rate'), if (f.zSpO2 <= -1.5) _tr('oxygen'), if (f.zTemp >= 1.5) _tr('temperature')];
-      if (vs.length > 1) return _tr('{a} and {b} changing together', {'a': '${vs[0][0].toUpperCase()}${vs[0].substring(1)}', 'b': vs[1]});
-      return _tr('Several vitals changing');
-    }
-    return {'hr': _tr('Heart rate above your normal'), 'spo2': _tr('Oxygen below your normal'), 'temp': _tr('Temperature above your normal')}[f.primary]!;
-  }
-
-  List<String> _reasons(WindowRecord rec, Features f, String? safetyRule) {
-    final out = <String>[];
-    if (safetyRule != null) out.add(_tr('Safety limit reached: {rule}. Learning can never switch this alert off.', {'rule': _tr(safetyRule)}));
-    if (f.zHR >= 1.5) {
-      final pc = ((rec.r.hr / rec.mu['hr']! - 1) * 100).round();
-      final args = {'hr': rec.r.hr, 'pc': pc, 'mu': rec.mu['hr']!.round()};
-      final head = rec.ctx == 'rest'
-          ? _tr('Heart rate {hr} bpm, {pc}% above your usual resting {mu} bpm', args)
-          : rec.ctx == 'light'
-              ? _tr('Heart rate {hr} bpm, {pc}% above your usual light-activity {mu} bpm', args)
-              : _tr('Heart rate {hr} bpm, {pc}% above your usual active {mu} bpm', args);
-      out.add('$head${cnt['hr']! > 0 ? _tr(' for {n} min', {'n': cnt['hr']}) : ''}${rec.ctx == 'rest' ? _tr(', while you were still') : ''}.');
-    }
-    if (f.zSpO2 <= -1.5 || safetyRule?.contains('SpO') == true) out.add(_tr('Oxygen {spo2}%. Your usual is {mu}%.', {'spo2': rec.r.spo2, 'mu': rec.mu['spo2']!.round()}));
-    if (f.zTemp >= 1.5) out.add(_tr('Temperature {t} °C. Your usual is {mu} °C.', {'t': rec.r.temp.toStringAsFixed(1), 'mu': rec.mu['temp']!.toStringAsFixed(1)}));
-    out.add(_tr('Signal quality good ({q}), so this isn\'t a loose sensor.', {'q': rec.sqi.toStringAsFixed(2)}));
-    return out;
-  }
-
-  void _escalate() {
-    for (final a in alerts) {
-      if (a.level == 1 && a.patientFeedback == null && !a.escalation.any((e) => e.who == 'Caregiver') && t - a.t >= 10) {
-        a.escalation.add(EscalationStep(t, 'Caregiver', _tr('No reply in 10 min, caregiver notified')));
+    for (final a in incoming) {
+      final i = alerts.indexWhere((x) => x.id == a.id);
+      if (i >= 0) {
+        alerts[i].absorb(a);
+      } else {
+        final at = alerts.indexWhere((x) => x.id < a.id);
+        alerts.insert(at < 0 ? alerts.length : at, a);
       }
     }
+    if (alerts.length > maxKept) alerts.removeRange(maxKept, alerts.length);
   }
-
-  void _setContrib(HealthAlert a, double r, double f) {
-    if (a.safety) return;
-    final b = buckets.putIfAbsent(a.key, Bucket.new);
-    b.r += r - a.contribR;
-    b.f += f - a.contribF;
-    a.contribR = r;
-    a.contribF = f;
-  }
-
-  void _nudge(double d) => tau = nudgedTau(tau, weekStartTau, d);
-
-  /// The wearer says what was happening. Never makes the engine less sensitive
-  /// when they feel unwell or are unsure.
-  void patientFeedback(HealthAlert a, PatientFeedback kind) {
-    if (a.patientFeedback != null) return;
-    a.patientFeedback = kind;
-    labels++;
-    if (a.doctor != DoctorLabel.pending) return;
-    switch (kind) {
-      case PatientFeedback.active:
-        _setContrib(a, 0, .5);
-        _nudge(.01);
-      case PatientFeedback.loose:
-        _setContrib(a, 0, .5);
-        _nudge(.01);
-        sqiMin = min(.65, sqiMin + .02);
-      case PatientFeedback.unwell:
-        _setContrib(a, .5, 0);
-        _nudge(-.02);
-        a.escalation.add(EscalationStep(t, 'Doctor', _tr('Priority: patient feels unwell')));
-      case PatientFeedback.notSure:
-        break;
-    }
-  }
-
-  /// The doctor's label overrides the wearer's.
-  void doctorLabel(HealthAlert a, bool real, {String? by}) {
-    if (a.doctor != DoctorLabel.pending) return;
-    a.doctor = real ? DoctorLabel.confirmed : DoctorLabel.rejected;
-    a.reviewedBy = by;
-    labels++;
-    _setContrib(a, real ? 1 : 0, real ? 0 : 1);
-    if (!a.safety) _nudge(real ? -.05 : .03);
-  }
-
-  /// Current blended probability for a learned pattern.
-  double bucketP(String key) {
-    final q = personal(buckets[key]);
-    return (1 - q.w) * globalTree(featuresFromKey(key)).p + q.w * q.pu;
-  }
-
-  WindowRecord? get last => history.isEmpty ? null : history.last;
 }
 
 String pct(double x) => '${(x * 100).round()}%';

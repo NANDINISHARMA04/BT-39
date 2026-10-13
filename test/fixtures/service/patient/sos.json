@@ -1,0 +1,18 @@
+{
+  "id": 1,
+  "contacts": [
+    {
+      "id": "f1",
+      "name": "Sunita Sharma",
+      "delivered_ms": 1200,
+      "seen_ms": 3500
+    },
+    {
+      "id": "f2",
+      "name": "Rajesh Sharma",
+      "delivered_ms": 1900,
+      "seen_ms": 5000
+    }
+  ],
+  "location": "Sector 62, Noida (demo location)"
+}

@@ -179,4 +179,6 @@ const hiHelp = <String, String>{
   'Sorry, I didn\'t understand that.': 'माफ़ कीजिए, मैं यह समझ नहीं पाया।',
   'I can tell you where things are in the app, explain your health readings and alerts, and help in an emergency.': 'मैं बता सकता हूँ कि ऐप में कौन-सी चीज़ कहाँ है, आपकी रीडिंग और अलर्ट समझा सकता हूँ, और इमरजेंसी में मदद कर सकता हूँ।',
   'Tap a question below, or ask in your own words, like "Where are my reports?"': 'नीचे किसी सवाल पर टैप करें, या अपने शब्दों में पूछें, जैसे "मेरी रिपोर्ट कहाँ हैं?"',
+  // Moved to the BT39 service (2026-10)
+  'Signed-in accounts keep their data on the BT39 service. Demo data is deleted when you leave.': 'लॉग इन वाले अकाउंट का डेटा BT39 सर्विस पर रहता है। डेमो का डेटा बाहर निकलते ही मिट जाता है।',
 };

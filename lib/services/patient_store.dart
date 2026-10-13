@@ -1,35 +1,70 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/patient_models.dart';
+import 'pulse_api.dart';
 
-/// Example doctors for discovery and booking. All fictional.
-const doctorCatalog = [
-  Doctor(id: 'd1', name: 'Dr. Kavya Rao', specialty: 'Cardiologist', hospital: 'Fortis Heart Institute', city: 'Noida', years: 14, rating: 4.9, reviews: 612, fee: 900, languages: ['English', 'Hindi', 'Kannada'], nextFreeDays: 0, distanceKm: 3.2, about: 'Heart rhythm problems and recovery after heart surgery. Reviews AdaptAlert alerts for her patients.'),
-  Doctor(id: 'd2', name: 'Dr. Arjun Malhotra', specialty: 'General Physician', hospital: 'Max Clinic', city: 'Delhi', years: 9, rating: 4.7, reviews: 1204, fee: 500, languages: ['English', 'Hindi', 'Punjabi'], nextFreeDays: 0, distanceKm: 6.8, about: 'Fever, infections, diabetes and blood pressure follow-ups.'),
-  Doctor(id: 'd3', name: 'Dr. Meenakshi Iyer', specialty: 'Pulmonologist', hospital: 'Apollo Hospitals', city: 'Delhi', years: 18, rating: 4.8, reviews: 433, fee: 1100, languages: ['English', 'Tamil', 'Hindi'], nextFreeDays: 1, distanceKm: 9.1, about: 'Asthma, COPD, sleep apnoea and low oxygen at night.'),
-  Doctor(id: 'd4', name: 'Dr. Rohan Verma', specialty: 'Endocrinologist', hospital: 'Medanta', city: 'Gurugram', years: 11, rating: 4.6, reviews: 287, fee: 1000, languages: ['English', 'Hindi'], nextFreeDays: 2, distanceKm: 21.4, clinic: false, about: 'Diabetes, thyroid and hormone disorders. Video consults only.'),
-  Doctor(id: 'd5', name: 'Dr. Sana Qureshi', specialty: 'Neurologist', hospital: 'AIIMS OPD', city: 'Delhi', years: 16, rating: 4.9, reviews: 815, fee: 1200, languages: ['English', 'Hindi', 'Urdu'], nextFreeDays: 3, distanceKm: 12.0, video: false, about: 'Headache, epilepsy, stroke recovery.'),
-  Doctor(id: 'd6', name: 'Dr. Vikram Shetty', specialty: 'Orthopedic', hospital: 'Manipal Hospital', city: 'Bengaluru', years: 20, rating: 4.5, reviews: 954, fee: 800, languages: ['English', 'Kannada', 'Hindi'], nextFreeDays: 1, distanceKm: 4.4, about: 'Joint pain, sports injuries, fracture follow-up.'),
-  Doctor(id: 'd7', name: 'Dr. Priya Nair', specialty: 'Pediatrician', hospital: 'Rainbow Children\'s Hospital', city: 'Noida', years: 12, rating: 4.9, reviews: 1530, fee: 700, languages: ['English', 'Malayalam', 'Hindi'], nextFreeDays: 0, distanceKm: 2.1, about: 'Child health, vaccination and growth checks.'),
-  Doctor(id: 'd8', name: 'Dr. Ananya Ghosh', specialty: 'Gynecologist', hospital: 'Cloudnine', city: 'Gurugram', years: 10, rating: 4.7, reviews: 640, fee: 900, languages: ['English', 'Bengali', 'Hindi'], nextFreeDays: 2, distanceKm: 15.6, about: 'Pregnancy care, PCOS and women\'s health.'),
-  Doctor(id: 'd9', name: 'Dr. Karan Mehta', specialty: 'Psychiatrist', hospital: 'Mind Wellness Clinic', city: 'Mumbai', years: 8, rating: 4.8, reviews: 372, fee: 1000, languages: ['English', 'Hindi', 'Gujarati'], nextFreeDays: 0, distanceKm: 30.0, clinic: false, about: 'Anxiety, sleep, stress after illness. Video consults only.'),
-  Doctor(id: 'd10', name: 'Dr. Neha Kapoor', specialty: 'Dermatologist', hospital: 'Skin & You', city: 'Delhi', years: 7, rating: 4.4, reviews: 521, fee: 600, languages: ['English', 'Hindi'], nextFreeDays: 1, distanceKm: 7.3, about: 'Skin, hair and allergy problems.'),
-  Doctor(id: 'd11', name: 'Dr. Suresh Pillai', specialty: 'Cardiologist', hospital: 'Narayana Health', city: 'Bengaluru', years: 22, rating: 4.8, reviews: 1102, fee: 1300, languages: ['English', 'Malayalam', 'Kannada'], nextFreeDays: 4, distanceKm: 8.0, about: 'Heart failure, high blood pressure and cardiac rehab.'),
-  Doctor(id: 'd12', name: 'Dr. Farah Siddiqui', specialty: 'General Physician', hospital: 'HealthFirst Clinic', city: 'Noida', years: 6, rating: 4.6, reviews: 389, fee: 400, languages: ['English', 'Hindi', 'Urdu'], nextFreeDays: 0, distanceKm: 1.4, about: 'Everyday illness, check-ups and medicine reviews.'),
-];
+/// The doctors a patient can book. The list lives on the service (`GET /doctors`)
+/// and is filled by [PatientStore.load]; every doctor is fictional.
+final doctorCatalog = <Doctor>[];
 
-Doctor doctorById(String id) => doctorCatalog.firstWhere((d) => d.id == id, orElse: () => doctorCatalog.first);
+/// The doctor with [id], or the first one if there is none with that id.
+Doctor doctorById(String id) {
+  for (final d in doctorCatalog) {
+    if (d.id == id) return d;
+  }
+  if (doctorCatalog.isNotEmpty) return doctorCatalog.first;
+  return Doctor(id: id, name: '', specialty: '', hospital: '', city: '', years: 0, rating: 0, reviews: 0, fee: 0, languages: const [], nextFreeDays: 0, about: '');
+}
 
+/// The specialities offered in the doctor sign-up form.
 const specialties = ['Cardiologist', 'General Physician', 'Pulmonologist', 'Endocrinologist', 'Neurologist', 'Orthopedic', 'Pediatrician', 'Gynecologist', 'Psychiatrist', 'Dermatologist'];
 
-/// Everything the patient app stores, kept on the device per account.
+/// One emergency contact on an SOS: when the message reached them and when they
+/// opened it, in milliseconds after the SOS started.
+typedef SosContact = ({String id, String name, int deliveredMs, int seenMs});
+
+/// What the service did for an SOS: who it told and the location it sent.
+class SosPlan {
+  const SosPlan(this.id, this.contacts, this.location);
+  final String id;
+  final List<SosContact> contacts;
+  final String location;
+
+  factory SosPlan.fromJson(Map<String, dynamic> j) => SosPlan(
+        '${j['id']}',
+        [
+          for (final c in (j['contacts'] as List? ?? const []))
+            (
+              id: '${(c as Map)['id']}',
+              name: '${c['name'] ?? ''}',
+              deliveredMs: (c['delivered_ms'] as num?)?.round() ?? 0,
+              seenMs: (c['seen_ms'] as num?)?.round() ?? 0,
+            ),
+        ],
+        '${j['location'] ?? ''}',
+      );
+}
+
+/// Everything the patient app shows about the person: profile, family,
+/// appointments, records, insurance and preferences.
+///
+/// The document lives on the PulseOS service, one per account. A change shows
+/// at once on screen, is sent to the service, and the whole document the
+/// service answers with replaces the local copy. If the service refuses, the
+/// document is read again and [error] says why.
 class PatientStore extends ChangeNotifier {
-  String _account = 'demo';
-  late UserProfile profile;
+  PulseApi? api;
+  String _account = '';
+
+  /// Counts loads. A reply that belongs to an earlier load is dropped, so a
+  /// slow answer for the last account cannot land in the next one.
+  int _gen = 0;
+  bool _disposed = false;
+
+  UserProfile profile = UserProfile(name: '');
   List<FamilyMember> family = [];
   List<Appointment> appointments = [];
   List<MedicalRecord> records = [];
@@ -38,146 +73,148 @@ class PatientStore extends ChangeNotifier {
   Preferences prefs = Preferences();
   bool loaded = false;
 
+  /// The service's sentence for the last request that failed, until one succeeds.
+  String? error;
+
   final _rnd = Random();
   String newId() => '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${_rnd.nextInt(1 << 20).toRadixString(36)}';
 
-  String _k(String part) => 'bt39.$_account.$part';
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
-  Future<void> load(String account, {required String name, String email = '', Map<String, String> details = const {}}) async {
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  // ------------------------------------------------------------------ loading
+
+  String _name = '', _email = '';
+  Map<String, String> _details = const {};
+
+  /// Reads the account's document and the doctor directory from the service.
+  /// [name], [email] and [details] only fill in the profile until the answer
+  /// arrives; the service already has them and seeds a new account itself.
+  Future<void> load(PulseApi api, String account, {required String name, String email = '', Map<String, String> details = const {}}) async {
+    this.api = api;
     _account = account;
-    final sp = await SharedPreferences.getInstance();
-    // The demo account starts from the same example data every time.
-    final raw = account.startsWith('demo-') ? null : sp.getString(_k('data'));
-    if (raw == null) {
-      _seed(name, email);
-      if (details['age'] != null) profile.age = int.tryParse(details['age']!) ?? profile.age;
-      if (details['sex'] != null) profile.sex = details['sex']!;
-      if (details['phone'] != null && details['phone']!.isNotEmpty) profile.phone = details['phone']!;
-      await save();
-    } else {
-      try {
-        _fromJson(jsonDecode(raw) as Map<String, dynamic>);
-      } catch (_) {
-        _seed(name, email);
-      }
-    }
-    loaded = true;
-    notifyListeners();
-  }
-
-  /// Reads another account's saved data without making it the active account,
-  /// e.g. for a doctor opening a patient's record. Null if nothing is saved.
-  static Future<PatientStore?> peek(String account) async {
-    try {
-      final sp = await SharedPreferences.getInstance();
-      final raw = sp.getString('bt39.$account.data');
-      if (raw == null) return null;
-      final s = PatientStore().._account = account;
-      s._fromJson(jsonDecode(raw) as Map<String, dynamic>);
-      s.loaded = true;
-      return s;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// The example data for [name], in memory only.
-  static PatientStore example(String name, String email) {
-    final s = PatientStore().._seed(name, email);
-    s.loaded = true;
-    return s;
-  }
-
-  Future<void> save() async {
-    try {
-      final sp = await SharedPreferences.getInstance();
-      await sp.setString(_k('data'), jsonEncode(_toJson()));
-    } catch (_) {
-      // Storage can be unavailable (private browsing). The app keeps working in memory.
-    }
-  }
-
-  void _changed() {
-    notifyListeners();
-    save();
-  }
-
-  Map<String, dynamic> _toJson() => {
-        'profile': profile.toJson(),
-        'family': family.map((e) => e.toJson()).toList(),
-        'appointments': appointments.map((e) => e.toJson()).toList(),
-        'records': records.map((e) => e.toJson()).toList(),
-        'policies': policies.map((e) => e.toJson()).toList(),
-        'claims': claims.map((e) => e.toJson()).toList(),
-        'prefs': prefs.toJson(),
-      };
-
-  void _fromJson(Map<String, dynamic> j) {
-    Map<String, dynamic> m(Object e) => Map<String, dynamic>.from(e as Map);
-    profile = UserProfile.fromJson(m(j['profile']));
-    family = (j['family'] as List).map((e) => FamilyMember.fromJson(m(e))).toList();
-    appointments = (j['appointments'] as List).map((e) => Appointment.fromJson(m(e))).toList();
-    records = (j['records'] as List).map((e) => MedicalRecord.fromJson(m(e))).toList();
-    policies = (j['policies'] as List).map((e) => InsurancePolicy.fromJson(m(e))).toList();
-    claims = (j['claims'] as List).map((e) => Claim.fromJson(m(e))).toList();
-    prefs = Preferences.fromJson(m(j['prefs']));
-  }
-
-  /// Example data so every screen opens in a working state.
-  void _seed(String name, String email) {
-    final now = DateTime.now();
-    DateTime day(int d, int h, [int m = 0]) => DateTime(now.year, now.month, now.day + d, h, m);
-    profile = UserProfile(
-      name: name, email: email, phone: '+91 98100 12345', age: 24, sex: 'M', bloodGroup: 'B+', heightCm: 174, weightKg: 66, city: 'Noida',
-      conditions: ['Heart valve repair surgery, day 6 at home', 'Mild asthma'],
-      allergies: ['Penicillin'],
-      medications: [
-        Medication(name: 'Aspirin', dose: '75 mg', schedule: 'Once daily, after breakfast'),
-        Medication(name: 'Metoprolol', dose: '25 mg', schedule: 'Twice daily'),
-        Medication(name: 'Pantoprazole', dose: '40 mg', schedule: 'Before breakfast'),
-        Medication(name: 'Salbutamol inhaler', dose: '100 mcg', schedule: 'When needed for wheeze'),
-      ],
-    );
-    family = [
-      FamilyMember(id: 'f1', name: 'Sunita Sharma', relation: 'Mother', age: 50, bloodGroup: 'B+', phone: '+91 98111 22334', caregiver: true, emergencyContact: true),
-      FamilyMember(id: 'f2', name: 'Rajesh Sharma', relation: 'Father', age: 54, bloodGroup: 'O+', phone: '+91 98111 99887', conditions: ['High blood pressure'], emergencyContact: true),
-      FamilyMember(id: 'f3', name: 'Ishaan Sharma', relation: 'Brother', age: 12, bloodGroup: 'B+', conditions: ['Asthma (mild)']),
-    ];
-    appointments = [
-      Appointment(id: 'a1', doctorId: 'd1', forMember: 'self', at: day(1, 11, 30), mode: ApptMode.video, reason: 'Post-surgery review, week 1', notes: 'Share AdaptAlert summary before the call.'),
-      Appointment(id: 'a2', doctorId: 'd7', forMember: 'f3', at: day(4, 17), mode: ApptMode.clinic, reason: 'Inhaler check-up'),
-      Appointment(id: 'a3', doctorId: 'd2', forMember: 'self', at: day(-9, 10), mode: ApptMode.clinic, reason: 'Fever follow-up', status: ApptStatus.completed),
-    ];
-    records = [
-      MedicalRecord(id: 'r1', title: 'Discharge summary, Fortis', category: 'Discharge summary', date: day(-6, 0), forMember: 'self', fileName: 'discharge_summary.pdf', sizeBytes: 482113, notes: 'Mitral valve repair. Follow up with cardiology in 1 week.', shared: true),
-      MedicalRecord(id: 'r2', title: 'Blood count and INR', category: 'Lab report', date: day(-12, 0), forMember: 'self', fileName: 'lab_report.pdf', sizeBytes: 210554, notes: 'Haemoglobin 11.8 g/dL. INR 1.1.', shared: true),
-      MedicalRecord(id: 'r3', title: 'Chest X-ray', category: 'Imaging', date: day(-7, 0), forMember: 'self', fileName: 'chest_xray.jpg', sizeBytes: 1830220),
-      MedicalRecord(id: 'r4', title: 'Discharge medicines', category: 'Prescription', date: day(-6, 0), forMember: 'self', fileName: 'prescription.jpg', sizeBytes: 642010, shared: true),
-      MedicalRecord(id: 'r5', title: 'Vaccination card', category: 'Vaccination', date: day(-200, 0), forMember: 'f3', fileName: 'vaccines.pdf', sizeBytes: 120044),
-    ];
-    policies = [
-      InsurancePolicy(id: 'p1', insurer: 'Star Health', plan: 'Family Health Optima', policyNo: 'SH-4471-2209-88', sumInsured: 1000000, validTill: DateTime(now.year + 1, 3, 31), members: ['self', 'f2', 'f3'], premium: 28400),
-    ];
-    claims = [
-      Claim(id: 'c1', policyId: 'p1', title: 'Heart valve repair surgery', hospital: 'Fortis Heart Institute', amount: 420000, approved: 395000, forMember: 'self', recordIds: ['r1'], timeline: [
-        ClaimEvent(ClaimStatus.submitted, day(-6, 9)),
-        ClaimEvent(ClaimStatus.underReview, day(-5, 14), 'Documents received'),
-        ClaimEvent(ClaimStatus.approved, day(-3, 16), '₹25,000 not covered: room upgrade'),
-      ]),
-      Claim(id: 'c2', policyId: 'p1', title: 'Pediatric OPD and nebuliser', hospital: 'Rainbow Children\'s Hospital', amount: 6800, forMember: 'f3', timeline: [ClaimEvent(ClaimStatus.submitted, day(-1, 18))]),
-    ];
+    _name = name;
+    _email = email;
+    _details = details;
+    final gen = ++_gen;
+    loaded = false;
+    error = null;
+    _pending = 0;
+    _tail = Future.value();
+    _slots.clear();
+    _slotsBusy.clear();
+    profile = UserProfile(name: name, email: email, phone: details['phone'] ?? '', age: int.tryParse(details['age'] ?? '') ?? 30, sex: details['sex'] ?? 'F');
+    family = [];
+    appointments = [];
+    records = [];
+    policies = [];
+    claims = [];
     prefs = Preferences();
+    // The app starts this from initState. Telling listeners while the page is
+    // being built would be an error, so the news waits until the build is over.
+    scheduleMicrotask(_notify);
+    final got = await Future.wait([api.get('/me/data'), api.get('/doctors')]);
+    if (gen != _gen || _disposed) return;
+    final me = got[0], docs = got[1];
+    if (!me.ok || !docs.ok) {
+      error = (!me.ok ? me : docs).message;
+      _notify();
+      return;
+    }
+    _fromJson(me.map);
+    _setDoctors(docs.map);
+    loaded = true;
+    _notify();
   }
+
+  /// Tries the last [load] again, e.g. after the service was asleep.
+  Future<void> reload() {
+    final a = api;
+    return a == null ? Future.value() : load(a, _account, name: _name, email: _email, details: _details);
+  }
+
+  void _setDoctors(Map<String, dynamic> j) {
+    final list = [for (final d in (j['doctors'] as List? ?? const [])) Doctor.fromJson(Map<String, dynamic>.from(d as Map))];
+    if (list.isEmpty) return;
+    doctorCatalog
+      ..clear()
+      ..addAll(list);
+  }
+
+  /// Takes the service's document. A part it leaves out stays as it is.
+  void _fromJson(Map<String, dynamic> j) {
+    Map<String, dynamic> m(Object? e) => Map<String, dynamic>.from(e as Map);
+    List<T> list<T>(Object? v, T Function(Map<String, dynamic>) f) => [for (final e in (v as List? ?? const [])) f(m(e))];
+    if (j['profile'] is Map) profile = UserProfile.fromJson(m(j['profile']));
+    if (j['family'] is List) family = list(j['family'], FamilyMember.fromJson);
+    if (j['appointments'] is List) appointments = list(j['appointments'], Appointment.fromJson);
+    if (j['records'] is List) records = list(j['records'], MedicalRecord.fromJson);
+    if (j['policies'] is List) policies = list(j['policies'], InsurancePolicy.fromJson);
+    if (j['claims'] is List) claims = list(j['claims'], Claim.fromJson);
+    if (j['prefs'] is Map) prefs = Preferences.fromJson(m(j['prefs']));
+  }
+
+  // ------------------------------------------------------------------ writing
+
+  int _pending = 0;
+  Future<void> _tail = Future.value();
+
+  /// Sends one change. Changes go to the service one at a time, in order. The
+  /// document in the answer to the last one replaces the local copy (an earlier
+  /// answer would leave out the changes after it). When the service refuses, the
+  /// document is read again so the screen shows what is really saved.
+  /// [slots] drops the cached free times, because a booking changes them.
+  Future<void> _write(Future<ApiResult> Function(PulseApi api) send, {bool slots = false}) async {
+    final api = this.api;
+    if (api == null) return;
+    final gen = _gen;
+    _pending++;
+    final before = _tail;
+    final turn = Completer<void>();
+    _tail = turn.future;
+    try {
+      await before;
+      if (gen != _gen || _disposed) return;
+      final r = await send(api);
+      if (gen != _gen || _disposed) return;
+      if (r.ok) {
+        error = null;
+        if (_pending == 1 && r.map.containsKey('profile')) _fromJson(r.map);
+      } else {
+        error = r.message;
+        final fresh = await api.get('/me/data');
+        if (gen == _gen && !_disposed && fresh.ok) _fromJson(fresh.map);
+      }
+    } finally {
+      if (gen == _gen) {
+        _pending--;
+        if (slots) _slots.clear();
+      }
+      turn.complete();
+      _notify();
+    }
+  }
+
+  static String _id(String id) => Uri.encodeComponent(id);
 
   // ---- profile & prefs
-  void updateProfile(void Function(UserProfile p) f) {
+  Future<void> updateProfile(void Function(UserProfile p) f) {
     f(profile);
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/profile', profile.toJson()));
   }
 
-  void updatePrefs(void Function(Preferences p) f) {
+  Future<void> updatePrefs(void Function(Preferences p) f) {
     f(prefs);
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/prefs', prefs.toJson()));
   }
 
   // ---- family
@@ -185,110 +222,177 @@ class PatientStore extends ChangeNotifier {
   List<FamilyMember> get emergencyContacts => family.where((m) => m.emergencyContact).toList();
   FamilyMember? get caregiver => family.where((m) => m.caregiver).firstOrNull;
 
-  void upsertMember(FamilyMember m) {
+  Future<void> upsertMember(FamilyMember m) {
     final i = family.indexWhere((x) => x.id == m.id);
     i < 0 ? family.add(m) : family[i] = m;
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/family/${_id(m.id)}', m.toJson()));
   }
 
-  void deleteMember(String id) {
+  Future<void> deleteMember(String id) {
     family.removeWhere((m) => m.id == id);
     for (final a in appointments) {
       if (a.forMember == id) a.status = ApptStatus.cancelled;
     }
-    _changed();
+    _notify();
+    return _write((a) => a.delete('/me/family/${_id(id)}'), slots: true);
   }
 
   // ---- appointments
   List<Appointment> get upcoming => appointments.where((a) => a.status == ApptStatus.upcoming && a.at.isAfter(DateTime.now().subtract(const Duration(hours: 1)))).toList()..sort((a, b) => a.at.compareTo(b.at));
   List<Appointment> get past => appointments.where((a) => !upcoming.contains(a)).toList()..sort((a, b) => b.at.compareTo(a.at));
 
-  void upsertAppointment(Appointment a) {
+  Future<void> upsertAppointment(Appointment a) {
     final i = appointments.indexWhere((x) => x.id == a.id);
     i < 0 ? appointments.add(a) : appointments[i] = a;
-    _changed();
+    _notify();
+    return _write((api) => api.put('/me/appointments/${_id(a.id)}', a.toJson()), slots: true);
   }
 
-  void cancelAppointment(String id) {
-    appointments.firstWhere((a) => a.id == id).status = ApptStatus.cancelled;
-    _changed();
+  Future<void> cancelAppointment(String id) {
+    final a = appointments.where((x) => x.id == id).firstOrNull;
+    if (a != null) a.status = ApptStatus.cancelled;
+    _notify();
+    return _write((api) => api.post('/me/appointments/${_id(id)}/cancel'), slots: true);
   }
 
-  void deleteAppointment(String id) {
+  Future<void> deleteAppointment(String id) {
     appointments.removeWhere((a) => a.id == id);
-    _changed();
+    _notify();
+    return _write((api) => api.delete('/me/appointments/${_id(id)}'), slots: true);
   }
 
-  /// Free 30-minute slots for a doctor on a day, minus booked ones.
+  // ---- free times
+
+  /// Free times already fetched, by doctor and the appointment being moved.
+  final Map<String, ({Map<String, List<DateTime>> days, DateTime at})> _slots = {};
+  final Set<String> _slotsBusy = {};
+  static const _slotsTtl = Duration(minutes: 5);
+
+  static String _dayKey(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  static String _slotKey(Doctor d, String? except) => '${d.id}|${except ?? ''}';
+
+  /// Free 30-minute times for a doctor on a day. The service works them out
+  /// (`GET /doctors/{id}/slots`), minus times anyone has booked. The first call
+  /// for a doctor returns an empty list and fetches; the store notifies when
+  /// the times arrive. [exceptAppt] keeps that appointment's own time free, for
+  /// moving it. Times that have since come within 30 minutes of now are left
+  /// out, as the service does when it answers.
   List<DateTime> slotsFor(Doctor d, DateTime date, {String? exceptAppt}) {
-    final now = DateTime.now();
-    final out = <DateTime>[];
-    for (var h = 9; h < 18; h++) {
-      for (final m in [0, 30]) {
-        if (h == 13) continue; // lunch
-        final s = DateTime(date.year, date.month, date.day, h, m);
-        if (s.isBefore(now.add(const Duration(minutes: 30)))) continue;
-        final taken = appointments.any((a) => a.id != exceptAppt && a.doctorId == d.id && a.status == ApptStatus.upcoming && a.at == s);
-        // Doctors are busier on some slots: a stable pseudo-random pattern.
-        final busy = (d.id.hashCode + s.day * 31 + h * 7 + m) % 5 == 0;
-        if (!taken && !busy) out.add(s);
+    final have = _slots[_slotKey(d, exceptAppt)];
+    if (have == null || DateTime.now().difference(have.at) > _slotsTtl) _fetchSlots(d, exceptAppt);
+    final soonest = DateTime.now().add(const Duration(minutes: 30));
+    return [
+      for (final s in have?.days[_dayKey(date)] ?? const <DateTime>[])
+        if (!s.isBefore(soonest)) s,
+    ];
+  }
+
+  /// True until the first answer for this doctor has arrived.
+  bool slotsLoading(Doctor d, {String? exceptAppt}) => _slotsBusy.contains(_slotKey(d, exceptAppt)) || !_slots.containsKey(_slotKey(d, exceptAppt));
+
+  Future<void> _fetchSlots(Doctor d, String? except) async {
+    final api = this.api;
+    final key = _slotKey(d, except);
+    if (api == null || !_slotsBusy.add(key)) return;
+    final gen = _gen;
+    final query = 'from=${_dayKey(DateTime.now())}&days=14${except == null ? '' : '&except=${Uri.encodeQueryComponent(except)}'}';
+    final r = await api.get('/doctors/${_id(d.id)}/slots?$query');
+    if (gen != _gen || _disposed) return;
+    _slotsBusy.remove(key);
+    if (r.ok) {
+      final days = <String, List<DateTime>>{};
+      for (final e in ((r.map['days'] as Map?) ?? const {}).entries) {
+        days['${e.key}'] = [for (final s in (e.value as List)) DateTime.parse('$s').toLocal()];
       }
+      _slots[key] = (days: days, at: DateTime.now());
+    } else {
+      // Try again in about 15 seconds, the next time the page asks.
+      _slots[key] = (days: const {}, at: DateTime.now().subtract(_slotsTtl - const Duration(seconds: 15)));
     }
-    return out;
+    _notify();
   }
 
   // ---- records
-  void upsertRecord(MedicalRecord r) {
+  Future<void> upsertRecord(MedicalRecord r) {
     final i = records.indexWhere((x) => x.id == r.id);
     i < 0 ? records.insert(0, r) : records[i] = r;
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/records/${_id(r.id)}', r.toJson()));
   }
 
-  void deleteRecord(String id) {
+  Future<void> deleteRecord(String id) {
     records.removeWhere((r) => r.id == id);
     for (final c in claims) {
       c.recordIds.remove(id);
     }
-    _changed();
+    _notify();
+    return _write((a) => a.delete('/me/records/${_id(id)}'));
   }
 
   // ---- insurance
-  void upsertPolicy(InsurancePolicy p) {
+  Future<void> upsertPolicy(InsurancePolicy p) {
     final i = policies.indexWhere((x) => x.id == p.id);
     i < 0 ? policies.add(p) : policies[i] = p;
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/policies/${_id(p.id)}', p.toJson()));
   }
 
-  void deletePolicy(String id) {
+  Future<void> deletePolicy(String id) {
     policies.removeWhere((p) => p.id == id);
     claims.removeWhere((c) => c.policyId == id);
-    _changed();
+    _notify();
+    return _write((a) => a.delete('/me/policies/${_id(id)}'));
   }
 
   int usedOf(InsurancePolicy p) => claims.where((c) => c.policyId == p.id && (c.status == ClaimStatus.approved || c.status == ClaimStatus.paid)).fold(0, (a, c) => a + (c.approved ?? c.amount));
 
-  void upsertClaim(Claim c) {
+  Future<void> upsertClaim(Claim c) {
     final i = claims.indexWhere((x) => x.id == c.id);
     i < 0 ? claims.insert(0, c) : claims[i] = c;
-    _changed();
+    _notify();
+    return _write((a) => a.put('/me/claims/${_id(c.id)}', c.toJson()));
   }
 
-  void deleteClaim(String id) {
+  Future<void> deleteClaim(String id) {
     claims.removeWhere((c) => c.id == id);
-    _changed();
+    _notify();
+    return _write((a) => a.delete('/me/claims/${_id(id)}'));
   }
 
   /// Demo only: moves a claim one step along, as the insurer would.
-  void advanceClaim(Claim c) {
+  Future<void> advanceClaim(Claim c) {
     final next = switch (c.status) {
       ClaimStatus.submitted => ClaimStatus.underReview,
       ClaimStatus.underReview => ClaimStatus.approved,
       ClaimStatus.approved => ClaimStatus.paid,
       _ => null,
     };
-    if (next == null) return;
+    if (next == null) return Future.value();
     if (next == ClaimStatus.approved) c.approved ??= (c.amount * .94).round();
     c.timeline.add(ClaimEvent(next, DateTime.now(), next == ClaimStatus.underReview ? 'Documents received' : ''));
-    _changed();
+    _notify();
+    return _write((a) => a.post('/me/claims/${_id(c.id)}/advance'));
+  }
+
+  // ---- SOS
+
+  /// Tells the service the person pressed SOS (or that [alertId] triggered it).
+  /// It records it and answers with who it told. Null when it could not.
+  Future<SosPlan?> startSos({int? alertId}) async {
+    final api = this.api;
+    if (api == null) return null;
+    final r = await api.post('/sos', {'alert_id': alertId});
+    if (!r.ok) {
+      error = r.message;
+      _notify();
+      return null;
+    }
+    return SosPlan.fromJson(r.map);
+  }
+
+  /// Records that the SOS [id] is over.
+  Future<void> endSos(String id) async {
+    await api?.post('/sos/${_id(id)}/end');
   }
 }

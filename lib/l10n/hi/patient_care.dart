@@ -330,4 +330,7 @@ const hiPatientCare = <String, String>{
   'Pediatric OPD and nebuliser': 'बच्चों की OPD और नेबुलाइज़र',
   'Documents received': 'दस्तावेज़ मिल गए',
   '₹25,000 not covered: room upgrade': '₹25,000 कवर नहीं: रूम अपग्रेड',
+  // Moved to the BT39 service (2026-10)
+  'Record details are saved to your account. The files themselves are not uploaded.': 'रिकॉर्ड की जानकारी आपके अकाउंट में सेव होती है। फ़ाइलें खुद अपलोड नहीं होतीं।',
+  'Finding free times…': 'खाली समय ढूँढ रहे हैं…',
 };

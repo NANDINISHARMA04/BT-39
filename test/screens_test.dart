@@ -1,7 +1,8 @@
-import 'package:bt39_care/app.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/recorded_service.dart';
 
 /// Opens every screen once on a phone-sized view. Any layout overflow or
 /// exception fails the test (the test font is wider than real fonts, so this
@@ -47,7 +48,7 @@ void main() {
       t.view.physicalSize = size;
       t.view.devicePixelRatio = 3;
       addTearDown(t.view.reset);
-      await t.pumpWidget(const BT39App());
+      await openApp(t);
       await settle(t, 3);
       await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
       await settle(t, 10);
@@ -92,7 +93,7 @@ void main() {
     t.view.physicalSize = const Size(1440, 900);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
@@ -111,7 +112,7 @@ void main() {
     t.view.physicalSize = const Size(1179, 2556);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
@@ -134,7 +135,7 @@ void main() {
     t.view.physicalSize = const Size(1179, 2556);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
@@ -155,7 +156,7 @@ void main() {
     t.view.physicalSize = const Size(1179, 2556);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
@@ -177,7 +178,7 @@ void main() {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Nurse'));
     await settle(t, 10);
@@ -202,7 +203,7 @@ void main() {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Doctor'));
     await settle(t, 10);
@@ -246,7 +247,7 @@ void main() {
     t.view.physicalSize = const Size(1440, 900);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    await openApp(t);
     await settle(t, 3);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Doctor'));
     await settle(t, 10);

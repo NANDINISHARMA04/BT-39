@@ -177,7 +177,12 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
 Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime? day}) {
   final cs = context.read<ClinicalStore>();
   final now = DateTime.now();
-  final days = [for (var i = 0; i < 8; i++) DateTime(now.year, now.month, now.day + i)].where((d) => d.weekday != DateTime.sunday).toList();
+  // Bookable days and free times come from the service (the next 8 days, clinic closed on Sundays).
+  final days = cs.bookingDays();
+  if (days.isEmpty) {
+    toast(context, tr('Book a visit'), tr('The schedule has not loaded yet. Try again in a moment.'));
+    return Future.value();
+  }
   var p = patient;
   var d = days.firstWhere((x) => day != null && DateUtils.isSameDay(x, day), orElse: () => days.first);
   DateTime? slot;
@@ -187,12 +192,7 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
     context,
     (ctx) => StatefulBuilder(builder: (ctx, set) {
       final c = ctx.ios;
-      final taken = cs.visitsOn(d).where((v) => v.status != VisitStatus.cancelled).map((v) => v.at).toSet();
-      final slots = [
-        for (var h = 9; h < 18; h++)
-          for (final m in [0, 30])
-            if (h != 13) DateTime(d.year, d.month, d.day, h, m),
-      ].where((s) => s.isAfter(now.add(const Duration(minutes: 15))) && !taken.contains(s)).toList();
+      final slots = cs.bookingSlots(d);
       Widget chip(String text, bool on, VoidCallback tap) => Padding(
             padding: const EdgeInsets.only(right: 8, bottom: 8),
             child: GestureDetector(onTap: tap, child: Pill(text, color: on ? c.blue : null, solid: on)),

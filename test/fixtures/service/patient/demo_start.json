@@ -1,0 +1,7 @@
+{
+  "role": "patient",
+  "name": "Jai",
+  "email": "patient@pulseos.app",
+  "expires_in": 21600,
+  "token": "pd1.recorded.patient"
+}

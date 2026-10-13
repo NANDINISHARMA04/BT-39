@@ -1,8 +1,9 @@
-import 'dart:math';
-
-import 'adapt_alert.dart';
+import '../services/pulse_api.dart';
 
 /// Simulated studies of alert systems on the same virtual patients.
+///
+/// The study runs on the PulseOS service (`POST /study`); this file holds the
+/// settings the Research Lab sends and the results it gets back.
 ///
 /// Systems compared on identical event streams:
 ///   A  Fixed thresholds: HR > 100, SpO₂ < 94, Temp > 37.8, no quality check
@@ -14,6 +15,19 @@ import 'adapt_alert.dart';
 ///      statistics pooled from earlier patients (counts only, no raw vitals)
 ///
 /// The event mix and rates are modelling assumptions, listed in docs/RESEARCH.md.
+
+double _d(Object? v) => (v as num?)?.toDouble() ?? 0;
+int _i(Object? v) => (v as num?)?.round() ?? 0;
+Map<String, dynamic> _obj(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+
+/// The first of [keys] that [j] has, so replies in camelCase or snake_case both read.
+Object? _pick(Map<String, dynamic> j, List<String> keys) {
+  for (final k in keys) {
+    if (j[k] != null) return j[k];
+  }
+  return null;
+}
+
 class StudyConfig {
   const StudyConfig({
     this.patients = 40,
@@ -59,6 +73,38 @@ class StudyConfig {
         confirmStep: confirmStep,
         realEventRate: realEventRate ?? this.realEventRate,
       );
+
+  Map<String, dynamic> toJson() => {
+        'patients': patients,
+        'days': days,
+        'seed': seed,
+        'labelRate': labelRate,
+        'labelNoise': labelNoise,
+        'dismissRate': dismissRate,
+        'k': k,
+        'rejectStep': rejectStep,
+        'confirmStep': confirmStep,
+        'realEventRate': realEventRate,
+      };
+
+  /// Reads a config the service echoed back; a missing key keeps its default.
+  factory StudyConfig.fromJson(Map<String, dynamic> j) {
+    const d = StudyConfig();
+    double real(List<String> keys, double fallback) => _pick(j, keys) == null ? fallback : _d(_pick(j, keys));
+    int whole(String key, int fallback) => j[key] == null ? fallback : _i(j[key]);
+    return StudyConfig(
+      patients: whole('patients', d.patients),
+      days: whole('days', d.days),
+      seed: whole('seed', d.seed),
+      labelRate: real(['labelRate', 'label_rate'], d.labelRate),
+      labelNoise: real(['labelNoise', 'label_noise'], d.labelNoise),
+      dismissRate: real(['dismissRate', 'dismiss_rate'], d.dismissRate),
+      k: real(['k'], d.k),
+      rejectStep: real(['rejectStep', 'reject_step'], d.rejectStep),
+      confirmStep: real(['confirmStep', 'confirm_step'], d.confirmStep),
+      realEventRate: real(['realEventRate', 'real_event_rate'], d.realEventRate),
+    );
+  }
 }
 
 const systemNames = {
@@ -72,6 +118,7 @@ const systemNames = {
 class Interval {
   const Interval(this.lo, this.hi);
   final double lo, hi;
+  factory Interval.fromJson(Map<String, dynamic> j) => Interval(_d(j['lo']), _d(j['hi']));
 }
 
 class SystemMetrics {
@@ -84,10 +131,22 @@ class SystemMetrics {
 
   // Names kept for the screens and tests written against the first study.
   double get falsePerDayWeek5 => falsePerDayLastWeek;
+
+  factory SystemMetrics.fromJson(Map<String, dynamic> j) => SystemMetrics(
+        falsePerDay: _d(j['falsePerDay']),
+        falsePerDayWeek1: _d(j['falsePerDayWeek1']),
+        falsePerDayLastWeek: _d(j['falsePerDayLastWeek']),
+        sensitivity: _d(j['sensitivity']),
+        criticalCaught: _d(j['criticalCaught']),
+        ppv: _d(j['ppv']),
+        alertsPerDay: _d(j['alertsPerDay']),
+        falseLastWeekCI: Interval.fromJson(_obj(j['falseLastWeekCI'])),
+        sensitivityCI: Interval.fromJson(_obj(j['sensitivityCI'])),
+      );
 }
 
 class ExperimentResult {
-  ExperimentResult(this.config, this.realEvents, this.safetyEvents, this.series, this.metrics);
+  ExperimentResult(this.config, this.realEvents, this.safetyEvents, this.series, this.metrics, [this.reductions = const {}]);
   final StudyConfig config;
   final int realEvents, safetyEvents;
 
@@ -95,261 +154,74 @@ class ExperimentResult {
   final Map<String, List<double>> series;
   final Map<String, SystemMetrics> metrics;
 
+  /// The service's own figure for AdaptAlert (`C`) and with a federated prior (`E`).
+  final Map<String, double> reductions;
+
   int get days => config.days;
   int get patients => config.patients;
 
   /// Percent fewer false alarms than the fixed-threshold monitor in the last week.
-  double reduction(String s) => metrics['A']!.falsePerDayLastWeek == 0 ? 0 : 1 - metrics[s]!.falsePerDayLastWeek / metrics['A']!.falsePerDayLastWeek;
+  double reduction(String s) => reductions[s] ?? (metrics['A']!.falsePerDayLastWeek == 0 ? 0 : 1 - metrics[s]!.falsePerDayLastWeek / metrics['A']!.falsePerDayLastWeek);
+
+  factory ExperimentResult.fromJson(Map<String, dynamic> j) => ExperimentResult(
+        StudyConfig.fromJson(_obj(j['config'])),
+        _i(_pick(j, ['real_events', 'realEvents'])),
+        _i(_pick(j, ['safety_events', 'safetyEvents'])),
+        {
+          for (final e in _obj(j['series']).entries) e.key: [for (final v in (e.value as List? ?? const [])) _d(v)],
+        },
+        {
+          for (final e in _obj(j['metrics']).entries) e.key: SystemMetrics.fromJson(_obj(e.value)),
+        },
+        {
+          for (final e in _obj(j['reduction']).entries) e.key: _d(e.value),
+        },
+      );
 }
 
 typedef StudyResult = ExperimentResult;
 typedef StudyMetrics = SystemMetrics;
 
-/// The first study's call, kept for existing screens and tests.
-ExperimentResult runStudy({int seed = 7, int patients = 40, int days = 30}) => runExperiment(StudyConfig(seed: seed, patients: patients, days: days));
-
-class _Ev {
-  _Ev({this.fixed = false, this.real = false, this.safety = false, this.f, this.safetyAsFeature});
-  final bool fixed, real, safety;
-  final Features? f;
-
-  /// How the safety event looks to a model that has no safety floor (system D).
-  final Features? safetyAsFeature;
-}
-
-class _Learner {
-  _Learner(this.cfg, this.safetyFloor, {Map<String, Bucket>? prior, this.guarded = true}) : prior = prior ?? {};
-  final StudyConfig cfg;
-  final bool safetyFloor, guarded;
-  final Map<String, Bucket> prior;
-  final Map<String, Bucket> own = {};
-  double tau = .5, wk = .5;
-
-  Bucket? _bucket(String key) {
-    final p = prior[key], o = own[key];
-    if (p == null) return o;
-    return Bucket()
-      ..r = p.r + (o?.r ?? 0)
-      ..f = p.f + (o?.f ?? 0);
-  }
-
-  /// Decides, then learns from a (possibly wrong) clinician label.
-  bool decide(_Ev e, Random r) {
-    Features? f = e.f;
-    if (e.safety) {
-      if (safetyFloor) return true;
-      f = e.safetyAsFeature;
-    }
-    if (f == null) return false;
-    final key = bucketKey(f);
-    final q = personal(_bucket(key), k: cfg.k);
-    final p = (1 - q.w) * globalTree(f).p + q.w * q.pu;
-    final sent = p >= tau;
-    if (sent && r.nextDouble() < cfg.labelRate) {
-      var saysReal = r.nextDouble() < cfg.labelNoise ? !e.real : e.real;
-      if (e.real && r.nextDouble() < cfg.dismissRate) saysReal = false;
-      final b = own.putIfAbsent(key, Bucket.new);
-      if (saysReal) {
-        b.r++;
-        _move(-cfg.confirmStep);
-      } else {
-        b.f++;
-        _move(cfg.rejectStep);
-      }
-    }
-    return sent;
-  }
-}
-
-extension on _Learner {
-  void _move(double d) => tau = guarded ? nudgedTau(tau, wk, d) : (tau + d).clamp(.05, .95).toDouble();
-}
-
-ExperimentResult runExperiment(StudyConfig cfg) {
-  final r = Random(cfg.seed);
-  final days = cfg.days, n = cfg.patients;
-  int pois(double l) {
-    final lim = exp(-l);
-    var k = 0;
-    var p = 1.0;
-    do {
-      k++;
-      p *= r.nextDouble();
-    } while (p > lim);
-    return k - 1;
-  }
-
-  const systems = ['A', 'B', 'C', 'D', 'E'];
-  final fa = {for (final s in systems) s: List<double>.filled(days, 0)};
-  final faLastWeekByPatient = {for (final s in systems) s: List<double>.filled(n, 0)};
-  final caughtByPatient = {for (final s in systems) s: List<int>.filled(n, 0)};
-  final realByPatient = List<int>.filled(n, 0);
-  final alerted = {for (final s in systems) s: 0};
-  final criticalHit = {for (final s in systems) s: 0};
-  var real = 0, safetyEvents = 0;
-  final pool = <String, Bucket>{}; // federated: label counts pooled across finished patients
-
-  for (var i = 0; i < n; i++) {
-    final c = _Learner(cfg, true), d = _Learner(cfg, false, guarded: false);
-    final prior = <String, Bucket>{};
-    pool.forEach((key, b) {
-      final total = b.r + b.f;
-      final n0 = min(3.0, total); // shrink the pooled evidence to at most 3 labels
-      prior[key] = Bucket()
-        ..r = n0 * (b.r + 1) / (total + 2)
-        ..f = n0 * (b.f + 1) / (total + 2);
-    });
-    final e = _Learner(cfg, true, prior: prior);
-
-    for (var day = 0; day < days; day++) {
-      if (day % 7 == 0) {
-        for (final l in [c, d, e]) {
-          l.wk = l.tau;
-        }
-      }
-      final ev = <_Ev>[];
-      for (var k = pois(2); k > 0; k--) {
-        ev.add(_Ev(fixed: true)); // exercise
-      }
-      for (var k = pois(1.5); k > 0; k--) {
-        ev.add(_Ev(fixed: r.nextDouble() < .7)); // loose sensor
-      }
-      for (var k = pois(1.2); k > 0; k--) {
-        ev.add(_Ev(fixed: r.nextDouble() < .3, f: Features(act: 'rest', primary: 'hr', zHR: 2.6 + r.nextDouble() * 2.2, zSpO2: -.3, zTemp: .1, numAbn: 1, night: r.nextDouble() < .15))); // coffee, stress
-      }
-      if (r.nextDouble() < .5) {
-        ev.add(_Ev(fixed: r.nextDouble() < .6, f: Features(act: 'rest', primary: 'spo2', zHR: .2, zSpO2: -(2.6 + r.nextDouble() * .8), zTemp: 0, numAbn: 1, night: true))); // sleep dip
-      }
-      if (r.nextDouble() < cfg.realEventRate) {
-        final ty = r.nextDouble();
-        if (ty < .3) {
-          ev.add(_Ev(real: true, fixed: true, f: Features(act: 'rest', primary: 'multi', zHR: 5 + r.nextDouble() * 3, zSpO2: -(2.5 + r.nextDouble()), zTemp: .3, numAbn: 2, night: r.nextDouble() < .3)));
-        } else if (ty < .55) {
-          ev.add(_Ev(real: true, fixed: true, f: Features(act: 'rest', primary: 'multi', zHR: 2 + r.nextDouble() * 2, zSpO2: -.5, zTemp: 4 + r.nextDouble() * 3, numAbn: 2, night: r.nextDouble() < .3)));
-        } else if (ty < .75) {
-          safetyEvents++;
-          ev.add(_Ev(real: true, fixed: true, safety: true, safetyAsFeature: Features(act: 'rest', primary: 'spo2', zHR: 1, zSpO2: -(6 + r.nextDouble() * 2), zTemp: 0, numAbn: 1, night: r.nextDouble() < .3)));
-        } else {
-          ev.add(_Ev(real: true, fixed: r.nextDouble() < .6, f: Features(act: 'rest', primary: 'spo2', zHR: .8, zSpO2: -(2.8 + r.nextDouble() * .6), zTemp: 0, numAbn: 1)));
-        }
-      }
-      for (final x in ev) {
-        if (x.real) {
-          real++;
-          realByPatient[i]++;
-        }
-        void hit(String s, bool sent) {
-          if (!sent) return;
-          alerted[s] = alerted[s]! + 1;
-          if (x.real) {
-            caughtByPatient[s]![i]++;
-            if (x.safety) criticalHit[s] = criticalHit[s]! + 1;
-          } else {
-            fa[s]![day] += 1;
-            if (day >= days - 7) faLastWeekByPatient[s]![i] += 1 / 7;
-          }
-        }
-
-        hit('A', x.fixed);
-        hit('B', x.safety || (x.f != null && globalTree(x.f!).p >= .5));
-        hit('C', c.decide(x, r));
-        hit('D', d.decide(x, r));
-        hit('E', e.decide(x, r));
-      }
-    }
-    // Federated step: share only this patient's own label counts.
-    e.own.forEach((key, b) {
-      final p = pool.putIfAbsent(key, Bucket.new);
-      p.r += b.r;
-      p.f += b.f;
-    });
-  }
-
-  // Bootstrap over patients for 95% intervals.
-  final boot = Random(cfg.seed + 99);
-  Interval ci(List<double> Function(List<int> idx) stat) {
-    final vals = <double>[];
-    for (var b = 0; b < 400; b++) {
-      final idx = List.generate(n, (_) => boot.nextInt(n));
-      vals.addAll(stat(idx));
-    }
-    vals.sort();
-    return Interval(vals[(vals.length * .025).floor()], vals[min(vals.length - 1, (vals.length * .975).floor())]);
-  }
-
-  double avg(List<double> xs) => xs.fold(0.0, (a, b) => a + b) / (n * xs.length);
-  final metrics = <String, SystemMetrics>{};
-  for (final s in systems) {
-    final caught = caughtByPatient[s]!.fold(0, (a, b) => a + b);
-    metrics[s] = SystemMetrics(
-      falsePerDay: avg(fa[s]!),
-      falsePerDayWeek1: avg(fa[s]!.sublist(0, min(7, days))),
-      falsePerDayLastWeek: avg(fa[s]!.sublist(max(0, days - 7))),
-      sensitivity: real == 0 ? 1 : caught / real,
-      criticalCaught: safetyEvents == 0 ? 1 : criticalHit[s]! / safetyEvents,
-      ppv: alerted[s] == 0 ? 0 : caught / alerted[s]!,
-      alertsPerDay: alerted[s]! / (n * days),
-      falseLastWeekCI: ci((idx) => [idx.fold(0.0, (a, i) => a + faLastWeekByPatient[s]![i]) / n]),
-      sensitivityCI: ci((idx) {
-        final rr = idx.fold(0, (a, i) => a + realByPatient[i]), cc = idx.fold(0, (a, i) => a + caughtByPatient[s]![i]);
-        return [rr == 0 ? 1.0 : cc / rr];
-      }),
-    );
-  }
-  return ExperimentResult(cfg, real, safetyEvents, {for (final s in systems) s: fa[s]!.map((v) => v / n).toList()}, metrics);
-}
-
 /// What happens as feedback gets worse: at each level, a share of real alerts
-/// is dismissed as a false alarm (alarm fatigue). Averaged over [seeds] runs.
+/// is dismissed as a false alarm (alarm fatigue). Averaged over several runs.
 class NoisePoint {
   NoisePoint(this.noise, this.sensC, this.sensD, this.critC, this.critD, this.falseC);
   final double noise, sensC, sensD, critC, critD, falseC;
+
+  factory NoisePoint.fromJson(Map<String, dynamic> j) => NoisePoint(_d(j['noise']), _d(j['sensC']), _d(j['sensD']), _d(j['critC']), _d(j['critD']), _d(j['falseC']));
 }
 
-List<NoisePoint> noiseSweep(StudyConfig cfg, {List<double> levels = const [0, .1, .2, .3, .5], int seeds = 5}) => [
-      for (final lv in levels)
-        () {
-          var sc = 0.0, sd = 0.0, cc = 0.0, cd = 0.0, fc = 0.0;
-          for (var k = 0; k < seeds; k++) {
-            final r = runExperiment(cfg.copyWith(dismissRate: lv, seed: cfg.seed + k * 1000));
-            sc += r.metrics['C']!.sensitivity;
-            sd += r.metrics['D']!.sensitivity;
-            cc += r.metrics['C']!.criticalCaught;
-            cd += r.metrics['D']!.criticalCaught;
-            fc += r.metrics['C']!.falsePerDayLastWeek;
-          }
-          return NoisePoint(lv, sc / seeds, sd / seeds, cc / seeds, cd / seeds, fc / seeds);
-        }(),
-    ];
+/// One answer from the study route.
+class StudyRun {
+  const StudyRun(this.result, this.noise, this.markdown);
+  final ExperimentResult result;
 
-/// The results as Markdown tables, ready to paste into a paper draft.
-String resultsMarkdown(ExperimentResult r, {List<NoisePoint>? noise}) {
-  final c = r.config;
-  String f2(double x) => x.toStringAsFixed(2);
-  String p(double x) => '${(x * 100).toStringAsFixed(1)}%';
-  final b = StringBuffer()
-    ..writeln('Simulated study: ${c.patients} patients × ${c.days} days, seed ${c.seed}, label rate ${p(c.labelRate)}, label noise ${p(c.labelNoise)}, real alerts dismissed ${p(c.dismissRate)}, k = ${c.k}.')
-    ..writeln('${r.realEvents} real events (${r.safetyEvents} reached the safety floor).')
-    ..writeln()
-    ..writeln('| System | False alarms/patient/day, week 1 | Last week (95% CI) | Sensitivity (95% CI) | Critical caught | PPV | Alerts/patient/day |')
-    ..writeln('|---|---|---|---|---|---|---|');
-  for (final s in systemNames.keys) {
-    final m = r.metrics[s]!;
-    b.writeln('| ${systemNames[s]} | ${f2(m.falsePerDayWeek1)} | ${f2(m.falsePerDayLastWeek)} (${f2(m.falseLastWeekCI.lo)}–${f2(m.falseLastWeekCI.hi)}) | ${p(m.sensitivity)} (${p(m.sensitivityCI.lo)}–${p(m.sensitivityCI.hi)}) | ${p(m.criticalCaught)} | ${p(m.ppv)} | ${f2(m.alertsPerDay)} |');
-  }
-  b
-    ..writeln()
-    ..writeln('False-alarm reduction vs fixed threshold, last week: AdaptAlert ${p(r.reduction('C'))}, with federated prior ${p(r.reduction('E'))}.');
-  if (noise != null) {
-    b
-      ..writeln()
-      ..writeln('Alarm fatigue: share of real alerts dismissed as false alarms (mean of 5 seeds).')
-      ..writeln()
-      ..writeln('| Real alerts dismissed | Sensitivity, AdaptAlert | Sensitivity, unguarded | Critical caught, AdaptAlert | Critical caught, unguarded | False alarms/day, AdaptAlert |')
-      ..writeln('|---|---|---|---|---|---|');
-    for (final n in noise) {
-      b.writeln('| ${p(n.noise)} | ${p(n.sensC)} | ${p(n.sensD)} | ${p(n.critC)} | ${p(n.critD)} | ${f2(n.falseC)} |');
-    }
-  }
-  return b.toString();
+  /// The alarm-fatigue sweep, when it was asked for.
+  final List<NoisePoint>? noise;
+
+  /// The results as Markdown tables for a paper draft, when asked for.
+  final String? markdown;
 }
+
+/// Runs the study on the service. Pass [noise] to add the alarm-fatigue sweep
+/// (patients per run, runs per level) and [markdown] to get the tables as text.
+/// The service runs one study at a time and remembers the last ones, so a
+/// repeat is quick. Throws an [ApiException] when the service says no.
+Future<StudyRun> runStudyRemote(PulseApi api, StudyConfig cfg, {({int patients, int seeds})? noise, bool markdown = false}) async {
+  final r = await api.post('/study', {
+    'config': cfg.toJson(),
+    'noise': noise == null ? null : {'patients': noise.patients, 'seeds': noise.seeds},
+    'markdown': markdown,
+  });
+  if (!r.ok) throw ApiException(r.status, r.error, r.message);
+  final j = r.map;
+  return StudyRun(
+    ExperimentResult.fromJson(_obj(j['result'])),
+    j['noise'] is List ? [for (final n in j['noise'] as List) NoisePoint.fromJson(_obj(n))] : null,
+    j['markdown'] as String?,
+  );
+}
+
+/// The first study's call, kept for existing screens: the default experiment
+/// with the given [seed].
+Future<ExperimentResult> runStudy(PulseApi api, {int seed = 7}) async => (await runStudyRemote(api, StudyConfig(seed: seed))).result;

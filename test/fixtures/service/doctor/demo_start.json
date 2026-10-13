@@ -1,0 +1,7 @@
+{
+  "role": "doctor",
+  "name": "Dr. Kavya Rao",
+  "email": "doctor@pulseos.app",
+  "expires_in": 21600,
+  "token": "pd1.recorded.doctor"
+}

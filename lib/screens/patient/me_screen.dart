@@ -43,7 +43,7 @@ class MeScreen extends StatelessWidget {
                   Text(p.email.isEmpty ? tr('No email') : p.email, style: T.footnote.copyWith(color: c.label2)),
                   const SizedBox(height: 6),
                   Wrap(spacing: 6, children: [
-                    Pill(switch (s.mode) { AuthMode.demo => tr('Demo Mode'), AuthMode.local => tr('Device account'), AuthMode.cloud => tr('Signed in') }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
+                    Pill(switch (s.mode) { AuthMode.demo => tr('Demo Mode'), AuthMode.cloud => tr('Signed in') }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
                     Pill(tr('Edit profile'), color: c.blue),
                   ]),
                 ]),
@@ -113,7 +113,7 @@ class MeScreen extends StatelessWidget {
         ]),
         FormGroup(header: tr('About'), children: [
           IOSRow(icon: CupertinoIcons.info_circle_fill, iconColor: c.gray, title: 'PulseOS', subtitle: tr('Version 1.0 · AdaptAlert engine · student research prototype, not a medical device'), chevron: false),
-          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: tr('Privacy'), subtitle: switch (s.mode) { AuthMode.demo => tr('Demo Mode: all data stays on this device'), AuthMode.local => tr('Account stored on this device; the password is kept only as a salted hash'), AuthMode.cloud => tr('Signed in with Supabase. Health data in this build stays on this device.') }, chevron: false),
+          IOSRow(icon: CupertinoIcons.lock_fill, iconColor: c.green, title: tr('Privacy'), subtitle: switch (s.mode) { AuthMode.demo => tr('Demo Mode: your data is kept on the BT39 service for this visit only'), AuthMode.cloud => tr('Signed in. Your health data is saved to your account on the BT39 service.') }, chevron: false),
         ]),
         const SizedBox(height: 20),
         GroupedList(children: [
@@ -122,7 +122,7 @@ class MeScreen extends StatelessWidget {
             destructive: true,
             chevron: false,
             onTap: () async {
-              if (await confirm(context, title: s.demo ? tr('Leave Demo Mode?') : tr('Sign out?'), message: tr('Your data stays on this device for next time.'), action: s.demo ? tr('Leave') : tr('Sign out'))) {
+              if (await confirm(context, title: s.demo ? tr('Leave Demo Mode?') : tr('Sign out?'), message: s.demo ? tr('This demo\'s data will be deleted.') : tr('Your data stays in your account for next time.'), action: s.demo ? tr('Leave') : tr('Sign out'))) {
                 await s.signOut();
               }
             },

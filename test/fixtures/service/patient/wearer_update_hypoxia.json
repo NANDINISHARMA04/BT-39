@@ -1,0 +1,296 @@
+{
+  "type": "update",
+  "version": 2,
+  "t": 561,
+  "rec": {
+    "t": 560,
+    "hr": 99,
+    "spo2": 90,
+    "temp": 36.7,
+    "motion": 0.0731052004163949,
+    "contact": 0.9022785874728947,
+    "sqi": 0.9022785874728947,
+    "act": "Resting",
+    "ctx": "rest",
+    "good": true,
+    "fixed": false,
+    "mu": {
+      "hr": 66.3682553679625,
+      "spo2": 97.38550930903389,
+      "temp": 36.55052101287034
+    },
+    "sd": {
+      "hr": 6.0,
+      "spo2": 1.0,
+      "temp": 0.2
+    },
+    "z": {
+      "hr": 5.438624105339582,
+      "spo2": -7.385509309033893,
+      "temp": 0.747394935648309
+    },
+    "alert": 4,
+    "held": false
+  },
+  "pipe": {
+    "A": {
+      "s": "ok",
+      "x": {
+        "t": "Quality {q} · good, use it",
+        "a": {
+          "q": "0.90"
+        }
+      }
+    },
+    "B": {
+      "s": "ok",
+      "x": {
+        "c": [
+          {
+            "t": "Resting"
+          },
+          " · ",
+          {
+            "t": "motion {m} g",
+            "a": {
+              "m": "0.07"
+            }
+          }
+        ]
+      }
+    },
+    "C": {
+      "s": "ok",
+      "x": {
+        "t": "z · HR {hr} · SpO₂ {spo2} · Temp {temp}",
+        "a": {
+          "hr": "+5.4",
+          "spo2": "−7.4",
+          "temp": "+0.7"
+        }
+      }
+    },
+    "D": {
+      "s": "crit",
+      "x": {
+        "t": "Triggered · {rule}",
+        "a": {
+          "rule": {
+            "t": "SpO₂ ≤ 91% for 2 min"
+          }
+        }
+      }
+    },
+    "E": {
+      "s": "warn",
+      "x": {
+        "t": "Unusual for you · {what}",
+        "a": {
+          "what": {
+            "c": [
+              {
+                "t": "heart rate"
+              },
+              " + ",
+              {
+                "t": "oxygen"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "F": {
+      "s": "crit",
+      "x": {
+        "t": "Safety floor · sent without asking the model"
+      }
+    },
+    "G": {
+      "s": "send",
+      "x": {
+        "t": "Safety limit reached: {rule}. Learning can never switch this alert off.",
+        "a": {
+          "rule": {
+            "t": "SpO₂ ≤ 91% for 2 min"
+          }
+        }
+      }
+    }
+  },
+  "status": "alert",
+  "tau": 0.53,
+  "week_start_tau": 0.5,
+  "sqi_min": 0.5,
+  "labels": 2,
+  "fixed": 3,
+  "sent": 3,
+  "base": {
+    "rest": {
+      "hr": {
+        "mu": 66.3682553679625,
+        "sd": 6.0
+      },
+      "spo2": {
+        "mu": 97.38550930903389,
+        "sd": 1.0
+      },
+      "temp": {
+        "mu": 36.55052101287034,
+        "sd": 0.2
+      }
+    },
+    "light": {
+      "hr": {
+        "mu": 83.25058571199077,
+        "sd": 9.404414201819929
+      },
+      "spo2": {
+        "mu": 97.27026950964355,
+        "sd": 1.0
+      },
+      "temp": {
+        "mu": 36.599250619077786,
+        "sd": 0.21940036163318813
+      }
+    },
+    "active": {
+      "hr": {
+        "mu": 108.80384189172388,
+        "sd": 9.582148003641233
+      },
+      "spo2": {
+        "mu": 97.0,
+        "sd": 1.0
+      },
+      "temp": {
+        "mu": 36.69290824180042,
+        "sd": 0.27236420056564825
+      }
+    }
+  },
+  "alerts": [
+    {
+      "id": 3,
+      "t": 560,
+      "level": 4,
+      "title": {
+        "t": "Oxygen critically low"
+      },
+      "reasons": [
+        {
+          "t": "Safety limit reached: {rule}. Learning can never switch this alert off.",
+          "a": {
+            "rule": {
+              "t": "SpO₂ ≤ 91% for 2 min"
+            }
+          }
+        },
+        {
+          "c": [
+            {
+              "t": "Heart rate {hr} bpm, {pc}% above your usual resting {mu} bpm",
+              "a": {
+                "hr": 99,
+                "pc": 49,
+                "mu": 66
+              }
+            },
+            {
+              "t": " for {n} min",
+              "a": {
+                "n": 4
+              }
+            },
+            {
+              "t": ", while you were still"
+            },
+            "."
+          ]
+        },
+        {
+          "t": "Oxygen {spo2}%. Your usual is {mu}%.",
+          "a": {
+            "spo2": 90,
+            "mu": 97
+          }
+        },
+        {
+          "t": "Signal quality good ({q}), so this isn't a loose sensor.",
+          "a": {
+            "q": "0.90"
+          }
+        }
+      ],
+      "path": [
+        {
+          "t": "Safety floor: {rule}",
+          "a": {
+            "rule": {
+              "t": "SpO₂ ≤ 91% for 2 min"
+            }
+          }
+        }
+      ],
+      "p": 1.0,
+      "pg": 1.0,
+      "pu": 0.0,
+      "w": 0.0,
+      "n": 0.0,
+      "tau": 0.53,
+      "key": "SAFETY|spo2",
+      "safety": true,
+      "hr": 99,
+      "spo2": 90,
+      "temp": 36.7,
+      "feedback": null,
+      "doctor": "pending",
+      "reviewed_by": null,
+      "escalation": [
+        {
+          "t": 560,
+          "who": "You",
+          "what": {
+            "t": "Phone notification"
+          }
+        },
+        {
+          "t": 560,
+          "who": "Caregiver",
+          "what": {
+            "t": "Family caregiver notified"
+          }
+        },
+        {
+          "t": 560,
+          "who": "Doctor",
+          "what": {
+            "t": "Flagged urgent for your doctor"
+          }
+        },
+        {
+          "t": 560,
+          "who": "SOS",
+          "what": {
+            "t": "Emergency contacts alerted"
+          }
+        }
+      ],
+      "auto_sos": true,
+      "explain": null
+    }
+  ],
+  "held_new": [],
+  "scenario": {
+    "id": "hypoxia",
+    "minutes_left": 5
+  },
+  "paused": false,
+  "fast": true,
+  "events": [
+    {
+      "kind": "alert",
+      "id": 3
+    }
+  ]
+}

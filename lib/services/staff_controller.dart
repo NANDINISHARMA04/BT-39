@@ -6,19 +6,25 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config.dart';
-import '../engine/news2.dart';
 import '../l10n/l10n.dart';
+import '../l10n/msg.dart';
 import 'bt39_client.dart';
+import 'pulse_api.dart';
 
 class StaffAlert {
-  StaffAlert({required this.id, required this.patientId, required this.bed, required this.patientName, required this.kind, required this.severity, required this.message, required this.startedAt, this.news2, this.ackBy, this.ackAt, this.resolvedAt, this.resolution});
+  StaffAlert({required this.id, required this.patientId, required this.bed, required this.patientName, required this.kind, required this.severity, required Object? message, required this.startedAt, this.news2, this.ackBy, this.ackAt, this.resolvedAt, this.resolution}) : _message = message;
   final String id, patientId, bed, patientName, kind;
-  String severity, message;
+  String severity;
+  final Object? _message;
   int? news2;
   final DateTime startedAt;
   String? ackBy, resolution;
   DateTime? ackAt, resolvedAt;
   bool get open => resolvedAt == null;
+
+  /// The alert's text. Alerts from the live ward are plain strings; the demo
+  /// ward's come as messages, so they follow the app's language when read.
+  String get message => msg(_message);
 
   static const kindLabel = {
     'news2': 'NEWS2', 'trend_hr': 'Heart rate rising', 'trend_spo2': 'Oxygen falling', 'trend_rr': 'Breathing faster', 'trend_sbp': 'Blood pressure falling',
@@ -26,18 +32,48 @@ class StaffAlert {
     'acute_sbp': 'Very low blood pressure', 'acute_rr': 'Breathing rate extreme', 'sensor_off': 'Probe off', 'sensor_frozen': 'Sensor frozen', 'bp_overdue': 'BP overdue',
   };
   String get kindName => kindLabel[kind] ?? kind;
+
+  /// An alert from the demo ward stream (`GET /ward/live`).
+  factory StaffAlert.fromJson(Map<String, dynamic> j) {
+    DateTime? when(Object? v) => v == null ? null : DateTime.tryParse('$v')?.toLocal();
+    return StaffAlert(
+      id: '${j['id']}',
+      patientId: '${j['patient_id'] ?? ''}',
+      bed: '${j['bed'] ?? ''}',
+      patientName: '${j['patient_name'] ?? ''}',
+      kind: '${j['kind'] ?? ''}',
+      severity: '${j['severity'] ?? 'low'}',
+      message: j['message'],
+      startedAt: when(j['started_at']) ?? DateTime.now(),
+      news2: (j['news2'] as num?)?.round(),
+      ackBy: j['ack_by'] as String?,
+      ackAt: when(j['ack_at']),
+      resolvedAt: when(j['resolved_at']),
+      resolution: j['resolution'] as String?,
+    );
+  }
+}
+
+/// One line of a ward stream: every bed, and in Demo Mode the alerts too.
+class _Frame {
+  _Frame(this.beds, [this.alerts]);
+  final List<LiveBed> beds;
+  final List<StaffAlert>? alerts;
 }
 
 /// Feeds the doctor and nurse screens: live beds, ward alerts, actions.
 ///
-/// Demo Mode runs a 12-bed ward on the device, scored with NEWS2 every second.
-/// Signed-in staff get the real BT39 live stream and alerts from Supabase.
+/// Demo Mode streams the visitor's own 11-bed ward from the PulseOS service
+/// (`GET /ward/live`). Signed-in staff get the real BT39 live stream and alerts
+/// from Supabase. Either way the service scores NEWS2 and raises the alerts;
+/// the app shows them.
 class StaffController extends ChangeNotifier {
-  StaffController({required this.demo, required this.token, this.wardId, required this.myName});
+  StaffController({required this.demo, required this.token, this.wardId, required this.myName, required this.api});
   final bool demo;
   final Future<String?> Function() token;
   final String? wardId;
   final String myName;
+  final PulseApi api;
 
   List<LiveBed> beds = [];
   List<StaffAlert> alerts = [];
@@ -47,28 +83,30 @@ class StaffController extends ChangeNotifier {
   String? error;
 
   late final Bt39Client client = Bt39Client(token);
-  Timer? _timer, _staleTimer;
+  Timer? _staleTimer;
   http.Client? _http;
   RealtimeChannel? _channel;
-  bool _stopped = false;
+  bool _stopped = false, _disposed = false;
   final Map<String, String> _bedLabels = {};
   final Map<String, String> _patientNames = {};
 
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
   void start() {
     _stopped = false;
+    _loadLabels();
     if (demo) {
-      _demoInit();
-      status = 'live';
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) => _demoTick());
+      _loop((c) => api.lines('/ward/live', c).map(_demoFrame));
     } else {
-      _liveLoop();
+      _loop((c) => client.liveOnce(c).map((b) => _Frame(b)));
       _loadAlerts();
     }
   }
 
   void stop() {
     _stopped = true;
-    _timer?.cancel();
     _staleTimer?.cancel();
     _http?.close();
     if (_channel != null) Supabase.instance.client.removeChannel(_channel!);
@@ -76,6 +114,7 @@ class StaffController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     stop();
     super.dispose();
   }
@@ -86,37 +125,65 @@ class StaffController extends ChangeNotifier {
     if (h.length > 120) h.removeAt(0);
   }
 
-  // ------------------------------------------------------------------ live mode
-  Future<void> _liveLoop() async {
+  // ------------------------------------------------------------------ streams
+
+  _Frame _demoFrame(Map<String, dynamic> j) => _Frame(
+        [for (final b in (j['beds'] as List? ?? const [])) LiveBed.fromJson(Map<String, dynamic>.from(b as Map))],
+        [for (final a in (j['alerts'] as List? ?? const [])) StaffAlert.fromJson(Map<String, dynamic>.from(a as Map))],
+      );
+
+  /// Keeps one ward stream open, reconnecting with a back-off.
+  Future<void> _loop(Stream<_Frame> Function(http.Client c) open) async {
     var delay = 1;
     var everLive = false;
     while (!_stopped) {
-      _http = http.Client();
+      _http = api.newClient();
       try {
-        await for (final frame in client.liveOnce(_http!)) {
+        await for (final frame in open(_http!)) {
           if (_stopped) return;
           delay = 1;
           everLive = true;
-          beds = frame;
-          for (final b in frame) {
+          beds = frame.beds;
+          if (frame.alerts != null) alerts = _keepAnswers(frame.alerts!);
+          for (final b in frame.beds) {
             _pushHistory(b);
           }
           status = 'live';
           _staleTimer?.cancel();
           _staleTimer = Timer(const Duration(seconds: 5), () {
             status = 'stale';
-            notifyListeners();
+            _notify();
           });
-          notifyListeners();
+          _notify();
         }
       } catch (_) {}
       _http?.close();
       if (_stopped) return;
       status = everLive ? 'offline' : 'connecting';
-      notifyListeners();
+      _notify();
       await Future.delayed(Duration(seconds: delay));
       delay = min(delay * 2, 15);
     }
+  }
+
+  /// A frame that was already on its way can predate an acknowledgement or a
+  /// resolution the person just made. The service never takes those back, so
+  /// keep them until the stream shows them.
+  List<StaffAlert> _keepAnswers(List<StaffAlert> fresh) {
+    final old = {for (final a in alerts) a.id: a};
+    for (final a in fresh) {
+      final o = old[a.id];
+      if (o == null) continue;
+      if (a.ackAt == null && o.ackAt != null) {
+        a.ackAt = o.ackAt;
+        a.ackBy = o.ackBy;
+      }
+      if (a.resolvedAt == null && o.resolvedAt != null) {
+        a.resolvedAt = o.resolvedAt;
+        a.resolution = o.resolution;
+      }
+    }
+    return fresh;
   }
 
   Future<void> _loadAlerts() async {
@@ -133,7 +200,7 @@ class StaffController extends ChangeNotifier {
       final list = await sb.from('alerts').select().eq('ward_id', wardId!).order('started_at', ascending: false).limit(200);
       alerts = list.map(_fromRow).toList();
       error = null;
-      notifyListeners();
+      _notify();
       _channel ??= sb
           .channel('ward-alerts')
           .onPostgresChanges(
@@ -146,7 +213,7 @@ class StaffController extends ChangeNotifier {
           .subscribe();
     } catch (e) {
       error = tr('Alerts could not be loaded from Supabase.');
-      notifyListeners();
+      _notify();
     }
   }
 
@@ -160,16 +227,24 @@ class StaffController extends ChangeNotifier {
   // ------------------------------------------------------------------ actions
   Future<String?> ack(StaffAlert a) async {
     if (demo) {
+      final was = (a.ackBy, a.ackAt);
       a.ackBy = myName;
       a.ackAt = DateTime.now();
-      notifyListeners();
+      _notify();
+      final r = await api.post('/ward/alerts/${Uri.encodeComponent(a.id)}/ack');
+      if (!r.ok && r.error != 'already_acknowledged') {
+        a.ackBy = was.$1;
+        a.ackAt = was.$2;
+        _notify();
+        return r.message;
+      }
       return null;
     }
     final r = await client.ack(a.id);
     if (r.ok || r.error == 'already_acknowledged') {
       a.ackAt ??= DateTime.now();
       a.ackBy ??= myName;
-      notifyListeners();
+      _notify();
     }
     return r.ok ? null : r.message;
   }
@@ -177,25 +252,51 @@ class StaffController extends ChangeNotifier {
   Future<String?> resolve(StaffAlert a, String note) async {
     if (a.severity != 'low' && note.trim().length < 3) return tr('Add a short note on what was done (at least 3 characters).');
     if (demo) {
+      final was = (a.resolvedAt, a.resolution);
       a.resolvedAt = DateTime.now();
       a.resolution = note.trim().isEmpty ? 'resolved' : note.trim();
-      _quiet[a.id] = 0;
-      notifyListeners();
+      _notify();
+      final r = await api.post('/ward/alerts/${Uri.encodeComponent(a.id)}/resolve', {'note': note.trim()});
+      if (!r.ok) {
+        a.resolvedAt = was.$1;
+        a.resolution = was.$2;
+        _notify();
+        return r.message;
+      }
       return null;
     }
     final r = await client.resolve(a.id, note.trim());
     if (r.ok) {
       a.resolvedAt = DateTime.now();
       a.resolution = note.trim();
-      notifyListeners();
+      _notify();
     }
     return r.ok ? null : r.message;
   }
 
-  /// AdaptAlert feedback from staff: was this alert clinically real?
-  void label(StaffAlert a, bool real) {
+  /// Saved labels for this ward, read when the controller starts.
+  Future<void> _loadLabels() async {
+    final r = await api.get('/labels');
+    if (!r.ok || _disposed) return;
+    final saved = r.map['labels'];
+    if (saved is! Map) return;
+    for (final e in saved.entries) {
+      // A label given while this was loading is newer.
+      if (e.value is bool) labels.putIfAbsent('${e.key}', () => e.value as bool);
+    }
+    _notify();
+  }
+
+  /// AdaptAlert feedback from staff: was this alert clinically real? It shows
+  /// at once and is saved on the service.
+  Future<void> label(StaffAlert a, bool real) async {
     labels[a.id] = real;
-    notifyListeners();
+    _notify();
+    final r = await api.post('/labels', {'alert_id': a.id, 'real': real});
+    if (!r.ok) {
+      error = r.message;
+      _notify();
+    }
   }
 
   /// Share of labelled alerts that staff called real, per alert kind.
@@ -212,9 +313,8 @@ class StaffController extends ChangeNotifier {
 
   Future<String?> runScenario(String bed, String scenario) async {
     if (demo) {
-      _scen[bed] = scenario;
-      notifyListeners();
-      return null;
+      final r = await api.post('/ward/scenario', {'bed': bed, 'scenario': scenario});
+      return r.ok ? null : r.message;
     }
     final r = await client.scenario(bed, scenario);
     return r.ok ? null : r.message;
@@ -231,131 +331,10 @@ class StaffController extends ChangeNotifier {
 
   int get openUnacked => alerts.where((a) => a.open && a.ackAt == null && a.kind != 'sensor_off').length;
 
-  // ------------------------------------------------------------------ demo ward
-  final _rnd = Random(39);
-  final Map<String, Map<String, double>> _v = {};
-  final Map<String, Map<String, double>> _base = {};
-  final Map<String, String> _scen = {};
-  final Map<String, int> _low = {}, _off = {};
-  final Map<String, int> _quiet = {};
-  final Map<String, ({String name, int age, String sex, bool o2})> _pt = {};
-  int _alertSeq = 1;
-
-  void _demoInit() {
-    const people = [
-      ('B01', 'Ramesh Iyer', 67, 'M', true), ('B02', 'Sunita Deshmukh', 54, 'F', false), ('B03', 'Imran Shaikh', 45, 'M', false),
-      ('B04', 'Lakshmi Menon', 72, 'F', false), ('B05', 'Harpreet Gill', 61, 'M', true), ('B06', 'Asha Kulkarni', 38, 'F', false),
-      ('B08', 'Gopal Das', 80, 'M', false), ('B09', 'Neelam Joshi', 59, 'F', false), ('B10', 'Vivek Rathore', 33, 'M', false),
-      ('B11', 'Fatima Begum', 66, 'F', true), ('B12', 'Dinesh Patil', 49, 'M', false),
-    ];
-    for (final (bed, name, age, sex, o2) in people) {
-      _pt[bed] = (name: name, age: age, sex: sex, o2: o2);
-      final b = {'hr': 70 + _rnd.nextDouble() * 16, 'spo2': o2 ? 95.0 : 97 + _rnd.nextDouble() * 2, 'rr': 14 + _rnd.nextDouble() * 4, 'sbp': 118 + _rnd.nextDouble() * 18, 'dbp': 72 + _rnd.nextDouble() * 8, 'temp': 36.6 + _rnd.nextDouble() * .5};
-      _base[bed] = b;
-      _v[bed] = {...b};
-      _scen[bed] = 'stable';
-    }
-    _scen['B02'] = 'sepsis';
-    _scen['B05'] = 'hypoxia';
-    for (var i = 0; i < 40; i++) {
-      _demoTick(silent: true);
-    }
-  }
-
-  static const _targets = {
-    'sepsis': {'hr': 128.0, 'rr': 26.0, 'temp': 38.8, 'sbp': 92.0, 'spo2': 93.0},
-    'hypoxia': {'spo2': 86.0, 'rr': 24.0, 'hr': 108.0},
-    'tachy': {'hr': 152.0},
-  };
-
-  double _g() => (_rnd.nextDouble() + _rnd.nextDouble() + _rnd.nextDouble() - 1.5);
-
-  void _demoTick({bool silent = false}) {
-    final out = <LiveBed>[];
-    for (var i = 1; i <= 12; i++) {
-      final bed = 'B${i.toString().padLeft(2, '0')}';
-      final p = _pt[bed];
-      if (p == null) {
-        out.add(LiveBed(bed: bed));
-        continue;
-      }
-      final v = _v[bed]!, base = _base[bed]!, sc = _scen[bed]!;
-      final target = {...base, ...?_targets[sc]};
-      for (final k in v.keys) {
-        v[k] = v[k]! + (target[k]! - v[k]!) * .08 + _g() * (k == 'temp' ? .03 : k == 'spo2' ? .3 : 1);
-      }
-      final off = sc == 'probe_off';
-      final hr = off ? null : v['hr']!.round(), spo2 = off ? null : v['spo2']!.clamp(70, 100).round();
-      final s = news2(rr: v['rr']!.round(), spo2: spo2, sbp: v['sbp']!.round(), hr: hr, temp: double.parse(v['temp']!.toStringAsFixed(1)), onOxygen: p.o2);
-      _low[bed] = (spo2 != null && spo2 < 88) ? (_low[bed] ?? 0) + 1 : 0;
-      _off[bed] = off ? (_off[bed] ?? 0) + 1 : 0;
-      _rules(bed, p.name, s, hr: hr, spo2: spo2, rr: v['rr']!.round(), temp: v['temp']!);
-      final b = LiveBed(
-        bed: bed, patientId: 'demo-$bed', name: p.name, age: p.age, sex: p.sex, hr: hr, spo2: spo2, rr: v['rr']!.round(), sbp: v['sbp']!.round(), dbp: v['dbp']!.round(),
-        temp: double.parse(v['temp']!.toStringAsFixed(1)), news2: s.total, band: s.band, onOxygen: p.o2, consciousness: 'A', staleS: off ? _off[bed] : 0, nibpAgeS: 300 + i * 40,
-        openAlerts: alerts.where((a) => a.bed == bed && a.open).map((a) => LiveAlert(a.id, a.kind, a.severity, a.ackAt != null)).toList(),
-      );
-      out.add(b);
-      _pushHistory(b);
-    }
-    beds = out;
-    if (!silent) notifyListeners();
-  }
-
-  void _open(String bed, String name, String kind, String severity, String msg, int? score) {
-    const rank = {'low': 0, 'medium': 1, 'high': 2};
-    final existing = alerts.where((a) => a.bed == bed && a.kind == kind && a.open).firstOrNull;
-    if (existing != null) {
-      if (rank[severity]! > rank[existing.severity]!) existing.severity = severity;
-      existing.message = msg;
-      existing.news2 = score;
-      _quiet[existing.id] = 0;
-      return;
-    }
-    final a = StaffAlert(id: 'demo-${_alertSeq++}', patientId: 'demo-$bed', bed: bed, patientName: name, kind: kind, severity: severity, message: msg, news2: score, startedAt: DateTime.now());
-    alerts.insert(0, a);
-    _quiet[a.id] = 0;
-  }
-
-  void _rules(String bed, String name, News2Score s, {int? hr, int? spo2, required int rr, required double temp}) {
-    final vals = 'HR ${hr ?? '—'}, RR $rr, SpO₂ ${spo2 ?? '—'}%, ${tr('Temp')} ${temp.toStringAsFixed(1)} °C';
-    if (s.band != 'low') {
-      _open(bed, name, 'news2', switch (s.band) { 'high' => 'high', 'medium' => 'medium', _ => 'low' }, 'NEWS2 ${s.total} (${tr(bandLabel[s.band]!)}): $vals', s.total);
-    }
-    if ((_low[bed] ?? 0) >= 5) _open(bed, name, 'acute_spo2', 'high', tr('SpO₂ {spo2}% for 30 s on air', {'spo2': spo2 ?? '—'}), s.total);
-    if (hr != null && hr > 150) _open(bed, name, 'acute_hr', 'high', tr('Heart rate {hr} for 30 s', {'hr': hr}), s.total);
-    if ((_off[bed] ?? 0) >= 5) _open(bed, name, 'sensor_off', 'low', tr('No heart rate or SpO₂ for 30 s. Check the probe.'), null);
-    // Auto-resolve: quiet for 20 s (shortened from 10 min for the demo).
-    for (final a in alerts.where((a) => a.bed == bed && a.open)) {
-      final firing = switch (a.kind) {
-        'news2' => s.band != 'low',
-        'acute_spo2' => (_low[bed] ?? 0) > 0,
-        'acute_hr' => hr != null && hr > 150,
-        'sensor_off' => (_off[bed] ?? 0) > 0,
-        _ => false,
-      };
-      _quiet[a.id] = firing ? 0 : (_quiet[a.id] ?? 0) + 1;
-      if ((_quiet[a.id] ?? 0) >= 20) {
-        a.resolvedAt = DateTime.now();
-        a.resolution = 'auto';
-      }
-    }
-  }
-
-  /// Demo answer for the doctor's patient chat, from the bed's own data.
-  String demoAnswer(LiveBed b, String q) {
-    final open = alerts.where((a) => a.bed == b.bed && a.open).toList();
-    final hist = (hrHistory[b.bed] ?? []).whereType<int>().toList();
-    final trend = hist.length > 10 ? hist.last - hist[hist.length - 10] : 0;
-    final buf = StringBuffer(tr('{name} ({age}{sex}, bed {bed}) has NEWS2 {score} ({band}). ', {'name': b.name, 'age': b.age, 'sex': b.sex, 'bed': b.bed, 'score': b.news2 ?? '—', 'band': b.band == null ? '—' : tr(bandLabel[b.band] ?? '—')}));
-    buf.write(tr('Now: HR {hr}, SpO₂ {spo2}%, RR {rr}, BP {sbp}/{dbp} (cuff {cuff} min old), Temp {temp} °C', {'hr': b.hr ?? '—', 'spo2': b.spo2 ?? '—', 'rr': b.rr ?? '—', 'sbp': b.sbp ?? '—', 'dbp': b.dbp ?? '—', 'cuff': ((b.nibpAgeS ?? 0) / 60).round(), 'temp': b.temp?.toStringAsFixed(1) ?? '—'}));
-    buf.write(b.onOxygen == true ? tr(', on oxygen') : '');
-    buf.write('. ');
-    if (trend.abs() >= 5) buf.write(trend > 0 ? tr('Heart rate has risen by {n} over the last few minutes. ', {'n': trend.abs()}) : tr('Heart rate has fallen by {n} over the last few minutes. ', {'n': trend.abs()}));
-    buf.write(open.isEmpty ? tr('There are no open alerts. ') : tr('Open alerts: {list}. ', {'list': open.map((a) => '${trData(a.kindName)} (${tr(severityLabel[a.severity]!)})').join(', ')}));
-    if (q.toLowerCase().contains('sepsis') || (b.temp ?? 0) >= 38.1 && (b.hr ?? 0) > 110) buf.write(tr('The pattern of fever, fast heart rate and fast breathing fits the sepsis screening criteria; consider the sepsis pathway. '));
-    buf.write('\n\n');
-    buf.write(tr('Demo Mode answer, built on the device from this bed\'s data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports.'));
-    return buf.toString();
+  /// Demo answer for the doctor's patient chat, written by the service from
+  /// the bed's own data. Returns the text, or the reason it could not.
+  Future<String> demoAnswer(LiveBed b, String q) async {
+    final r = await api.post('/ward/chat', {'bed': b.bed, 'q': q});
+    return r.ok ? msg(r.map['text']) : (r.message ?? '');
   }
 }

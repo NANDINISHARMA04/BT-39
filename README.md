@@ -18,7 +18,7 @@ There are two apps in one, chosen at sign-in.
 
 | Feature | Where |
 |---|---|
-| Secure authentication: separate **log in and sign up for patients, doctors and nurses** (role-specific fields such as registration number, speciality, ward and shift), salted SHA-256 password hashes on the device, Supabase when a key is set, plus **Demo Mode** that needs no account | Welcome › Log in / Sign up |
+| Secure authentication: separate **log in and sign up for patients, doctors and nurses** (role-specific fields such as registration number, speciality, ward and shift), accounts on the BT39 service with Supabase sign-in, plus **Demo Mode** that needs no account | Welcome › Log in / Sign up |
 | **Guided demo with a voice-over** in English or Hindi: plays the whole AdaptAlert story (walk, loose band, coffee alert, doctor rejects, held back, real event, safety floor) with captions and a recorded natural voice, then asks you to log in or sign up | Welcome › Watch the demo with voice |
 | **Help assistant** for everyone, especially older people: ask "where are my reports?", "how do I change the language?", "report kahan hai?" in English, Hindi or Hinglish and get short steps plus a button that goes straight there; big help topics; speak your question with the microphone; answers can be read aloud. A round **Help** button sits on every patient page | Help button, Today › AI Health Assistant |
 | **Accessibility** for older and disabled people: larger and bold text, **easy home** (one big status card, giant vitals and four big buttons: Ask for help, Call family, My medicines, SOS), **flash alerts** for hearing loss, **spoken alerts** for low vision, reduce motion, and Normal/High/Low words so colour is never the only signal | Me › Accessibility |
@@ -52,9 +52,25 @@ There are two apps in one, chosen at sign-in.
 | **AdaptAlert review**: the home patient's alerts with her own feedback; marking them real or false teaches AdaptAlert | Both | AdaptAlert review / Home band |
 | **Ward rules**: how often each ward rule was right, so the noisiest rules can be tuned first | Both | Ward rules |
 
+## Where the work happens
+
+The app shows what the BT39 service sends and sends what you do. Everything else runs on the service ([bt39-monitor-service](https://github.com/gxc-siddhartha/bt39-monitor-service), `api/bt39api/pulse/`, contract in its `docs/pulseos.md`):
+
+| On the service | In the app |
+|---|---|
+| The simulated band and the AdaptAlert engine (one per patient account, saved, so learning survives closing the app) | Screens, charts and colours |
+| The 30-day study and the Research Lab experiments | Translation into Hindi (`tr`) and number and date formats |
+| Accounts and roles, sign-up for every role | Voice-over, speech, accessibility settings |
+| Patient records: profile, family, appointments, free slots, records, insurance and claims | The phone dialler (Call 112, call family) and the file picker |
+| Care-team records: patients, notes, prescriptions, visits, nurse tasks, handovers | Typing animations and haptics |
+| The health assistant, the doctor's demo chat, SOS and caregiver steps | |
+| Demo Mode: each visitor gets a fresh copy (own band, 11-bed ward, example data), deleted when they leave | |
+
+The service's Python code was checked against this app's original Dart code: recorded runs (10,000 band minutes, the 30-day study, the demo ward, the assistant in English and Hindi) give the same numbers and the same words. So the app needs an internet connection; on the free plan the service can take about a minute to wake up.
+
 ## How AdaptAlert works
 
-Every reading window (one simulated minute) goes through seven stages. The code is in `lib/engine/adapt_alert.dart`.
+Every reading window (one simulated minute) goes through seven stages. The code runs on the service (`api/bt39api/pulse/engine.py`), ported from this app's original `lib/engine/adapt_alert.dart`.
 
 | Stage | What it does |
 |---|---|
@@ -68,7 +84,7 @@ Every reading window (one simulated minute) goes through seven stages. The code 
 
 The personal threshold τ starts at 50%, stays between 30% and 75%, and moves at most 10 points a week. A doctor's "false alarm" raises it a little, "confirmed real" lowers it more. "I feel unwell" and "Not sure" never make the app less sensitive. Escalation: you → caregiver (warnings, or no reply in 10 minutes) → doctor → SOS for critical alerts.
 
-**30-day simulated study** (Insights tab, `lib/engine/study.dart`): 40 virtual patients compared on three systems, using the same decision code as the app. With the default seed, false alarms in week 5 fell from about 3.6 per patient per day (fixed thresholds) to about 0.06 (AdaptAlert), and every real event was caught. The event mix and rates are assumptions made for the simulation, not clinical data.
+**30-day simulated study** (Insights tab, run on the service by `api/bt39api/pulse/study.py`): 40 virtual patients compared on three systems, using the same decision code as the app. With the default seed, false alarms in week 5 fell from about 3.6 per patient per day (fixed thresholds) to about 0.06 (AdaptAlert), and every real event was caught. The event mix and rates are assumptions made for the simulation, not clinical data.
 
 ## Run it
 
@@ -78,13 +94,14 @@ You need Flutter 3.41 or newer. It was built and tested with Flutter 3.47.7.
 flutter pub get
 flutter run                 # phone or emulator
 flutter run -d chrome       # web
-flutter test                # 29 tests: engine, NEWS2, storage, auth, guided demo, every screen, Hindi
-dart run tool/run_study.dart # prints the research results as Markdown
+flutter test                # client, every screen, Hindi (no network: a fake service answers)
+dart run tool/run_study.dart # asks the service for the research results as Markdown
 flutter build apk --release
-flutter build web --release --no-web-resources-cdn   # works offline, good for a viva
+flutter build web --release --no-web-resources-cdn
+PULSE_API=http://localhost:8000/v1/pulse flutter test test/live   # the guided demo against a running service
 ```
 
-With no settings, accounts are stored on the device. Three demo accounts always exist:
+The app talks to `https://bt39-monitor-service.onrender.com` and the BT39 Supabase project by default (`lib/config.dart`; the Supabase key there is the public "publishable" key). Three demo accounts exist on the service:
 
 | Role | Email | Password |
 |---|---|---|
@@ -93,6 +110,8 @@ With no settings, accounts are stored on the device. Three demo accounts always 
 | Nurse | nurse@pulseos.app | nurse123 |
 
 You can also sign up as any role, or tap *Try without an account*. The demo patient is **Jai**. A demo session is not remembered: reopening the site starts at the welcome page.
+
+**Use made-up data only.** A doctor or nurse who signs up can see every patient at once (the same as on one phone before, but now across all phones). That is fine for a demo, not for real health data.
 
 ### Demo script (5 minutes)
 
@@ -127,21 +146,20 @@ flutter run                     # with the iPhone plugged in and unlocked
 
 On the iPhone, turn on Settings → Privacy & Security → Developer Mode, and trust your Apple ID under Settings → General → VPN & Device Management. With a free Apple ID the app runs for 7 days, then `flutter run` installs it again.
 
-## Connect real accounts and the BT39 service (optional)
+## Accounts and the BT39 service
 
-Pass settings at build time:
+The defaults point at the BT39 project. To use another service or project, pass settings at build time:
 
 ```bash
 flutter run \
-  --dart-define=SUPABASE_KEY=<publishable key> \
-  --dart-define=SUPABASE_URL=https://rwoscuilmsvasohkmphu.supabase.co \
-  --dart-define=BT39_API=https://bt39-monitor-service.onrender.com
+  --dart-define=BT39_API=http://localhost:8000 \
+  --dart-define=SUPABASE_URL=https://<project>.supabase.co \
+  --dart-define=SUPABASE_KEY=<publishable key>
 ```
 
-- `SUPABASE_URL` and `BT39_API` default to the BT39 project. The publishable key isn't in the repository: copy it from Supabase › Project Settings › API.
-- **Patients** can create an account by email. **Doctors and nurses** sign in with an account that has a row in the BT39 `staff` table. They then get the real live stream (`GET /v1/live`), alerts from Supabase with Realtime, acknowledge and resolve, and the doctor chat (`POST /v1/chat`).
-- For the web build, add its exact origin to the service's `APP_ORIGIN` and to Supabase's Site URL and Redirect URLs (see the BT39 README, sections 2 and 5).
-- The free Render plan sleeps after 15 minutes. The ward shows "Connecting…" for about a minute while it wakes.
+- **Everyone** signs up on the service (`POST /v1/pulse/signup`) and logs in with Supabase. Patients see their own records on any phone. Doctors and nurses get the real ward (`GET /v1/live`), alerts with Realtime, acknowledge and resolve, the doctor chat (`POST /v1/chat`) and every patient's records.
+- What crosses between phones now really does: a booking with Dr. Kavya Rao shows in `doctor@pulseos.app`'s schedule, a prescription reaches the patient's medicine list, and a doctor's review of Jai's alert reaches `patient@pulseos.app`.
+- The free Render plan sleeps after 15 minutes. The app shows "Waking up the server" for up to a minute.
 
 ## Languages and voice-over
 
@@ -152,28 +170,28 @@ flutter run \
 
 ## Research paper
 
-`docs/RESEARCH.md` has the problem, the research gaps it addresses, the method, the simulation design, results tables, limitations and a paper outline. The numbers come from `lib/engine/study.dart`; rerun them with `dart run tool/run_study.dart` or the Research Lab. They are from simulated patients, and the references must be checked before submission.
+`docs/RESEARCH.md` has the problem, the research gaps it addresses, the method, the simulation design, results tables, limitations and a paper outline. The numbers come from the study, which now runs on the service with the same results as the original `lib/engine/study.dart`; rerun them with `dart run tool/run_study.dart` or the Research Lab. They are from simulated patients, and the references must be checked before submission.
 
 ## What is simulated in this version
 
-- **The wearable band.** `BandSimulator` stands in for an ESP32 band (MAX30102 for HR and SpO₂, MLX90614 for temperature, MPU6050 for motion). To use real hardware, replace it with a BLE source that produces the same `Reading` objects; the engine doesn't change.
-- **Patient-side data** (profile, appointments, records, insurance, family) is stored on the device with `shared_preferences`, separately for each account. Record files are not uploaded to a server.
-- **The AI Health Assistant** runs on the device and answers only from your data. It never diagnoses or gives doses. To use a hosted language model, send the same context to it through a backend (never put an API key in the app).
-- **SOS messages** to contacts and the location are simulated. *Call 112* opens the real phone dialer.
+- **The wearable band.** The service's band simulator stands in for an ESP32 band (MAX30102 for HR and SpO₂, MLX90614 for temperature, MPU6050 for motion). A real band would post its readings to the service, which feeds the same engine.
+- **Patient-side data** (profile, appointments, records, insurance, family) is saved on the service for each account. Record files are not uploaded, only their details.
+- **The AI Health Assistant** is a chat on the service (`POST /v1/pulse/chat`). It finds the few facts in your own records that answer the question, and a small language model writes the answer from them, citing each fact; the service's rules still spot emergencies first and answer for free when the model is not available. It never diagnoses or gives doses. Doctors and nurses have the same chat (**Ask**, on Today and on every patient and demo bed), answering from the patients they can see.
+- **SOS messages** to contacts and the location are simulated and recorded on the service (there is no SMS provider). *Call 112* opens the real phone dialer.
 - **Doctors, clinics and insurer updates** are example data.
 
 ## Project layout
 
 ```
 lib/
-  engine/      adapt_alert.dart (7-stage engine), simulator.dart (band), study.dart (30-day study), news2.dart
-  l10n/        l10n.dart (tr, language switch), hi/ (Hindi strings)
-  services/    session.dart (auth), tour.dart (guided demo), narrator.dart (voice-over), clinical_store.dart (doctor and nurse data), monitor.dart, patient_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
+  engine/      adapt_alert.dart (the engine's state as the service sends it), simulator.dart (scenario names and icons), study.dart (study results), news2.dart (labels)
+  l10n/        l10n.dart (tr, language switch), msg.dart (shows the service's messages in your language), hi/ (Hindi strings)
+  services/    pulse_api.dart (calls to the service), session.dart (auth, Demo Mode), tour.dart (guided demo), narrator.dart (voice-over), monitor.dart (the band, live), patient_store.dart, clinical_store.dart, assistant.dart, chat.dart (the chat stream), chat_controller.dart (one conversation), bt39_client.dart, staff_controller.dart
   models/      patient_models.dart
-  screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
-  widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart
+  screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/ (… staff_ask: the doctors' and nurses' chat)
+  widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart, chat/ (iMessage-style bubbles, typing dots, the chat view)
   theme/       ios_theme.dart (iOS colours, light and dark)
-test/          engine, NEWS2, storage, monitor story, auth, guided demo, every screen, and every screen in Hindi
+test/          client/ (service calls, mirror, stores), every screen and every screen in Hindi against a fake service, live/ (guided demo against a real service)
 ```
 
 ## Credits

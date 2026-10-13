@@ -1,0 +1,996 @@
+{
+  "patients": [
+    {
+      "id": "live",
+      "name": "Jai",
+      "age": 24,
+      "sex": "M",
+      "bloodGroup": "B+",
+      "phone": "+91 98100 12345",
+      "source": "live",
+      "condition": "Heart valve repair surgery, day 6 at home",
+      "conditions": [
+        "Heart valve repair surgery, day 6 at home",
+        "Mild asthma"
+      ],
+      "allergies": [
+        "Penicillin"
+      ],
+      "medications": [
+        {
+          "name": "Aspirin",
+          "dose": "75 mg",
+          "schedule": "Once daily, after breakfast"
+        },
+        {
+          "name": "Metoprolol",
+          "dose": "25 mg",
+          "schedule": "Twice daily"
+        },
+        {
+          "name": "Pantoprazole",
+          "dose": "40 mg",
+          "schedule": "Before breakfast"
+        },
+        {
+          "name": "Salbutamol inhaler",
+          "dose": "100 mcg",
+          "schedule": "When needed for wheeze"
+        }
+      ],
+      "records": [
+        {
+          "id": "r1",
+          "title": "Discharge summary, Fortis",
+          "category": "Discharge summary",
+          "date": "2026-10-06T18:30:00.000Z",
+          "forMember": "self",
+          "fileName": "discharge_summary.pdf",
+          "sizeBytes": 482113,
+          "notes": "Mitral valve repair. Follow up with cardiology in 1 week.",
+          "shared": true
+        },
+        {
+          "id": "r2",
+          "title": "Blood count and INR",
+          "category": "Lab report",
+          "date": "2026-09-30T18:30:00.000Z",
+          "forMember": "self",
+          "fileName": "lab_report.pdf",
+          "sizeBytes": 210554,
+          "notes": "Haemoglobin 11.8 g/dL. INR 1.1.",
+          "shared": true
+        },
+        {
+          "id": "r4",
+          "title": "Discharge medicines",
+          "category": "Prescription",
+          "date": "2026-10-06T18:30:00.000Z",
+          "forMember": "self",
+          "fileName": "prescription.jpg",
+          "sizeBytes": 642010,
+          "notes": "",
+          "shared": true
+        }
+      ],
+      "vitals": null,
+      "status": "Stable",
+      "learned": null,
+      "email": "patient@pulseos.app",
+      "hasStore": true
+    },
+    {
+      "id": "ex-sunita",
+      "name": "Sunita Verma",
+      "age": 64,
+      "sex": "F",
+      "bloodGroup": "O+",
+      "phone": "+91 98110 44120",
+      "source": "example",
+      "condition": "COPD, home oxygen at night",
+      "conditions": [
+        "COPD (moderate)",
+        "High blood pressure"
+      ],
+      "allergies": [],
+      "medications": [
+        {
+          "name": "Tiotropium inhaler",
+          "dose": "18 mcg",
+          "schedule": "Once daily"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "schedule": "Once daily"
+        }
+      ],
+      "records": [
+        {
+          "id": "x1",
+          "title": "Last clinic letter",
+          "category": "Discharge summary",
+          "date": "2026-09-23T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "clinic_letter.pdf",
+          "sizeBytes": 182220,
+          "notes": "COPD, home oxygen at night",
+          "shared": false
+        },
+        {
+          "id": "x2",
+          "title": "Blood tests",
+          "category": "Lab report",
+          "date": "2026-10-04T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "labs.pdf",
+          "sizeBytes": 96410,
+          "notes": "Within the expected range for this patient.",
+          "shared": false
+        }
+      ],
+      "vitals": {
+        "hr": 82,
+        "spo2": 93,
+        "temp": 36.8
+      },
+      "status": "Stable",
+      "learned": "Night oxygen dips to 91–92% are normal for her",
+      "email": null,
+      "hasStore": false
+    },
+    {
+      "id": "ex-farhan",
+      "name": "Farhan Ali",
+      "age": 71,
+      "sex": "M",
+      "bloodGroup": "A+",
+      "phone": "+91 98990 31207",
+      "source": "example",
+      "condition": "Heart failure, weight up 1.2 kg in 3 days",
+      "conditions": [
+        "Heart failure (EF 35%)",
+        "Type 2 diabetes"
+      ],
+      "allergies": [
+        "Sulfa drugs"
+      ],
+      "medications": [
+        {
+          "name": "Furosemide",
+          "dose": "40 mg",
+          "schedule": "Morning"
+        },
+        {
+          "name": "Ramipril",
+          "dose": "5 mg",
+          "schedule": "Once daily"
+        },
+        {
+          "name": "Bisoprolol",
+          "dose": "2.5 mg",
+          "schedule": "Once daily"
+        }
+      ],
+      "records": [
+        {
+          "id": "x1",
+          "title": "Last clinic letter",
+          "category": "Discharge summary",
+          "date": "2026-09-23T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "clinic_letter.pdf",
+          "sizeBytes": 182220,
+          "notes": "Heart failure, weight up 1.2 kg in 3 days",
+          "shared": false
+        },
+        {
+          "id": "x2",
+          "title": "Blood tests",
+          "category": "Lab report",
+          "date": "2026-10-04T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "labs.pdf",
+          "sizeBytes": 96410,
+          "notes": "Within the expected range for this patient.",
+          "shared": false
+        }
+      ],
+      "vitals": {
+        "hr": 91,
+        "spo2": 94,
+        "temp": 36.9
+      },
+      "status": "Watching",
+      "learned": null,
+      "email": null,
+      "hasStore": false
+    },
+    {
+      "id": "ex-rahul",
+      "name": "Rahul Iyer",
+      "age": 47,
+      "sex": "M",
+      "bloodGroup": "B-",
+      "phone": "+91 99580 77215",
+      "source": "example",
+      "condition": "After appendix surgery, day 4",
+      "conditions": [
+        "Laparoscopic appendectomy"
+      ],
+      "allergies": [],
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "schedule": "Every 6 hours if needed"
+        },
+        {
+          "name": "Cefuroxime",
+          "dose": "500 mg",
+          "schedule": "Twice daily for 5 days"
+        }
+      ],
+      "records": [
+        {
+          "id": "x1",
+          "title": "Last clinic letter",
+          "category": "Discharge summary",
+          "date": "2026-09-23T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "clinic_letter.pdf",
+          "sizeBytes": 182220,
+          "notes": "After appendix surgery, day 4",
+          "shared": false
+        },
+        {
+          "id": "x2",
+          "title": "Blood tests",
+          "category": "Lab report",
+          "date": "2026-10-04T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "labs.pdf",
+          "sizeBytes": 96410,
+          "notes": "Within the expected range for this patient.",
+          "shared": false
+        }
+      ],
+      "vitals": {
+        "hr": 76,
+        "spo2": 98,
+        "temp": 37.1
+      },
+      "status": "Stable",
+      "learned": null,
+      "email": null,
+      "hasStore": false
+    },
+    {
+      "id": "ex-pooja",
+      "name": "Pooja Desai",
+      "age": 35,
+      "sex": "F",
+      "bloodGroup": "AB+",
+      "phone": "+91 98201 66453",
+      "source": "example",
+      "condition": "Pregnancy, 30 weeks, high blood pressure",
+      "conditions": [
+        "Pregnancy (30 weeks)",
+        "Gestational hypertension"
+      ],
+      "allergies": [
+        "Penicillin"
+      ],
+      "medications": [
+        {
+          "name": "Labetalol",
+          "dose": "100 mg",
+          "schedule": "Twice daily"
+        },
+        {
+          "name": "Iron and folic acid",
+          "dose": "1 tablet",
+          "schedule": "Once daily"
+        }
+      ],
+      "records": [
+        {
+          "id": "x1",
+          "title": "Last clinic letter",
+          "category": "Discharge summary",
+          "date": "2026-09-23T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "clinic_letter.pdf",
+          "sizeBytes": 182220,
+          "notes": "Pregnancy, 30 weeks, high blood pressure",
+          "shared": false
+        },
+        {
+          "id": "x2",
+          "title": "Blood tests",
+          "category": "Lab report",
+          "date": "2026-10-04T11:41:37.565Z",
+          "forMember": "self",
+          "fileName": "labs.pdf",
+          "sizeBytes": 96410,
+          "notes": "Within the expected range for this patient.",
+          "shared": false
+        }
+      ],
+      "vitals": {
+        "hr": 90,
+        "spo2": 99,
+        "temp": 36.7
+      },
+      "status": "Stable",
+      "learned": null,
+      "email": null,
+      "hasStore": false
+    }
+  ],
+  "notes": [
+    {
+      "id": "s3",
+      "patientId": "ex-farhan",
+      "at": "2026-10-12T09:41:37.565Z",
+      "kind": "note",
+      "text": "Weight up 1.2 kg in 3 days, ankles a little swollen. Consider raising furosemide if it continues.",
+      "by": "Dr. Kavya Rao"
+    },
+    {
+      "id": "s2",
+      "patientId": "live",
+      "at": "2026-10-11T06:41:37.565Z",
+      "kind": "nursing",
+      "text": "Video check: wound clean and dry, band fits well, no breathlessness.",
+      "by": "Nurse Anjali Singh"
+    },
+    {
+      "id": "s4",
+      "patientId": "ex-sunita",
+      "at": "2026-10-10T11:41:37.565Z",
+      "kind": "consult",
+      "text": "Stable. Night SpO₂ 91–92% is her usual; AdaptAlert has learned this and no longer alerts on it.",
+      "by": "Dr. Kavya Rao"
+    },
+    {
+      "id": "s1",
+      "patientId": "live",
+      "at": "2026-10-07T08:41:37.565Z",
+      "kind": "consult",
+      "text": "Discharged after mitral valve repair. Wrist band fitted; AdaptAlert monitoring at home. Review in one week.",
+      "by": "Dr. Kavya Rao"
+    }
+  ],
+  "visits": {
+    "2026-10-12": [
+      {
+        "id": "ex-20261012-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-12T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "completed",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261012-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-12T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "completed",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-13": [
+      {
+        "id": "ex-20261013-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-13T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261013-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-13T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261013-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-13T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261013-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-13T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-14": [
+      {
+        "id": "ex-20261014-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-14T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261014-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-14T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261014-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-14T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-15": [
+      {
+        "id": "ex-20261015-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-15T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261015-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-15T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-16": [
+      {
+        "id": "ex-20261016-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-16T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261016-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-16T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261016-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-16T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-17": [
+      {
+        "id": "ex-20261017-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-17T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261017-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-17T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261017-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-17T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-18": [],
+    "2026-10-19": [
+      {
+        "id": "ex-20261019-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-19T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261019-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-19T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261019-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-19T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-20": [
+      {
+        "id": "ex-20261020-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-20T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261020-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-20T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261020-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-20T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-21": [
+      {
+        "id": "ex-20261021-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-21T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261021-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-21T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-22": [
+      {
+        "id": "ex-20261022-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-22T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261022-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-22T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261022-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-22T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-23": [
+      {
+        "id": "ex-20261023-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-23T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261023-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-23T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261023-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-23T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-24": [
+      {
+        "id": "ex-20261024-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-24T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261024-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-24T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-25": [],
+    "2026-10-26": [
+      {
+        "id": "ex-20261026-0",
+        "patientId": "ex-sunita",
+        "patientName": "Sunita Verma",
+        "at": "2026-10-26T04:00:00.000Z",
+        "reason": "COPD review and inhaler check",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261026-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-26T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261026-3",
+        "patientId": "ex-pooja",
+        "patientName": "Pooja Desai",
+        "at": "2026-10-26T10:30:00.000Z",
+        "reason": "Blood pressure review",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ],
+    "2026-10-27": [
+      {
+        "id": "ex-20261027-1",
+        "patientId": "ex-farhan",
+        "patientName": "Farhan Ali",
+        "at": "2026-10-27T05:30:00.000Z",
+        "reason": "Weight gain and breathlessness",
+        "video": true,
+        "status": "upcoming",
+        "bookedByPatient": false
+      },
+      {
+        "id": "ex-20261027-2",
+        "patientId": "ex-rahul",
+        "patientName": "Rahul Iyer",
+        "at": "2026-10-27T09:00:00.000Z",
+        "reason": "Wound check after surgery",
+        "video": false,
+        "status": "upcoming",
+        "bookedByPatient": false
+      }
+    ]
+  },
+  "slots": {
+    "2026-10-13": [
+      "2026-10-13T12:00:00.000Z"
+    ],
+    "2026-10-14": [
+      "2026-10-14T03:30:00.000Z",
+      "2026-10-14T04:30:00.000Z",
+      "2026-10-14T05:00:00.000Z",
+      "2026-10-14T05:30:00.000Z",
+      "2026-10-14T06:00:00.000Z",
+      "2026-10-14T06:30:00.000Z",
+      "2026-10-14T07:00:00.000Z",
+      "2026-10-14T08:30:00.000Z",
+      "2026-10-14T09:30:00.000Z",
+      "2026-10-14T10:00:00.000Z",
+      "2026-10-14T11:00:00.000Z",
+      "2026-10-14T11:30:00.000Z",
+      "2026-10-14T12:00:00.000Z"
+    ],
+    "2026-10-15": [
+      "2026-10-15T03:30:00.000Z",
+      "2026-10-15T04:00:00.000Z",
+      "2026-10-15T04:30:00.000Z",
+      "2026-10-15T05:00:00.000Z",
+      "2026-10-15T06:00:00.000Z",
+      "2026-10-15T06:30:00.000Z",
+      "2026-10-15T07:00:00.000Z",
+      "2026-10-15T08:30:00.000Z",
+      "2026-10-15T09:30:00.000Z",
+      "2026-10-15T10:00:00.000Z",
+      "2026-10-15T10:30:00.000Z",
+      "2026-10-15T11:00:00.000Z",
+      "2026-10-15T11:30:00.000Z",
+      "2026-10-15T12:00:00.000Z"
+    ],
+    "2026-10-16": [
+      "2026-10-16T03:30:00.000Z",
+      "2026-10-16T04:30:00.000Z",
+      "2026-10-16T05:00:00.000Z",
+      "2026-10-16T06:00:00.000Z",
+      "2026-10-16T06:30:00.000Z",
+      "2026-10-16T07:00:00.000Z",
+      "2026-10-16T08:30:00.000Z",
+      "2026-10-16T09:00:00.000Z",
+      "2026-10-16T09:30:00.000Z",
+      "2026-10-16T10:00:00.000Z",
+      "2026-10-16T11:00:00.000Z",
+      "2026-10-16T11:30:00.000Z",
+      "2026-10-16T12:00:00.000Z"
+    ],
+    "2026-10-17": [
+      "2026-10-17T03:30:00.000Z",
+      "2026-10-17T04:30:00.000Z",
+      "2026-10-17T05:00:00.000Z",
+      "2026-10-17T05:30:00.000Z",
+      "2026-10-17T06:00:00.000Z",
+      "2026-10-17T06:30:00.000Z",
+      "2026-10-17T07:00:00.000Z",
+      "2026-10-17T08:30:00.000Z",
+      "2026-10-17T09:30:00.000Z",
+      "2026-10-17T10:00:00.000Z",
+      "2026-10-17T11:00:00.000Z",
+      "2026-10-17T11:30:00.000Z",
+      "2026-10-17T12:00:00.000Z"
+    ],
+    "2026-10-19": [
+      "2026-10-19T03:30:00.000Z",
+      "2026-10-19T04:30:00.000Z",
+      "2026-10-19T05:00:00.000Z",
+      "2026-10-19T06:00:00.000Z",
+      "2026-10-19T06:30:00.000Z",
+      "2026-10-19T07:00:00.000Z",
+      "2026-10-19T08:30:00.000Z",
+      "2026-10-19T09:00:00.000Z",
+      "2026-10-19T09:30:00.000Z",
+      "2026-10-19T10:00:00.000Z",
+      "2026-10-19T11:00:00.000Z",
+      "2026-10-19T11:30:00.000Z",
+      "2026-10-19T12:00:00.000Z"
+    ],
+    "2026-10-20": [
+      "2026-10-20T03:30:00.000Z",
+      "2026-10-20T04:30:00.000Z",
+      "2026-10-20T05:00:00.000Z",
+      "2026-10-20T05:30:00.000Z",
+      "2026-10-20T06:00:00.000Z",
+      "2026-10-20T06:30:00.000Z",
+      "2026-10-20T07:00:00.000Z",
+      "2026-10-20T08:30:00.000Z",
+      "2026-10-20T09:30:00.000Z",
+      "2026-10-20T10:00:00.000Z",
+      "2026-10-20T11:00:00.000Z",
+      "2026-10-20T11:30:00.000Z",
+      "2026-10-20T12:00:00.000Z"
+    ]
+  },
+  "beds": [
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B08",
+    "B09",
+    "B10",
+    "B11",
+    "B12"
+  ],
+  "tasks": [
+    {
+      "id": "v08",
+      "hour": 8,
+      "title": {
+        "t": "Vitals round"
+      },
+      "detail": {
+        "t": "All occupied beds: NEWS2 for each"
+      },
+      "kind": "vitals"
+    },
+    {
+      "id": "m09",
+      "hour": 9,
+      "title": {
+        "t": "Morning medicines"
+      },
+      "detail": {
+        "t": "{a}: metoprolol 25 mg · {b}: insulin before breakfast",
+        "a": {
+          "a": "B01",
+          "b": "B02"
+        }
+      },
+      "kind": "meds"
+    },
+    {
+      "id": "h10",
+      "hour": 10,
+      "title": {
+        "t": "Home check by video"
+      },
+      "detail": {
+        "t": "{name}: band fit, wound and how he feels",
+        "a": {
+          "name": "Jai"
+        }
+      },
+      "kind": "check"
+    },
+    {
+      "id": "v12",
+      "hour": 12,
+      "title": {
+        "t": "Vitals round"
+      },
+      "detail": {
+        "t": "All occupied beds"
+      },
+      "kind": "vitals"
+    },
+    {
+      "id": "c13",
+      "hour": 13,
+      "title": {
+        "t": "Fluid balance chart"
+      },
+      "detail": "B03",
+      "kind": "care"
+    },
+    {
+      "id": "m14",
+      "hour": 14,
+      "title": {
+        "t": "Afternoon medicines"
+      },
+      "detail": {
+        "t": "{a}: antibiotics IV · {b}: aspirin",
+        "a": {
+          "a": "B04",
+          "b": "B01"
+        }
+      },
+      "kind": "meds"
+    },
+    {
+      "id": "v16",
+      "hour": 16,
+      "title": {
+        "t": "Vitals round"
+      },
+      "detail": {
+        "t": "All occupied beds"
+      },
+      "kind": "vitals"
+    },
+    {
+      "id": "c18",
+      "hour": 18,
+      "title": {
+        "t": "Wound dressing"
+      },
+      "detail": "B05",
+      "kind": "care"
+    },
+    {
+      "id": "h20",
+      "hour": 20,
+      "title": {
+        "t": "Handover to the next shift"
+      },
+      "detail": {
+        "t": "Write the handover note below"
+      },
+      "kind": "handover"
+    }
+  ],
+  "done": {},
+  "handovers": []
+}

@@ -35,11 +35,29 @@ class StaffTodayScreen extends StatelessWidget {
 Widget _meButton(BuildContext context) {
   final s = context.watch<Session>();
   final c = context.ios;
-  return CupertinoButton(
-    padding: EdgeInsets.zero,
-    onPressed: () => openStaffSection(context, StaffSec.me),
-    child: Avatar(s.name, size: 32, colors: [c.teal, c.blue]),
-  );
+  return Row(mainAxisSize: MainAxisSize.min, children: [
+    Semantics(
+      button: true,
+      label: tr('Ask'),
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(44, 44),
+        onPressed: () => openStaffSection(context, StaffSec.ask),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.teal, c.indigo])),
+          child: const Icon(CupertinoIcons.chat_bubble_2_fill, size: 17, color: Colors.white),
+        ),
+      ),
+    ),
+    const SizedBox(width: 6),
+    CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () => openStaffSection(context, StaffSec.me),
+      child: Avatar(s.name, size: 32, colors: [c.teal, c.blue]),
+    ),
+  ]);
 }
 
 class _Kpi extends StatelessWidget {

@@ -1,0 +1,266 @@
+{
+  "doctors": [
+    {
+      "id": "d1",
+      "name": "Dr. Kavya Rao",
+      "specialty": "Cardiologist",
+      "hospital": "Fortis Heart Institute",
+      "city": "Noida",
+      "years": 14,
+      "rating": 4.9,
+      "reviews": 612,
+      "fee": 900,
+      "languages": [
+        "English",
+        "Hindi",
+        "Kannada"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 0,
+      "about": "Heart rhythm problems and recovery after heart surgery. Reviews AdaptAlert alerts for her patients.",
+      "distanceKm": 3.2
+    },
+    {
+      "id": "d2",
+      "name": "Dr. Arjun Malhotra",
+      "specialty": "General Physician",
+      "hospital": "Max Clinic",
+      "city": "Delhi",
+      "years": 9,
+      "rating": 4.7,
+      "reviews": 1204,
+      "fee": 500,
+      "languages": [
+        "English",
+        "Hindi",
+        "Punjabi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 0,
+      "about": "Fever, infections, diabetes and blood pressure follow-ups.",
+      "distanceKm": 6.8
+    },
+    {
+      "id": "d3",
+      "name": "Dr. Meenakshi Iyer",
+      "specialty": "Pulmonologist",
+      "hospital": "Apollo Hospitals",
+      "city": "Delhi",
+      "years": 18,
+      "rating": 4.8,
+      "reviews": 433,
+      "fee": 1100,
+      "languages": [
+        "English",
+        "Tamil",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 1,
+      "about": "Asthma, COPD, sleep apnoea and low oxygen at night.",
+      "distanceKm": 9.1
+    },
+    {
+      "id": "d4",
+      "name": "Dr. Rohan Verma",
+      "specialty": "Endocrinologist",
+      "hospital": "Medanta",
+      "city": "Gurugram",
+      "years": 11,
+      "rating": 4.6,
+      "reviews": 287,
+      "fee": 1000,
+      "languages": [
+        "English",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": false,
+      "nextFreeDays": 2,
+      "about": "Diabetes, thyroid and hormone disorders. Video consults only.",
+      "distanceKm": 21.4
+    },
+    {
+      "id": "d5",
+      "name": "Dr. Sana Qureshi",
+      "specialty": "Neurologist",
+      "hospital": "AIIMS OPD",
+      "city": "Delhi",
+      "years": 16,
+      "rating": 4.9,
+      "reviews": 815,
+      "fee": 1200,
+      "languages": [
+        "English",
+        "Hindi",
+        "Urdu"
+      ],
+      "video": false,
+      "clinic": true,
+      "nextFreeDays": 3,
+      "about": "Headache, epilepsy, stroke recovery.",
+      "distanceKm": 12.0
+    },
+    {
+      "id": "d6",
+      "name": "Dr. Vikram Shetty",
+      "specialty": "Orthopedic",
+      "hospital": "Manipal Hospital",
+      "city": "Bengaluru",
+      "years": 20,
+      "rating": 4.5,
+      "reviews": 954,
+      "fee": 800,
+      "languages": [
+        "English",
+        "Kannada",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 1,
+      "about": "Joint pain, sports injuries, fracture follow-up.",
+      "distanceKm": 4.4
+    },
+    {
+      "id": "d7",
+      "name": "Dr. Priya Nair",
+      "specialty": "Pediatrician",
+      "hospital": "Rainbow Children's Hospital",
+      "city": "Noida",
+      "years": 12,
+      "rating": 4.9,
+      "reviews": 1530,
+      "fee": 700,
+      "languages": [
+        "English",
+        "Malayalam",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 0,
+      "about": "Child health, vaccination and growth checks.",
+      "distanceKm": 2.1
+    },
+    {
+      "id": "d8",
+      "name": "Dr. Ananya Ghosh",
+      "specialty": "Gynecologist",
+      "hospital": "Cloudnine",
+      "city": "Gurugram",
+      "years": 10,
+      "rating": 4.7,
+      "reviews": 640,
+      "fee": 900,
+      "languages": [
+        "English",
+        "Bengali",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 2,
+      "about": "Pregnancy care, PCOS and women's health.",
+      "distanceKm": 15.6
+    },
+    {
+      "id": "d9",
+      "name": "Dr. Karan Mehta",
+      "specialty": "Psychiatrist",
+      "hospital": "Mind Wellness Clinic",
+      "city": "Mumbai",
+      "years": 8,
+      "rating": 4.8,
+      "reviews": 372,
+      "fee": 1000,
+      "languages": [
+        "English",
+        "Hindi",
+        "Gujarati"
+      ],
+      "video": true,
+      "clinic": false,
+      "nextFreeDays": 0,
+      "about": "Anxiety, sleep, stress after illness. Video consults only.",
+      "distanceKm": 30.0
+    },
+    {
+      "id": "d10",
+      "name": "Dr. Neha Kapoor",
+      "specialty": "Dermatologist",
+      "hospital": "Skin & You",
+      "city": "Delhi",
+      "years": 7,
+      "rating": 4.4,
+      "reviews": 521,
+      "fee": 600,
+      "languages": [
+        "English",
+        "Hindi"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 1,
+      "about": "Skin, hair and allergy problems.",
+      "distanceKm": 7.3
+    },
+    {
+      "id": "d11",
+      "name": "Dr. Suresh Pillai",
+      "specialty": "Cardiologist",
+      "hospital": "Narayana Health",
+      "city": "Bengaluru",
+      "years": 22,
+      "rating": 4.8,
+      "reviews": 1102,
+      "fee": 1300,
+      "languages": [
+        "English",
+        "Malayalam",
+        "Kannada"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 4,
+      "about": "Heart failure, high blood pressure and cardiac rehab.",
+      "distanceKm": 8.0
+    },
+    {
+      "id": "d12",
+      "name": "Dr. Farah Siddiqui",
+      "specialty": "General Physician",
+      "hospital": "HealthFirst Clinic",
+      "city": "Noida",
+      "years": 6,
+      "rating": 4.6,
+      "reviews": 389,
+      "fee": 400,
+      "languages": [
+        "English",
+        "Hindi",
+        "Urdu"
+      ],
+      "video": true,
+      "clinic": true,
+      "nextFreeDays": 0,
+      "about": "Everyday illness, check-ups and medicine reviews.",
+      "distanceKm": 1.4
+    }
+  ],
+  "specialties": [
+    "Cardiologist",
+    "General Physician",
+    "Pulmonologist",
+    "Endocrinologist",
+    "Neurologist",
+    "Orthopedic",
+    "Pediatrician",
+    "Gynecologist",
+    "Psychiatrist",
+    "Dermatologist"
+  ]
+}

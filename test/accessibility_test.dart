@@ -1,4 +1,3 @@
-import 'package:bt39_care/app.dart';
 import 'package:bt39_care/screens/patient/accessibility_screen.dart';
 import 'package:bt39_care/screens/patient/assistant_screen.dart';
 import 'package:bt39_care/screens/patient/easy_home_screen.dart';
@@ -12,6 +11,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/recorded_service.dart';
 
 /// Accessibility options: they are saved, and at Extra large text every
 /// patient tab and the easy home fit a small phone (any overflow fails).
@@ -56,16 +57,16 @@ Future<void> popPage(WidgetTester t) async {
   await settle(t);
 }
 
-/// Opens the patient app on a 360pt-wide phone.
-Future<AccessibilitySettings> startPatient(WidgetTester t) async {
+/// Opens the patient app (Demo Mode on the recorded service) on a 360pt-wide phone.
+Future<(AccessibilitySettings, RecordedService)> startPatient(WidgetTester t) async {
   t.view.physicalSize = const Size(1080, 1920);
   t.view.devicePixelRatio = 3;
   addTearDown(t.view.reset);
-  await t.pumpWidget(const BT39App());
+  final svc = await openApp(t);
   await settle(t, 3);
   await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
   await settle(t, 10);
-  return Provider.of<AccessibilitySettings>(t.element(find.byType(TodayScreen).first), listen: false);
+  return (Provider.of<AccessibilitySettings>(t.element(find.byType(TodayScreen).first), listen: false), svc);
 }
 
 void main() {
@@ -98,7 +99,7 @@ void main() {
   });
 
   testWidgets('patient tabs fit a small phone at Extra large text', (t) async {
-    final a = await startPatient(t);
+    final (a, _) = await startPatient(t);
     await a.setTextSize(AccessibilitySettings.extraLarge);
     await a.setBoldText(true);
     await settle(t);
@@ -129,7 +130,7 @@ void main() {
   });
 
   testWidgets('easy home replaces Today, fits at Extra large text and its buttons open their pages', (t) async {
-    final a = await startPatient(t);
+    final (a, _) = await startPatient(t);
     await a.setTextSize(AccessibilitySettings.extraLarge);
     await a.setEasyHome(true);
     await settle(t);
@@ -165,7 +166,7 @@ void main() {
   });
 
   testWidgets('pages opened from the patient tabs fit at Extra large text', (t) async {
-    final a = await startPatient(t);
+    final (a, _) = await startPatient(t);
     await a.setTextSize(AccessibilitySettings.extraLarge);
     await settle(t);
     Future<void> openAndBack(Finder f) async {
@@ -203,18 +204,20 @@ void main() {
   });
 
   testWidgets('flash alerts: the alert banner stays until it is tapped', (t) async {
-    final a = await startPatient(t);
+    final (a, svc) = await startPatient(t);
     await a.setFlashAlerts(true);
     await a.setSpeakAlerts(true);
     final ctx = t.element(find.byType(TodayScreen).first);
     Provider.of<PatientStore>(ctx, listen: false).updatePrefs((x) => x.autoSos = false);
     final m = Provider.of<MonitorController>(ctx, listen: false);
     await settle(t);
-    m.runScenario('tachy');
-    for (var i = 0; i < 8; i++) {
-      m.tick();
-    }
+    expect(find.text('Tap to see the alert').hitTestable(), findsNothing, reason: 'no alert yet: the banner is off screen');
+    // An alert event arrives on the live stream: the line the service recorded when the oxygen scenario hit the
+    // safety floor (level 4). Auto SOS is off, so only the banner shows.
+    svc.send('GET /wearer/live', svc.alertUpdate());
     await settle(t);
+    expect(m.alertEvents.value?.level, 4);
+    expect(find.byType(SosScreen), findsNothing);
     expect(find.text('Tap to see the alert'), findsOneWidget);
     await settle(t, 50); // 10 seconds: a normal banner would be gone.
     expect(find.text('Tap to see the alert').hitTestable(), findsOneWidget);

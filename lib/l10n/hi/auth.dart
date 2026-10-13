@@ -195,4 +195,22 @@ const hiAuth = <String, String>{
   'AdaptAlert': 'AdaptAlert',
   'Unguarded learning (ablation)': 'बिना सुरक्षा की सीख (एब्लेशन)',
   'AdaptAlert + federated prior': 'AdaptAlert + फ़ेडरेटेड प्रायर',
+  // Moved to the BT39 service (2026-10)
+  "That email and password don't match an account.": 'यह ईमेल और पासवर्ड किसी अकाउंट से मेल नहीं खाते।',
+  'Staff accounts open the ward at once. This is a demo: use made-up data only.': 'स्टाफ़ अकाउंट तुरंत वार्ड खोलते हैं। यह एक डेमो है: सिर्फ़ काल्पनिक डेटा डालें।',
+  'The demo could not start.': 'डेमो शुरू नहीं हो सका।',
+  'Demo ended': 'डेमो खत्म हुआ',
+  'Waking up the server. This can take up to a minute.': 'सर्वर चालू हो रहा है। इसमें एक मिनट तक लग सकता है।',
+  'Try again': 'फिर कोशिश करें',
+  'Your demo session ended. Start it again to keep exploring.': 'आपका डेमो सत्र खत्म हो गया। आगे देखने के लिए इसे फिर शुरू करें।',
+  // Sentences the BT39 service sends back (shown through trData)
+  'Something went wrong. Please try again.': 'कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।',
+  'An account with this email already exists. Log in instead.': 'इस ईमेल से पहले से एक अकाउंट है। इसके बजाय लॉग इन करें।',
+  'Too many tries. Please wait a few minutes and try again.': 'बहुत ज़्यादा कोशिशें हुईं। कुछ मिनट रुककर फिर कोशिश करें।',
+  'The demo is busy. Please try again in a minute.': 'डेमो अभी व्यस्त है। एक मिनट बाद फिर कोशिश करें।',
+  'The service is busy right now. Please try again in a minute.': 'सर्विस अभी व्यस्त है। एक मिनट बाद फिर कोशिश करें।',
+  'Sign-up could not be completed right now. Please try again.': 'अभी साइन अप पूरा नहीं हो सका। कृपया फिर कोशिश करें।',
+  'Choose a stronger password.': 'ज़्यादा मज़बूत पासवर्ड चुनें।',
+  'Enter a valid email.': 'सही ईमेल डालें।',
+  'Sign-up could not be completed. Please check your details and try again.': 'साइन अप पूरा नहीं हो सका। अपनी जानकारी जाँचकर फिर कोशिश करें।',
 };

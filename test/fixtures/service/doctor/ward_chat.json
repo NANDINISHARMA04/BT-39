@@ -1,0 +1,57 @@
+{
+  "text": {
+    "c": [
+      {
+        "t": "{name} ({age}{sex}, bed {bed}) has NEWS2 {score} ({band}). ",
+        "a": {
+          "name": "Sunita Deshmukh",
+          "age": 54,
+          "sex": "F",
+          "bed": "B02",
+          "score": 10,
+          "band": {
+            "t": "High"
+          }
+        }
+      },
+      {
+        "t": "Now: HR {hr}, SpO₂ {spo2}%, RR {rr}, BP {sbp}/{dbp} (cuff {cuff} min old), Temp {temp} °C",
+        "a": {
+          "hr": 126,
+          "spo2": 93,
+          "rr": 27,
+          "sbp": 94,
+          "dbp": 74,
+          "cuff": 6,
+          "temp": "38.7"
+        }
+      },
+      "",
+      ". ",
+      {
+        "t": "Open alerts: {list}. ",
+        "a": {
+          "list": {
+            "c": [
+              {
+                "d": "NEWS2"
+              },
+              " (",
+              {
+                "t": "Emergency"
+              },
+              ")"
+            ]
+          }
+        }
+      },
+      {
+        "t": "The pattern of fever, fast heart rate and fast breathing fits the sepsis screening criteria; consider the sepsis pathway. "
+      },
+      "\n\n",
+      {
+        "t": "Demo Mode answer, built by the BT39 service from this bed's data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports."
+      }
+    ]
+  }
+}

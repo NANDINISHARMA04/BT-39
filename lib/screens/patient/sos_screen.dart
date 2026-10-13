@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,9 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
   bool _active = false;
   final Map<String, int> _contactState = {}; // 0 sending, 1 delivered, 2 seen
 
+  /// The SOS as the service recorded it, so ending it is recorded too.
+  String? _sosId;
+
   @override
   void initState() {
     super.initState();
@@ -57,17 +61,31 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _activate() {
+  Future<void> _activate() async {
     if (_active) return;
     _countdown?.cancel();
     HapticFeedback.vibrate();
     setState(() => _active = true);
-    final contacts = context.read<PatientStore>().emergencyContacts;
-    for (final (i, m) in contacts.indexed) {
+    final store = context.read<PatientStore>();
+    for (final m in store.emergencyContacts) {
       _contactState[m.id] = 0;
-      Future.delayed(Duration(milliseconds: 1200 + i * 700), () => mounted ? setState(() => _contactState[m.id] = 1) : null);
-      Future.delayed(Duration(milliseconds: 3500 + i * 1500), () => mounted ? setState(() => _contactState[m.id] = 2) : null);
     }
+    // The service records the SOS and says when each contact's message shows as delivered and seen (messages are
+    // simulated: there is no SMS provider). Times count from the press, so a quick answer feels as before. If the
+    // service can't be reached, the same times run here.
+    final pressed = DateTime.now();
+    final plan = await store.startSos(alertId: widget.trigger?.id);
+    if (!mounted) return;
+    _sosId = plan?.id;
+    final spent = DateTime.now().difference(pressed).inMilliseconds;
+    final contacts = plan?.contacts ??
+        [for (final (i, m) in store.emergencyContacts.indexed) (id: m.id, name: m.name, deliveredMs: 1200 + i * 700, seenMs: 3500 + i * 1500)];
+    for (final x in contacts) {
+      _contactState[x.id] = _contactState[x.id] ?? 0;
+      Future.delayed(Duration(milliseconds: max(0, x.deliveredMs - spent)), () => mounted ? setState(() => _contactState[x.id] = max(_contactState[x.id] ?? 0, 1)) : null);
+      Future.delayed(Duration(milliseconds: max(0, x.seenMs - spent)), () => mounted ? setState(() => _contactState[x.id] = 2) : null);
+    }
+    setState(() {});
   }
 
   Future<void> _call() async {
@@ -88,6 +106,8 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
               padding: EdgeInsets.zero,
               onPressed: () {
                 if (_active) {
+                  final id = _sosId;
+                  if (id != null) context.read<PatientStore>().endSos(id);
                   toast(context, tr('SOS ended'), tr('Your contacts were told you cancelled.'));
                 }
                 Navigator.pop(context);
@@ -175,7 +195,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
             onPressed: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen())),
             child: Text(tr('Show Medical ID'), style: const TextStyle(color: Colors.white)),
           ),
-          Text(tr('Messages to contacts are simulated in Demo Mode. The 112 call uses your phone\'s dialer.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: Colors.white38)),
+          Text(tr('Messages to contacts are simulated and recorded by the BT39 service; no text message is sent. The 112 call uses your phone\'s dialer.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: Colors.white38)),
         ]),
       ),
     );

@@ -162,7 +162,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         const SizedBox(height: 14),
         CupertinoButton.filled(onPressed: _upload, child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(CupertinoIcons.cloud_upload_fill, size: 18), const SizedBox(width: 8), Text(tr('Upload a record'))])),
         const SizedBox(height: 8),
-        Text(tr('In this build, record details are kept on this device. Files are not uploaded to a server.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        Text(tr('Record details are saved to your account. The files themselves are not uploaded.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
     );
   }

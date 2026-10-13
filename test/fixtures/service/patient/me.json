@@ -1,0 +1,8 @@
+{
+  "role": "patient",
+  "name": "Jai",
+  "email": "patient@pulseos.app",
+  "details": {},
+  "ward_id": null,
+  "demo": true
+}

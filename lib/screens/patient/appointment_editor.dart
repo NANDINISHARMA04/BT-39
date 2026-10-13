@@ -94,7 +94,9 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
     final c = context.ios;
     final store = context.watch<PatientStore>();
     final d = doctorById(_doctor);
+    // Free times come from the service (they leave out what anyone already booked with this doctor).
     final slots = store.slotsFor(d, _day, exceptAppt: widget.initial.id);
+    final finding = store.slotsLoading(d, exceptAppt: widget.initial.id);
     final days = List.generate(14, (i) => DateUtils.dateOnly(DateTime.now()).add(Duration(days: i)));
     return Scaffold(
       backgroundColor: c.bg,
@@ -172,7 +174,7 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
             ]),
           ),
         ]),
-        FormGroup(header: tr('Time'), footer: slots.isEmpty ? tr('No free slots this day. Try another day.') : tr('{n} free slots', {'n': slots.length}), children: [
+        FormGroup(header: tr('Time'), footer: finding ? tr('Finding free times…') : slots.isEmpty ? tr('No free slots this day. Try another day.') : tr('{n} free slots', {'n': slots.length}), children: [
           Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
@@ -189,7 +191,7 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
                     child: Text(DateFormat('h:mm a').format(s), style: T.footnote.copyWith(color: _slot == s ? Colors.white : c.label, fontWeight: FontWeight.w600)),
                   ),
                 ),
-              if (slots.isEmpty) Text('—', style: T.sub.copyWith(color: c.label3)),
+              if (finding) const CupertinoActivityIndicator() else if (slots.isEmpty) Text('—', style: T.sub.copyWith(color: c.label3)),
             ]),
           ),
         ]),

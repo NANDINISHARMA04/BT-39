@@ -1,6 +1,11 @@
-// Plain data classes for the patient side, each with JSON for on-device storage.
+// Plain data classes for the patient side, each with the JSON the PulseOS
+// service uses. The service sends and expects times in UTC (`...Z`); they are
+// shown in the phone's time zone, so reading converts to local time and
+// writing converts back to UTC.
 
-DateTime _dt(Object? v) => DateTime.tryParse(v as String? ?? '') ?? DateTime.now();
+DateTime _dt(Object? v) => DateTime.tryParse(v as String? ?? '')?.toLocal() ?? DateTime.now();
+String _iso(DateTime d) => d.toUtc().toIso8601String();
+int _int(Object? v, [int fallback = 0]) => (v as num?)?.round() ?? fallback;
 List<String> _ls(Object? v) => (v as List?)?.map((e) => e.toString()).toList() ?? [];
 
 class Medication {
@@ -41,7 +46,7 @@ class UserProfile {
         'medications': medications.map((m) => m.toJson()).toList(),
       };
   factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
-        name: j['name'] ?? '', email: j['email'] ?? '', phone: j['phone'] ?? '', age: j['age'] ?? 30, sex: j['sex'] ?? 'F',
+        name: j['name'] ?? '', email: j['email'] ?? '', phone: j['phone'] ?? '', age: _int(j['age'], 30), sex: j['sex'] ?? 'F',
         bloodGroup: j['bloodGroup'] ?? 'O+', heightCm: (j['heightCm'] as num?)?.toDouble() ?? 165, weightKg: (j['weightKg'] as num?)?.toDouble() ?? 60,
         city: j['city'] ?? '', conditions: _ls(j['conditions']), allergies: _ls(j['allergies']),
         medications: ((j['medications'] as List?) ?? []).map((m) => Medication.fromJson(Map<String, dynamic>.from(m))).toList(),
@@ -58,7 +63,7 @@ class FamilyMember {
   bool caregiver, emergencyContact;
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'relation': relation, 'age': age, 'bloodGroup': bloodGroup, 'phone': phone, 'conditions': conditions, 'caregiver': caregiver, 'emergencyContact': emergencyContact};
   factory FamilyMember.fromJson(Map<String, dynamic> j) => FamilyMember(
-        id: j['id'], name: j['name'] ?? '', relation: j['relation'] ?? '', age: j['age'] ?? 0, bloodGroup: j['bloodGroup'] ?? 'O+', phone: j['phone'] ?? '',
+        id: j['id'], name: j['name'] ?? '', relation: j['relation'] ?? '', age: _int(j['age']), bloodGroup: j['bloodGroup'] ?? 'O+', phone: j['phone'] ?? '',
         conditions: _ls(j['conditions']), caregiver: j['caregiver'] ?? false, emergencyContact: j['emergencyContact'] ?? false,
       );
 }
@@ -70,6 +75,17 @@ class Doctor {
   final double rating, distanceKm;
   final List<String> languages;
   final bool video, clinic;
+
+  Map<String, dynamic> toJson() => {
+        'id': id, 'name': name, 'specialty': specialty, 'hospital': hospital, 'city': city, 'years': years, 'rating': rating, 'reviews': reviews,
+        'fee': fee, 'languages': languages, 'video': video, 'clinic': clinic, 'nextFreeDays': nextFreeDays, 'about': about, 'distanceKm': distanceKm,
+      };
+  factory Doctor.fromJson(Map<String, dynamic> j) => Doctor(
+        id: j['id'], name: j['name'] ?? '', specialty: j['specialty'] ?? '', hospital: j['hospital'] ?? '', city: j['city'] ?? '',
+        years: _int(j['years']), rating: (j['rating'] as num?)?.toDouble() ?? 0, reviews: _int(j['reviews']),
+        fee: _int(j['fee']), languages: _ls(j['languages']), video: j['video'] ?? true, clinic: j['clinic'] ?? true,
+        nextFreeDays: _int(j['nextFreeDays']), about: j['about'] ?? '', distanceKm: (j['distanceKm'] as num?)?.toDouble() ?? 5,
+      );
 }
 
 enum ApptStatus { upcoming, completed, cancelled }
@@ -84,7 +100,7 @@ class Appointment {
   ApptMode mode;
   ApptStatus status;
   String? fromAlert;
-  Map<String, dynamic> toJson() => {'id': id, 'doctorId': doctorId, 'forMember': forMember, 'at': at.toIso8601String(), 'mode': mode.name, 'reason': reason, 'notes': notes, 'status': status.name, 'fromAlert': fromAlert};
+  Map<String, dynamic> toJson() => {'id': id, 'doctorId': doctorId, 'forMember': forMember, 'at': _iso(at), 'mode': mode.name, 'reason': reason, 'notes': notes, 'status': status.name, 'fromAlert': fromAlert};
   factory Appointment.fromJson(Map<String, dynamic> j) => Appointment(
         id: j['id'], doctorId: j['doctorId'], forMember: j['forMember'] ?? 'self', at: _dt(j['at']), mode: ApptMode.values.byName(j['mode'] ?? 'clinic'),
         reason: j['reason'] ?? '', notes: j['notes'] ?? '', status: ApptStatus.values.byName(j['status'] ?? 'upcoming'), fromAlert: j['fromAlert'],
@@ -100,10 +116,10 @@ class MedicalRecord {
   DateTime date;
   int sizeBytes;
   bool shared;
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'category': category, 'date': date.toIso8601String(), 'forMember': forMember, 'fileName': fileName, 'sizeBytes': sizeBytes, 'notes': notes, 'shared': shared};
+  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'category': category, 'date': _iso(date), 'forMember': forMember, 'fileName': fileName, 'sizeBytes': sizeBytes, 'notes': notes, 'shared': shared};
   factory MedicalRecord.fromJson(Map<String, dynamic> j) => MedicalRecord(
         id: j['id'], title: j['title'] ?? '', category: j['category'] ?? 'Other', date: _dt(j['date']), forMember: j['forMember'] ?? 'self',
-        fileName: j['fileName'] ?? '', sizeBytes: j['sizeBytes'] ?? 0, notes: j['notes'] ?? '', shared: j['shared'] ?? false,
+        fileName: j['fileName'] ?? '', sizeBytes: _int(j['sizeBytes']), notes: j['notes'] ?? '', shared: j['shared'] ?? false,
       );
 }
 
@@ -116,10 +132,10 @@ class InsurancePolicy {
   DateTime validTill;
   List<String> members;
   bool cashless;
-  Map<String, dynamic> toJson() => {'id': id, 'insurer': insurer, 'plan': plan, 'policyNo': policyNo, 'sumInsured': sumInsured, 'validTill': validTill.toIso8601String(), 'members': members, 'cashless': cashless, 'premium': premium};
+  Map<String, dynamic> toJson() => {'id': id, 'insurer': insurer, 'plan': plan, 'policyNo': policyNo, 'sumInsured': sumInsured, 'validTill': _iso(validTill), 'members': members, 'cashless': cashless, 'premium': premium};
   factory InsurancePolicy.fromJson(Map<String, dynamic> j) => InsurancePolicy(
-        id: j['id'], insurer: j['insurer'] ?? '', plan: j['plan'] ?? '', policyNo: j['policyNo'] ?? '', sumInsured: j['sumInsured'] ?? 0,
-        validTill: _dt(j['validTill']), members: _ls(j['members']), cashless: j['cashless'] ?? true, premium: j['premium'] ?? 0,
+        id: j['id'], insurer: j['insurer'] ?? '', plan: j['plan'] ?? '', policyNo: j['policyNo'] ?? '', sumInsured: _int(j['sumInsured']),
+        validTill: _dt(j['validTill']), members: _ls(j['members']), cashless: j['cashless'] ?? true, premium: _int(j['premium']),
       );
 }
 
@@ -138,7 +154,7 @@ class ClaimEvent {
   final ClaimStatus status;
   final DateTime at;
   final String note;
-  Map<String, dynamic> toJson() => {'status': status.name, 'at': at.toIso8601String(), 'note': note};
+  Map<String, dynamic> toJson() => {'status': status.name, 'at': _iso(at), 'note': note};
   factory ClaimEvent.fromJson(Map<String, dynamic> j) => ClaimEvent(ClaimStatus.values.byName(j['status']), _dt(j['at']), j['note'] ?? '');
 }
 
@@ -156,7 +172,7 @@ class Claim {
   DateTime get filed => timeline.isEmpty ? DateTime.now() : timeline.first.at;
   Map<String, dynamic> toJson() => {'id': id, 'policyId': policyId, 'title': title, 'hospital': hospital, 'amount': amount, 'approved': approved, 'forMember': forMember, 'recordIds': recordIds, 'timeline': timeline.map((e) => e.toJson()).toList()};
   factory Claim.fromJson(Map<String, dynamic> j) => Claim(
-        id: j['id'], policyId: j['policyId'], title: j['title'] ?? '', hospital: j['hospital'] ?? '', amount: j['amount'] ?? 0, approved: j['approved'],
+        id: j['id'], policyId: j['policyId'], title: j['title'] ?? '', hospital: j['hospital'] ?? '', amount: _int(j['amount']), approved: j['approved'] == null ? null : _int(j['approved']),
         forMember: j['forMember'] ?? 'self', recordIds: _ls(j['recordIds']),
         timeline: ((j['timeline'] as List?) ?? []).map((e) => ClaimEvent.fromJson(Map<String, dynamic>.from(e))).toList(),
       );
