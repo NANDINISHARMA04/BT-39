@@ -81,6 +81,9 @@ class IOS extends ThemeExtension<IOS> {
     dark: true,
   );
 
+  /// A tint for a coloured icon's background or a selected chip: stronger in the dark, where a faint wash disappears.
+  Color tint(Color color) => color.withValues(alpha: dark ? .22 : .13);
+
   @override
   IOS copyWith() => this;
 
@@ -90,6 +93,39 @@ class IOS extends ThemeExtension<IOS> {
 
 extension IOSContext on BuildContext {
   IOS get ios => Theme.of(this).extension<IOS>()!;
+}
+
+/// Corner radii. One radius per job, so every screen rounds the same way.
+abstract final class R {
+  /// Small controls: buttons, square-cornered chips, boxes inside a card.
+  static const sm = 10.0;
+
+  /// Cards, grouped lists, text boxes and tiles.
+  static const md = 14.0;
+
+  /// The one coloured card on a page, big buttons, the toast and sheets.
+  static const lg = 20.0;
+
+  /// The alert banner and the full-screen dialogs.
+  static const xl = 26.0;
+
+  static const pill = 999.0;
+}
+
+/// How long things take to move: short for a touch response, longer for something that arrives.
+abstract final class Motion {
+  static const press = Duration(milliseconds: 110);
+  static const quick = Duration(milliseconds: 200);
+  static const base = Duration(milliseconds: 320);
+  static const slow = Duration(milliseconds: 450);
+  static const enter = Curves.easeOutCubic;
+  static const spring = Curves.easeOutBack;
+}
+
+/// Standard spacing.
+abstract final class Insets {
+  static const gutter = 16.0;
+  static const card = EdgeInsets.all(16);
 }
 
 const _fontFallback = ['SF Pro Text', 'SF Pro Display', '.SF UI Text', 'Helvetica Neue', 'Roboto', 'Segoe UI', 'NotoSansDevanagari'];
@@ -149,17 +185,11 @@ ThemeData buildTheme(IOS c) {
       filled: true,
       fillColor: c.card,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.blue, width: 1.5)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(R.sm), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(R.sm), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(R.sm), borderSide: BorderSide(color: c.blue, width: 1.5)),
       hintStyle: TextStyle(color: c.label3),
       labelStyle: TextStyle(color: c.label2),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: c.card2,
-      contentTextStyle: TextStyle(color: c.label),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
   );
 }
@@ -176,5 +206,8 @@ class T {
   static const sub = TextStyle(fontSize: 15, letterSpacing: -.2);
   static const footnote = TextStyle(fontSize: 13, letterSpacing: -.1);
   static const caption = TextStyle(fontSize: 12);
+
+  /// Small capitals for a group header or a label above a number.
+  static const overline = TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: .4);
   static const num = [FontFeature.tabularFigures()];
 }

@@ -144,7 +144,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   AnimatedNumber(e.tau * 100, style: T.title1.copyWith(color: c.label)),
                   const SizedBox(height: 6),
                   Text(tr('Feedback answers'), style: T.footnote.copyWith(color: c.label2)),
-                  Text('${e.labels}', style: T.title2.copyWith(color: c.label)),
+                  Text('${e.labels}', style: T.title2.copyWith(color: c.label, fontFeatures: T.num)),
                 ]),
               ),
             ]),
@@ -159,26 +159,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
               ? Padding(padding: const EdgeInsets.all(16), child: Text(tr('No feedback yet. Answer an alert to teach AdaptAlert.'), style: T.sub.copyWith(color: c.label2)))
               : Column(children: [
                   for (final (i, k) in e.buckets.keys.indexed) ...[
-                    if (i > 0) Divider(height: .5, color: c.sep),
+                    if (i > 0) const Hairline(indent: 14),
                     _BucketRow(k: k, engine: e),
                   ],
                 ]),
         ),
         SectionHeader(tr('30-day study'), trailing: tr('simulated')),
         IOSCard(
-          onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
-          color: c.indigo,
-          child: Row(children: [
-            const Icon(CupertinoIcons.lab_flask_solid, color: Colors.white, size: 30),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(tr('Open the Research Lab'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
-                Text(tr('Run your own experiments: 5 systems, ablation, alarm fatigue, federated cold start, 95% CIs.'), style: T.footnote.copyWith(color: Colors.white.withValues(alpha: .85))),
-              ]),
-            ),
-            const Icon(CupertinoIcons.chevron_forward, color: Colors.white70, size: 18),
-          ]),
+          padding: EdgeInsets.zero,
+          child: IOSRow(
+            icon: CupertinoIcons.lab_flask_solid,
+            iconColor: c.indigo,
+            title: tr('Open the Research Lab'),
+            subtitle: tr('Run your own experiments: 5 systems, ablation, alarm fatigue, federated cold start, 95% CIs.'),
+            onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
+          ),
         ),
         const SizedBox(height: 12),
         IOSCard(
@@ -206,19 +201,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
               Text(_studyError!, style: T.footnote.copyWith(color: c.red))
             else
               const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CupertinoActivityIndicator())),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: CupertinoButton.tinted(
-                sizeStyle: CupertinoButtonSize.medium,
-                onPressed: _studyLoading
-                    ? null
-                    : () {
-                        setState(() => _seed = Random().nextInt(1 << 20));
-                        _loadStudy();
-                      },
-                child: _studyLoading && _study != null ? const CupertinoActivityIndicator() : Text(tr('Run again with new patients')),
-              ),
+            const SizedBox(height: 12),
+            AppButton(
+              tr('Run again with new patients'),
+              kind: ButtonKind.tinted,
+              size: ButtonSize.medium,
+              expand: true,
+              busy: _studyLoading && _study != null,
+              onTap: _studyLoading
+                  ? null
+                  : () {
+                      setState(() => _seed = Random().nextInt(1 << 20));
+                      _loadStudy();
+                    },
             ),
           ]),
         ),
@@ -257,7 +252,7 @@ class _MiniStat extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(R.sm)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: T.caption.copyWith(color: c.label2)),
           Text(value, style: T.title3.copyWith(color: c.label, fontFeatures: T.num)),
@@ -279,21 +274,21 @@ class PipelineList extends StatelessWidget {
         Builder(builder: (context) {
           final s = pipe[k] ?? const Stage(StageState.idle, '—');
           final (bg, fg) = switch (s.state) {
-            StageState.ok => (c.green.withValues(alpha: .18), c.green),
-            StageState.watch || StageState.warn => (c.orange.withValues(alpha: .2), c.orange),
+            StageState.ok => (c.tint(c.green), c.green),
+            StageState.watch || StageState.warn => (c.tint(c.orange), c.orange),
             StageState.send => (c.red, Colors.white),
             StageState.crit => (c.red, Colors.white),
-            StageState.hold => (c.indigo.withValues(alpha: .2), c.indigo),
+            StageState.hold => (c.tint(c.indigo), c.indigo),
             StageState.bad => (c.gray, Colors.white),
             StageState.idle => (c.fill, c.label2),
           };
           return IOSRow(
             leading: AnimatedContainer(
               duration: const Duration(milliseconds: 400),
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
+              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
               child: Text(k, style: TextStyle(color: fg, fontWeight: FontWeight.w700)),
             ),
             title: tr(names[k]!),
@@ -325,8 +320,7 @@ class _BucketRow extends StatelessWidget {
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (_, box) => Stack(children: [
-            Container(height: 8, decoration: BoxDecoration(color: c.fill2, borderRadius: BorderRadius.circular(4))),
-            AnimatedContainer(duration: const Duration(milliseconds: 700), curve: Curves.easeOutCubic, width: box.maxWidth * p, height: 8, decoration: BoxDecoration(color: send ? c.red : c.indigo, borderRadius: BorderRadius.circular(4))),
+            ProgressBar(value: p, height: 8, color: send ? c.red : c.indigo),
             Positioned(left: box.maxWidth * engine.tau - 1, child: Container(width: 2, height: 8, color: c.label)),
           ]),
         ),

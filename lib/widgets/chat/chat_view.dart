@@ -225,11 +225,11 @@ class _ChatViewState extends State<ChatView> {
               ignoring: !_away,
               child: AnimatedScale(
                 scale: _away ? 1 : .6,
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutBack,
+                duration: Motion.base,
+                curve: Motion.spring,
                 child: AnimatedOpacity(
                   opacity: _away ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
+                  duration: Motion.quick,
                   child: Semantics(
                     button: true,
                     label: tr('Go to the latest message'),
@@ -412,18 +412,7 @@ class _ChatViewState extends State<ChatView> {
         delay: m.urgent ? 0 : 80,
         child: Padding(
           padding: const EdgeInsets.only(top: 8, left: 6),
-          child: CupertinoButton(
-            color: m.urgent ? c.red : c.blue,
-            minimumSize: Size(48, widget.large ? 50 : 40),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: widget.large ? 12 : 8),
-            borderRadius: BorderRadius.circular(14),
-            onPressed: () => widget.onAction!(m.action!),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Flexible(child: Text(label, style: TextStyle(color: Colors.white, fontSize: widget.large ? 17 : 15, fontWeight: FontWeight.w600))),
-              const SizedBox(width: 8),
-              Icon(CupertinoIcons.arrow_right_circle_fill, color: Colors.white, size: widget.large ? 22 : 18),
-            ]),
-          ),
+          child: AppButton(label, icon: CupertinoIcons.arrow_right_circle_fill, size: widget.large ? ButtonSize.medium : ButtonSize.small, color: m.urgent ? c.red : c.blue, onTap: () => widget.onAction!(m.action!)),
         ),
       ));
     }
@@ -512,7 +501,7 @@ class _ChatViewState extends State<ChatView> {
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
                 color: c.card,
-                borderRadius: BorderRadius.circular(21),
+                borderRadius: BorderRadius.circular(R.lg),
                 border: Border.all(color: _listening ? c.red : (_focus.hasFocus ? c.blue.withValues(alpha: .5) : c.sep), width: _listening ? 2 : 1),
               ),
               child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -548,32 +537,14 @@ class _ChatViewState extends State<ChatView> {
   }
 }
 
-/// A round-ended button for a question to ask.
+/// A question to ask, as a tinted capsule.
 class _Capsule extends StatelessWidget {
   const _Capsule({required this.label, this.onTap, this.icon});
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
   @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return Pressable(
-      onTap: onTap,
-      child: AnimatedOpacity(
-        opacity: onTap == null ? .5 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 40),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(99), border: Border.all(color: c.blue.withValues(alpha: .35))),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null) ...[Icon(icon, size: 15, color: c.blue), const SizedBox(width: 6)],
-            Flexible(child: Text(label, style: T.sub.copyWith(color: c.blue, fontWeight: FontWeight.w500))),
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppChip(label, icon: icon, tinted: true, large: true, enabled: onTap != null, onTap: onTap);
 }
 
 IconData _kindIcon(String kind) => switch (kind) {

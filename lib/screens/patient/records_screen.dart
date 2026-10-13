@@ -105,13 +105,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
           children: [
             for (final cat in recordCategories)
               Pressable(
+                scale: .95,
                 onTap: () => setState(() => _cat = _cat == cat ? null : cat),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
+                  duration: Motion.quick,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: _cat == cat ? categoryColor(context, cat) : c.card,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(R.md),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Icon(categoryIcon(cat), color: _cat == cat ? Colors.white : categoryColor(context, cat), size: 22),
@@ -128,25 +129,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(children: [
             for (final (id, name) in [('all', tr('Everyone')), ('self', tr('Me')), ...store.family.map((m) => (m.id, m.name.split(' ').first))])
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(name),
-                  selected: _member == id,
-                  onSelected: (_) => setState(() => _member = id),
-                  showCheckmark: false,
-                  selectedColor: c.blue,
-                  labelStyle: TextStyle(color: _member == id ? Colors.white : c.label, fontWeight: FontWeight.w600),
-                  backgroundColor: c.card,
-                  side: BorderSide.none,
-                  shape: const StadiumBorder(),
-                ),
-              ),
+              Padding(padding: const EdgeInsets.only(right: 8), child: AppChip(name, selected: _member == id, onTap: () => setState(() => _member = id))),
           ]),
         ),
         const SizedBox(height: 12),
         if (list.isEmpty)
-          EmptyState(icon: CupertinoIcons.doc, color: c.blue, title: tr('No records here'), message: tr('Upload lab reports, prescriptions or scans. PDF and photos up to 10 MB.'), action: tr('Upload a record'), onAction: _upload)
+          EmptyState(icon: CupertinoIcons.doc, title: tr('No records here'), message: tr('Upload lab reports, prescriptions or scans. PDF and photos up to 10 MB.'), action: tr('Upload a record'), onAction: _upload)
         else
           GroupedList(children: [
             for (final r in list)
@@ -160,7 +148,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
               ),
           ]),
         const SizedBox(height: 14),
-        CupertinoButton.filled(onPressed: _upload, child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(CupertinoIcons.cloud_upload_fill, size: 18), const SizedBox(width: 8), Text(tr('Upload a record'))])),
+        AppButton(tr('Upload a record'), icon: CupertinoIcons.cloud_upload_fill, expand: true, onTap: _upload),
         const SizedBox(height: 8),
         Text(tr('Record details are saved to your account. The files themselves are not uploaded.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
@@ -178,22 +166,18 @@ class RecordDetail extends StatelessWidget {
     final r = store.records.where((x) => x.id == id).firstOrNull;
     if (r == null) return const SizedBox.shrink();
     final col = categoryColor(context, r.category);
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        previousPageTitle: tr('Records'),
-        backgroundColor: c.material,
-        middle: Text(trData(r.category)),
-        trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => RecordEditor(record: r))), child: Text(tr('Edit'))),
-      ),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        Container(
-          height: 200,
-          decoration: BoxDecoration(gradient: LinearGradient(colors: [col.withValues(alpha: .85), col.withValues(alpha: .55)], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(22)),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(categoryIcon(r.category), size: 64, color: Colors.white),
+    return PlainPage(
+      title: trData(r.category),
+      previousTitle: tr('Records'),
+      trailing: BarButton(tr('Edit'), onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => RecordEditor(record: r)))),
+      children: [
+        AccentCard(
+          color: col,
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 18),
+          child: Column(children: [
+            Icon(categoryIcon(r.category), size: 56, color: Colors.white),
             const SizedBox(height: 10),
-            Text(r.fileName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            Text(r.fileName, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             Text(fileSize(r.sizeBytes), style: const TextStyle(color: Colors.white70, fontSize: 13)),
           ]),
         ),
@@ -201,8 +185,8 @@ class RecordDetail extends StatelessWidget {
         Text(trData(r.title), style: T.title2.copyWith(color: c.label)),
         const SizedBox(height: 14),
         GroupedList(children: [
-          IOSRow(icon: CupertinoIcons.calendar, iconColor: c.red, title: tr('Date'), trailing: Text(DateFormat('d MMM y').format(r.date), style: T.sub.copyWith(color: c.label2)), chevron: false),
-          IOSRow(icon: CupertinoIcons.person_fill, iconColor: c.orange, title: tr('Belongs to'), trailing: Text(trData(store.memberName(r.forMember)), style: T.sub.copyWith(color: c.label2)), chevron: false),
+          IOSRow(icon: CupertinoIcons.calendar, iconColor: c.red, title: tr('Date'), value: DateFormat('d MMM y').format(r.date), chevron: false),
+          IOSRow(icon: CupertinoIcons.person_fill, iconColor: c.orange, title: tr('Belongs to'), value: trData(store.memberName(r.forMember)), chevron: false),
           IOSRow(
             icon: CupertinoIcons.person_2_fill,
             iconColor: c.blue,
@@ -214,8 +198,11 @@ class RecordDetail extends StatelessWidget {
         ]),
         if (r.notes.isNotEmpty) ...[SectionHeader(tr('Notes')), IOSCard(child: Text(trData(r.notes), style: T.body.copyWith(color: c.label, height: 1.4)))],
         const SizedBox(height: 24),
-        CupertinoButton(
-          onPressed: () async {
+        AppButton(
+          tr('Delete record'),
+          kind: ButtonKind.plain,
+          destructive: true,
+          onTap: () async {
             if (await confirm(context, title: tr('Delete record?'), message: tr('“{title}” will be removed from your vault.', {'title': trData(r.title)}), action: tr('Delete'))) {
               store.deleteRecord(r.id);
               if (context.mounted) {
@@ -224,9 +211,8 @@ class RecordDetail extends StatelessWidget {
               }
             }
           },
-          child: Text(tr('Delete record'), style: TextStyle(color: c.red)),
         ),
-      ]),
+      ],
     );
   }
 }
@@ -254,38 +240,34 @@ class _RecordEditorState extends State<RecordEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.ios;
     final store = context.read<PatientStore>();
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(widget.isNew ? tr('New record') : tr('Edit record')),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            if (_title.text.trim().isEmpty) return toast(context, tr('Add a title'));
-            store.upsertRecord(widget.record
-              ..title = _title.text.trim()
-              ..notes = _notes.text.trim()
-              ..category = _cat
-              ..forMember = _for
-              ..date = _date
-              ..shared = _shared);
-            Navigator.pop(context);
-            toast(context, widget.isNew ? tr('Record saved to your vault') : tr('Record updated'));
-          },
-          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+    return PlainPage(
+      title: widget.isNew ? tr('New record') : tr('Edit record'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(
+        tr('Save'),
+        bold: true,
+        onTap: () {
+          if (_title.text.trim().isEmpty) return toast(context, tr('Add a title'));
+          store.upsertRecord(widget.record
+            ..title = _title.text.trim()
+            ..notes = _notes.text.trim()
+            ..category = _cat
+            ..forMember = _for
+            ..date = _date
+            ..shared = _shared);
+          Navigator.pop(context);
+          toast(context, widget.isNew ? tr('Record saved to your vault') : tr('Record updated'));
+        },
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
         FormGroup(header: tr('File'), children: [IOSRow(icon: categoryIcon(_cat), iconColor: categoryColor(context, _cat), title: widget.record.fileName, subtitle: fileSize(widget.record.sizeBytes), chevron: false)]),
         FormGroup(header: tr('Details'), children: [
           FormField2(label: tr('Title'), controller: _title),
           IOSRow(
             title: tr('Category'),
-            trailing: Text(trData(_cat), style: T.sub.copyWith(color: c.label2)),
+            value: trData(_cat),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -299,19 +281,16 @@ class _RecordEditorState extends State<RecordEditor> {
           ),
           IOSRow(
             title: tr('Date'),
-            trailing: Text(DateFormat('d MMM y').format(_date), style: T.sub.copyWith(color: c.label2)),
-            onTap: () => showCupertinoModalPopup(
-              context: context,
-              builder: (ctx) => Container(
-                height: 260,
-                color: c.card,
-                child: CupertinoDatePicker(mode: CupertinoDatePickerMode.date, initialDateTime: _date, maximumDate: DateTime.now().add(const Duration(days: 1)), onDateTimeChanged: (d) => setState(() => _date = d)),
-              ),
+            value: DateFormat('d MMM y').format(_date),
+            onTap: () => showPicker(
+              context,
+              title: tr('Date'),
+              picker: CupertinoDatePicker(mode: CupertinoDatePickerMode.date, initialDateTime: _date, maximumDate: DateTime.now().add(const Duration(days: 1)), onDateTimeChanged: (d) => setState(() => _date = d)),
             ),
           ),
           IOSRow(
             title: tr('Belongs to'),
-            trailing: Text(trData(store.memberName(_for)), style: T.sub.copyWith(color: c.label2)),
+            value: trData(store.memberName(_for)),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -326,7 +305,7 @@ class _RecordEditorState extends State<RecordEditor> {
           IOSRow(title: tr('Share with my doctor'), trailing: CupertinoSwitch(value: _shared, onChanged: (v) => setState(() => _shared = v)), chevron: false),
           FormField2(label: tr('Notes'), controller: _notes, hint: tr('Key results, doctor\'s advice…'), maxLines: 4),
         ]),
-      ]),
+      ],
     );
   }
 }

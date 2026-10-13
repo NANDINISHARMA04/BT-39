@@ -54,6 +54,7 @@ Widget _meButton(BuildContext context) {
     const SizedBox(width: 6),
     CupertinoButton(
       padding: EdgeInsets.zero,
+      minimumSize: const Size(44, 44),
       onPressed: () => openStaffSection(context, StaffSec.me),
       child: Avatar(s.name, size: 32, colors: [c.teal, c.blue]),
     ),
@@ -73,7 +74,7 @@ class _Kpi extends StatelessWidget {
       onTap: onTap,
       padding: const EdgeInsets.all(14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [IconSquare(icon, color, size: 28), const Spacer(), Icon(CupertinoIcons.chevron_right, size: 14, color: c.label3)]),
+        Row(children: [IconSquare(icon, color, size: 28), const Spacer(), const Chevron()]),
         const SizedBox(height: 10),
         Text(value, style: T.title1.copyWith(color: c.label, fontFeatures: T.num)),
         Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
@@ -204,17 +205,17 @@ class _NurseShiftState extends State<_NurseShift> {
               Text(DateFormat('EEE d MMM').format(DateTime.now()), style: T.footnote.copyWith(color: c.label2)),
             ]),
             const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(value: tasks.isEmpty ? 0 : done / tasks.length, minHeight: 10, color: c.green, backgroundColor: c.fill),
-            ),
+            ProgressBar(value: tasks.isEmpty ? 0 : done / tasks.length, height: 10, color: c.green),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              GestureDetector(onTap: () => openStaffSection(context, StaffSec.alerts), child: Pill(tr('{n} alerts to acknowledge', {'n': sc.openUnacked}), icon: CupertinoIcons.bell_fill, color: sc.openUnacked > 0 ? c.red : c.green)),
-              GestureDetector(onTap: () => openStaffSection(context, StaffSec.ward), child: Pill(tr('{n} high-risk beds', {'n': risky}), icon: CupertinoIcons.bed_double_fill, color: risky > 0 ? c.orange : c.green)),
-              GestureDetector(
+              AppChip(tr('{n} alerts to acknowledge', {'n': sc.openUnacked}), icon: CupertinoIcons.bell_fill, tinted: true, color: sc.openUnacked > 0 ? c.red : c.green, onTap: () => openStaffSection(context, StaffSec.alerts)),
+              AppChip(tr('{n} high-risk beds', {'n': risky}), icon: CupertinoIcons.bed_double_fill, tinted: true, color: risky > 0 ? c.orange : c.green, onTap: () => openStaffSection(context, StaffSec.ward)),
+              AppChip(
+                tr('Home band: {status}', {'status': m.engine.status == 'alert' ? tr('alert') : m.engine.status == 'band' ? tr('no signal') : tr('stable')}),
+                icon: CupertinoIcons.waveform_path_ecg,
+                tinted: true,
+                color: m.engine.status == 'alert' ? c.red : c.indigo,
                 onTap: () => openStaffSection(context, StaffSec.review),
-                child: Pill(tr('Home band: {status}', {'status': m.engine.status == 'alert' ? tr('alert') : m.engine.status == 'band' ? tr('no signal') : tr('stable')}), icon: CupertinoIcons.waveform_path_ecg, color: m.engine.status == 'alert' ? c.red : c.indigo),
               ),
             ]),
           ]),
@@ -252,18 +253,18 @@ class _NurseShiftState extends State<_NurseShift> {
               minLines: 3,
               padding: const EdgeInsets.all(12),
               style: T.body.copyWith(color: c.label),
-              decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(R.sm)),
             ),
             const SizedBox(height: 10),
-            CupertinoButton.filled(
-              sizeStyle: CupertinoButtonSize.medium,
-              onPressed: () async {
+            AppButton(
+              tr('Save handover'),
+              size: ButtonSize.medium,
+              onTap: () async {
                 if (_handover.text.trim().isEmpty) return;
                 await cs.addHandover(_handover.text);
                 _handover.clear();
                 if (context.mounted) toast(context, tr('Handover saved'), tr('The next shift sees it here.'));
               },
-              child: Text(tr('Save handover')),
             ),
           ]),
         ),

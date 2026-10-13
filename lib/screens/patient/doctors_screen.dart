@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
@@ -85,21 +84,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final res = _results;
-    Widget chip(String label, bool on, VoidCallback tap, {IconData? icon}) => Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Pressable(
-            onTap: tap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(color: on ? c.blue : c.card, borderRadius: BorderRadius.circular(99), border: Border.all(color: on ? c.blue : c.sep)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (icon != null) ...[Icon(icon, size: 14, color: on ? Colors.white : c.label), const SizedBox(width: 4)],
-                Text(label, style: T.footnote.copyWith(color: on ? Colors.white : c.label, fontWeight: FontWeight.w600)),
-              ]),
-            ),
-          ),
-        );
+    Widget chip(String label, bool on, VoidCallback tap, {IconData? icon}) => Padding(padding: const EdgeInsets.only(right: 8), child: AppChip(label, icon: icon, selected: on, onTap: tap));
     return LargeTitlePage(
       title: tr('Find a doctor'),
       previousTitle: tr('Care'),
@@ -130,7 +115,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         if (res.isEmpty)
           EmptyState(
             icon: CupertinoIcons.search,
-            color: c.gray,
             title: tr('No doctors match'),
             message: tr('Try removing a filter.'),
             action: tr('Clear filters'),
@@ -177,6 +161,8 @@ class DoctorCard extends StatelessWidget {
               ]),
             ]),
           ),
+          const SizedBox(width: 6),
+          const Padding(padding: EdgeInsets.only(top: 18), child: Chevron()),
         ]),
       ),
     );
@@ -190,24 +176,28 @@ class DoctorDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final store = context.read<PatientStore>();
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: tr('Doctors'), backgroundColor: c.material, middle: Text(d.name)),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 120), children: [
+    return PlainPage(
+      title: d.name,
+      previousTitle: tr('Doctors'),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
+      children: [
         Center(child: Hero(tag: 'doc-${d.id}', child: Avatar(d.name, size: 96, colors: [c.teal, c.blue]))),
         const SizedBox(height: 12),
         Text(d.name, textAlign: TextAlign.center, style: T.title1.copyWith(color: c.label)),
         Text('${trData(d.specialty)} · ${d.hospital}, ${d.city}', textAlign: TextAlign.center, style: T.sub.copyWith(color: c.label2)),
         const SizedBox(height: 18),
-        Row(children: [
-          for (final (v, l) in [('${d.rating}★', tr('{n} reviews', {'n': d.reviews})), ('${d.years}', tr('years')), ('₹${d.fee}', tr('per visit')), ('${d.distanceKm.toStringAsFixed(1)} km', tr('away'))])
-            Expanded(
-              child: Column(children: [
-                Text(v, style: T.title3.copyWith(color: c.label)),
-                Text(l, style: T.caption.copyWith(color: c.label2)),
-              ]),
-            ),
-        ]),
+        IOSCard(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Row(children: [
+            for (final (v, l) in [('${d.rating}★', tr('{n} reviews', {'n': d.reviews})), ('${d.years}', tr('years')), ('₹${d.fee}', tr('per visit')), ('${d.distanceKm.toStringAsFixed(1)} km', tr('away'))])
+              Expanded(
+                child: Column(children: [
+                  Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title3.copyWith(color: c.label, fontFeatures: T.num)),
+                  Text(l, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
+                ]),
+              ),
+          ]),
+        ),
         SectionHeader(tr('About')),
         IOSCard(child: Text(trData(d.about), style: T.body.copyWith(color: c.label, height: 1.4))),
         SectionHeader(tr('Details')),
@@ -217,14 +207,15 @@ class DoctorDetail extends StatelessWidget {
           IOSRow(icon: CupertinoIcons.clock_fill, iconColor: c.orange, title: nextFreeText(d), subtitle: tr('Mon–Sat, 9 AM to 6 PM'), chevron: false),
         ]),
         const SizedBox(height: 24),
-        CupertinoButton.filled(
-          onPressed: () => Navigator.of(context).push(CupertinoPageRoute(
+        AppButton(
+          tr('Book appointment'),
+          expand: true,
+          onTap: () => Navigator.of(context).push(CupertinoPageRoute(
             fullscreenDialog: true,
             builder: (_) => AppointmentEditor(initial: Appointment(id: store.newId(), doctorId: d.id, forMember: 'self', at: DateTime.now(), mode: d.clinic ? ApptMode.clinic : ApptMode.video, reason: ''), isNew: true),
           )),
-          child: Text(tr('Book appointment')),
         ),
-      ]),
+      ],
     );
   }
 }

@@ -18,6 +18,7 @@ import 'services/session.dart';
 import 'services/staff_controller.dart';
 import 'services/tour.dart';
 import 'theme/ios_theme.dart';
+import 'widgets/common.dart';
 import 'widgets/shell_navigator.dart';
 
 class BT39App extends StatelessWidget {
@@ -43,6 +44,8 @@ class BT39App extends StatelessWidget {
               supportedLocales: const [Locale('en'), Locale('hi')],
               localizationsDelegates: GlobalMaterialLocalizations.delegates,
               debugShowCheckedModeBanner: false,
+              // Lists bounce at their ends on every platform, with no glow.
+              scrollBehavior: const CupertinoScrollBehavior(),
               theme: buildTheme(IOS.light),
               darkTheme: buildTheme(IOS.darkTheme),
               themeMode: switch (pref) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system },
@@ -171,7 +174,13 @@ class _Splash extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: context.ios.bg,
-        body: const Center(child: CupertinoActivityIndicator(radius: 14)),
+        body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: const [
+            AppIcon(size: 72),
+            SizedBox(height: 28),
+            CupertinoActivityIndicator(radius: 12),
+          ]),
+        ),
       );
 }
 
@@ -219,7 +228,7 @@ class _WakingState extends State<_Waking> {
             ],
             if (err != null && widget.onRetry != null) ...[
               const SizedBox(height: 12),
-              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: widget.onRetry, child: Text(tr('Try again'))),
+              AppButton(tr('Try again'), kind: ButtonKind.tinted, size: ButtonSize.medium, onTap: widget.onRetry),
             ],
           ]),
         ),

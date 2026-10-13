@@ -98,15 +98,12 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
     final slots = store.slotsFor(d, _day, exceptAppt: widget.initial.id);
     final finding = store.slotsLoading(d, exceptAppt: widget.initial.id);
     final days = List.generate(14, (i) => DateUtils.dateOnly(DateTime.now()).add(Duration(days: i)));
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(widget.isNew ? tr('Book appointment') : tr('Reschedule')),
-        trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: _save, child: Text(widget.isNew ? tr('Book') : tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600))),
-      ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 60), children: [
+    return PlainPage(
+      title: widget.isNew ? tr('Book appointment') : tr('Reschedule'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(widget.isNew ? tr('Book') : tr('Save'), bold: true, onTap: _save),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 60),
+      children: [
         FormGroup(header: tr('Doctor'), children: [
           IOSRow(leading: Avatar(d.name, size: 40, colors: [c.teal, c.blue]), title: d.name, subtitle: '${trData(d.specialty)} · ₹${d.fee}', onTap: _pickDoctor),
         ]),
@@ -114,18 +111,7 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final (id, name) in [('self', tr('Me')), ...store.family.map((m) => (m.id, m.name.split(' ').first))])
-                ChoiceChip(
-                  label: Text(name),
-                  selected: _for == id,
-                  onSelected: (_) => setState(() => _for = id),
-                  showCheckmark: false,
-                  selectedColor: c.blue,
-                  labelStyle: TextStyle(color: _for == id ? Colors.white : c.label, fontWeight: FontWeight.w600),
-                  backgroundColor: c.fill,
-                  side: BorderSide.none,
-                  shape: const StadiumBorder(),
-                ),
+              for (final (id, name) in [('self', tr('Me')), ...store.family.map((m) => (m.id, m.name.split(' ').first))]) AppChip(name, selected: _for == id, onTap: () => setState(() => _for = id)),
             ]),
           ),
         ]),
@@ -156,17 +142,21 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Pressable(
-                    onTap: () => setState(() {
-                      _day = day;
-                      _slot = null;
-                    }),
+                    scale: .94,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _day = day;
+                        _slot = null;
+                      });
+                    },
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
+                      duration: Motion.quick,
                       width: 52,
-                      decoration: BoxDecoration(color: day == _day ? c.blue : c.fill, borderRadius: BorderRadius.circular(14)),
+                      decoration: BoxDecoration(color: day == _day ? c.blue : c.fill, borderRadius: BorderRadius.circular(R.sm)),
                       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Text(DateFormat('EEE').format(day), style: T.caption.copyWith(color: day == _day ? Colors.white : c.label2)),
-                        Text('${day.day}', style: T.title3.copyWith(color: day == _day ? Colors.white : c.label)),
+                        Text('${day.day}', style: T.title3.copyWith(color: day == _day ? Colors.white : c.label, fontFeatures: T.num)),
                       ]),
                     ),
                   ),
@@ -179,17 +169,14 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
               for (final s in slots)
-                Pressable(
+                AppChip(
+                  DateFormat('h:mm a').format(s),
+                  selected: _slot == s,
+                  square: true,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() => _slot = s);
                   },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(color: _slot == s ? c.blue : c.fill, borderRadius: BorderRadius.circular(10)),
-                    child: Text(DateFormat('h:mm a').format(s), style: T.footnote.copyWith(color: _slot == s ? Colors.white : c.label, fontWeight: FontWeight.w600)),
-                  ),
                 ),
               if (finding) const CupertinoActivityIndicator() else if (slots.isEmpty) Text('—', style: T.sub.copyWith(color: c.label3)),
             ]),
@@ -201,8 +188,11 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
         ]),
         if (!widget.isNew) ...[
           const SizedBox(height: 24),
-          CupertinoButton(
-            onPressed: () async {
+          AppButton(
+            tr('Delete appointment'),
+            kind: ButtonKind.plain,
+            destructive: true,
+            onTap: () async {
               if (await confirm(context, title: tr('Delete appointment?'), message: tr('This removes it completely. To keep a record, cancel it instead.'), action: tr('Delete'))) {
                 if (!context.mounted) return;
                 context.read<PatientStore>().deleteAppointment(widget.initial.id);
@@ -210,10 +200,9 @@ class _AppointmentEditorState extends State<AppointmentEditor> {
                 toast(context, tr('Appointment deleted'));
               }
             },
-            child: Text(tr('Delete appointment'), style: TextStyle(color: c.red)),
           ),
         ],
-      ]),
+      ],
     );
   }
 }

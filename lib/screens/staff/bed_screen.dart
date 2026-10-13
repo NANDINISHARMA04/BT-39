@@ -8,6 +8,7 @@ import '../../services/bt39_client.dart';
 import '../../services/session.dart';
 import '../../services/staff_controller.dart';
 import '../../theme/ios_theme.dart';
+import '../../widgets/chat/bubble.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
 import 'staff_ask_screen.dart';
@@ -63,7 +64,7 @@ class _BedScreenState extends State<BedScreen> {
     final s = context.watch<Session>();
     final b = sc.beds.where((x) => x.bed == widget.bed).firstOrNull;
     if (b == null || b.empty) {
-      return Scaffold(backgroundColor: c.bg, appBar: CupertinoNavigationBar(previousPageTitle: tr('Ward'), middle: Text(widget.bed)), body: Center(child: Text(tr('This bed is empty.'))));
+      return PlainPage(title: widget.bed, previousTitle: tr('Ward'), children: [EmptyState(icon: CupertinoIcons.bed_double, title: widget.bed, message: tr('This bed is empty.'))]);
     }
     final alerts = sc.sortedAlerts.where((a) => a.bed == b.bed).toList();
     final col = bandColor(context, b.band);
@@ -91,13 +92,14 @@ class _BedScreenState extends State<BedScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: tr('Ward'), backgroundColor: c.material, middle: Text('${b.bed} · ${b.name}'), trailing: StatusPill(status: sc.status)),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 40), children: [
-        Container(
+    return PlainPage(
+      middle: Text('${b.bed} · ${b.name}'),
+      previousTitle: tr('Ward'),
+      trailing: StatusPill(status: sc.status),
+      children: [
+        AccentCard(
+          color: col,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(20)),
           child: Row(children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -106,7 +108,7 @@ class _BedScreenState extends State<BedScreen> {
               ]),
             ),
             Column(children: [
-              Text('${b.news2 ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
+              Text('${b.news2 ?? '—'}', style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800, fontFeatures: T.num)),
               Text('NEWS2 · ${b.band == null ? '—' : tr(bandLabel[b.band] ?? '—')}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
             ]),
           ]),
@@ -118,7 +120,7 @@ class _BedScreenState extends State<BedScreen> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: .8,
+          childAspectRatio: .9,
           children: [
             vital('HR', '/min', 'hr', b.hr),
             vital('SpO₂', '%', 'spo2', b.spo2),
@@ -140,7 +142,7 @@ class _BedScreenState extends State<BedScreen> {
           SectionHeader(tr('Demo scenario')),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final (id, name) in [('stable', 'Stable'), ('sepsis', 'Sepsis'), ('hypoxia', 'Low oxygen'), ('tachy', 'Fast heart'), ('probe_off', 'Probe off')])
-              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => sc.runScenario(b.bed, id).then((_) => context.mounted ? toast(context, tr('{name} on {bed}', {'name': tr(name), 'bed': b.bed})) : null), child: Text(tr(name))),
+              AppChip(tr(name), tinted: true, onTap: () => sc.runScenario(b.bed, id).then((_) => context.mounted ? toast(context, tr('{name} on {bed}', {'name': tr(name), 'bed': b.bed})) : null)),
           ]),
         ],
         SectionHeader(tr('Alerts'), trailing: tr('{n} open', {'n': alerts.where((a) => a.open).length})),
@@ -157,23 +159,54 @@ class _BedScreenState extends State<BedScreen> {
               for (final (mine, text) in _chat)
                 Align(
                   alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(color: mine ? c.blue : c.card2, borderRadius: BorderRadius.circular(16)),
-                    child: text.isEmpty ? const CupertinoActivityIndicator() : Text(text, style: T.sub.copyWith(color: mine ? Colors.white : c.label, height: 1.35)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: text.isEmpty
+                        ? const TypingBubble()
+                        : ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .72),
+                            child: Bubble(color: mine ? c.blue : incomingBubble(c), mine: mine, child: Text(text, style: T.sub.copyWith(color: mine ? Colors.white : c.label, height: 1.35))),
+                          ),
                   ),
                 ),
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: CupertinoTextField(controller: _q, placeholder: tr('e.g. What changed in the last hour?'), onSubmitted: (_) => _ask(b), padding: const EdgeInsets.all(10))),
-                const SizedBox(width: 6),
-                CupertinoButton(padding: EdgeInsets.zero, onPressed: _asking ? null : () => _ask(b), child: const Icon(CupertinoIcons.arrow_up_circle_fill, size: 32)),
-              ]),
+              Container(
+                decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(R.lg), border: Border.all(color: c.sep)),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Expanded(
+                    child: CupertinoTextField(
+                      controller: _q,
+                      placeholder: tr('e.g. What changed in the last hour?'),
+                      decoration: null,
+                      minLines: 1,
+                      maxLines: 4,
+                      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                      style: T.body.copyWith(color: c.label),
+                      placeholderStyle: T.body.copyWith(color: c.label3),
+                      onSubmitted: (_) => _ask(b),
+                    ),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: tr('Send'),
+                    child: Pressable(
+                      onTap: _asking ? null : () => _ask(b),
+                      scale: .85,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: _asking ? c.gray : c.blue, shape: BoxShape.circle),
+                        child: const Icon(CupertinoIcons.arrow_up, color: Colors.white, size: 19),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
             ]),
           ),
         ],
-      ]),
+      ],
     );
   }
 }
@@ -192,15 +225,7 @@ class _AskCard extends StatelessWidget {
         Text(tr('Answers come from this bed\'s live values and alerts, and show where each fact is written. They never give orders or doses.'), style: T.footnote.copyWith(color: c.label2)),
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final q in const ['Is this sepsis?', 'What changed in the last hour?', 'Which alerts are open?'])
-            Pressable(
-              onTap: () => open(tr(q)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: c.blue.withValues(alpha: .1), borderRadius: BorderRadius.circular(99)),
-                child: Text(tr(q), style: T.footnote.copyWith(color: c.blue, fontWeight: FontWeight.w600)),
-              ),
-            ),
+          for (final q in const ['Is this sepsis?', 'What changed in the last hour?', 'Which alerts are open?']) AppChip(tr(q), tinted: true, onTap: () => open(tr(q))),
         ]),
         const SizedBox(height: 10),
         Semantics(
@@ -209,11 +234,11 @@ class _AskCard extends StatelessWidget {
           child: Pressable(
             onTap: open,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-              decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.sep)),
+              padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+              decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(R.lg), border: Border.all(color: c.sep)),
               child: Row(children: [
-                Expanded(child: Text(tr('Ask about this patient'), style: T.callout.copyWith(color: c.label3))),
-                Icon(CupertinoIcons.arrow_up_circle_fill, size: 28, color: c.blue),
+                Expanded(child: Text(tr('Ask about this patient'), style: T.body.copyWith(color: c.label3))),
+                Container(width: 32, height: 32, decoration: BoxDecoration(color: c.blue, shape: BoxShape.circle), child: const Icon(CupertinoIcons.arrow_up, color: Colors.white, size: 19)),
               ]),
             ),
           ),

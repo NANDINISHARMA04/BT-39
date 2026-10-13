@@ -13,8 +13,8 @@ class DemoBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     return IOSCard(
-      color: c.orange.withValues(alpha: .14),
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      color: c.tint(c.orange),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       child: Row(children: [
         Icon(CupertinoIcons.play_circle_fill, color: c.orange, size: 26),
         const SizedBox(width: 10),
@@ -24,11 +24,7 @@ class DemoBanner extends StatelessWidget {
             Text(tr('Log in or create your own patient, doctor or nurse account.'), style: T.caption.copyWith(color: c.label2)),
           ]),
         ),
-        CupertinoButton(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          onPressed: () => context.read<Session>().signOut(),
-          child: Text(tr('Log in'), style: T.sub.copyWith(color: c.blue, fontWeight: FontWeight.w700)),
-        ),
+        AppButton(tr('Log in'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => context.read<Session>().signOut()),
       ]),
     );
   }

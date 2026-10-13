@@ -140,8 +140,9 @@ void main() {
     await tapScrolled(t, find.widgetWithText(CupertinoButton, 'Patient'));
     await settle(t, 10);
     double opacityOf(String text) {
-      final tabFade = find.ancestor(of: find.text(text).first, matching: find.byType(AnimatedOpacity)).first;
-      return t.widget<FadeTransition>(find.descendant(of: tabFade, matching: find.byType(FadeTransition)).first).opacity.value;
+      // A tab that has faded out goes offstage, so look there too.
+      final tabFade = find.ancestor(of: find.text(text, skipOffstage: false).first, matching: find.byType(AnimatedOpacity, skipOffstage: false)).first;
+      return t.widget<FadeTransition>(find.descendant(of: tabFade, matching: find.byType(FadeTransition, skipOffstage: false)).first).opacity.value;
     }
 
     await t.tap(find.text('Care').last);

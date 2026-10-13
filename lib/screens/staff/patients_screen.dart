@@ -81,13 +81,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(children: [
             for (final f in ['All', 'Live band', 'Signed up', 'Watching'])
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _filter = f),
-                  child: Pill(tr(f), color: _filter == f ? c.blue : null, solid: _filter == f),
-                ),
-              ),
+              Padding(padding: const EdgeInsets.only(right: 8), child: AppChip(tr(f), selected: _filter == f, onTap: () => setState(() => _filter = f))),
           ]),
         ),
         const SizedBox(height: 12),
@@ -226,18 +220,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       if (p.live) ...[
         const SectionHeader('AdaptAlert'),
         IOSCard(
-          onTap: () => openStaffSection(context, StaffSec.review),
-          child: Row(children: [
-            IconSquare(CupertinoIcons.sparkles, c.indigo),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                tr('Sensitivity τ {tau} · {labels} feedback answers · {held} alerts held back · {pending} to review', {'tau': pct(e.tau), 'labels': e.labels, 'held': e.held.length, 'pending': e.alerts.where((a) => a.doctor == DoctorLabel.pending).length}),
-                style: T.footnote.copyWith(color: c.label),
-              ),
-            ),
-            Icon(CupertinoIcons.chevron_right, size: 14, color: c.label3),
-          ]),
+          padding: EdgeInsets.zero,
+          child: IOSRow(
+            icon: CupertinoIcons.sparkles,
+            iconColor: c.indigo,
+            title: tr('Sensitivity τ {tau} · {labels} feedback answers · {held} alerts held back · {pending} to review', {'tau': pct(e.tau), 'labels': e.labels, 'held': e.held.length, 'pending': e.alerts.where((a) => a.doctor == DoctorLabel.pending).length}),
+            onTap: () => openStaffSection(context, StaffSec.review),
+          ),
         ),
       ],
       if (p.learned != null) ...[
@@ -353,7 +342,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(look(n.kind).$3.toUpperCase(), style: T.caption.copyWith(color: look(n.kind).$2, fontWeight: FontWeight.w700, letterSpacing: .4)),
+                    Text(look(n.kind).$3.toUpperCase(), style: T.overline.copyWith(color: look(n.kind).$2)),
                     const SizedBox(height: 2),
                     Text(trData(n.text), style: T.body.copyWith(color: c.label)),
                     const SizedBox(height: 4),
@@ -367,6 +356,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 }
 
+/// A tinted square action under a patient's name: call, note, prescribe, book, ask.
 class _Action extends StatelessWidget {
   const _Action(this.icon, this.label, this.color, this.onTap);
   final IconData icon;
@@ -377,10 +367,11 @@ class _Action extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Pressable(
           onTap: onTap,
+          scale: .94,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 3),
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(color: color.withValues(alpha: .13), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: context.ios.tint(color), borderRadius: BorderRadius.circular(R.sm)),
             child: Column(children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(height: 4),
@@ -422,17 +413,17 @@ Future<void> showNoteSheet(BuildContext context, CarePatient p) {
               minLines: 4,
               padding: const EdgeInsets.all(12),
               style: T.body.copyWith(color: c.label),
-              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(R.md)),
             ),
             const SizedBox(height: 14),
-            CupertinoButton.filled(
-              onPressed: () async {
+            AppButton(
+              tr('Save note'),
+              onTap: () async {
                 if (text.text.trim().isEmpty) return;
                 await cs.addNote(p.id, kind, text.text);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) toast(context, tr('Note saved'), tr('Everyone on {name}\'s care team can see it.', {'name': p.name.split(' ').first}));
               },
-              child: Text(tr('Save note')),
             ),
           ]),
         );
@@ -464,8 +455,9 @@ Future<void> showPrescribeSheet(BuildContext context, CarePatient p) {
             FormField2(label: tr('For (days)'), controller: days, hint: tr('optional'), keyboard: TextInputType.number),
           ]),
           const SizedBox(height: 14),
-          CupertinoButton.filled(
-            onPressed: () async {
+          AppButton(
+            tr('Save prescription'),
+            onTap: () async {
               if (name.text.trim().isEmpty || dose.text.trim().isEmpty) return;
               final allergic = p.allergies.any((a) => name.text.toLowerCase().contains(a.toLowerCase().split(' ').first));
               if (allergic && !await confirm(ctx, title: tr('Allergy warning'), message: tr('{name} is allergic to {list}. Prescribe anyway?', {'name': p.name, 'list': p.allergies.map(trData).join(', ')}), action: tr('Prescribe'))) return;
@@ -474,7 +466,6 @@ Future<void> showPrescribeSheet(BuildContext context, CarePatient p) {
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) toast(context, tr('Prescription saved'), added ? tr('Added to {name}\'s medicine list too.', {'name': p.name.split(' ').first}) : null);
             },
-            child: Text(tr('Save prescription')),
           ),
         ]),
       );

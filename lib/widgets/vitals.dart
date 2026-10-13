@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
 
 import '../theme/ios_theme.dart';
@@ -133,7 +133,7 @@ class _BeatingHeartState extends State<BeatingHeart> with SingleTickerProviderSt
         final s = t < .12 ? 1 + 2.3 * t : t < .24 ? 1.28 - 2.3 * (t - .12) : t < .36 ? 1 + 1.15 * (t - .24) : t < .48 ? 1.14 - 1.15 * (t - .36) : 1.0;
         return Transform.scale(scale: s, child: ch);
       },
-      child: Icon(Icons.favorite, color: widget.color, size: widget.size),
+      child: Icon(CupertinoIcons.heart_fill, color: widget.color, size: widget.size),
     );
   }
 }

@@ -90,12 +90,7 @@ class EasyHomeScreen extends StatelessWidget {
         _BigButton(icon: CupertinoIcons.capsule_fill, color: c.purple, label: tr('My medicines'), onTap: () => push(const ProfileEditor(), dialog: true)),
         _BigButton(icon: CupertinoIcons.exclamationmark_octagon_fill, color: c.red, label: 'SOS', detail: tr('Emergency help'), onTap: () => push(const SosScreen(), dialog: true)),
         const SizedBox(height: 8),
-        Center(
-          child: CupertinoButton(
-            onPressed: () => context.read<AccessibilitySettings>().setEasyHome(false),
-            child: Text(tr('Show full home'), textAlign: TextAlign.center),
-          ),
-        ),
+        Center(child: AppButton(tr('Show full home'), kind: ButtonKind.plain, onTap: () => context.read<AccessibilitySettings>().setEasyHome(false))),
       ],
     );
   }
@@ -134,7 +129,7 @@ class _StatusCard extends StatelessWidget {
         label: '$title. $text',
         excludeSemantics: true,
         button: onTap != null,
-        child: IOSCard(
+        child: AccentCard(
           onTap: onTap,
           color: color,
           padding: const EdgeInsets.all(20),
@@ -221,7 +216,7 @@ class _BigButton extends StatelessWidget {
             child: Container(
               constraints: const BoxConstraints(minHeight: 84),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(22)),
+              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(R.lg)),
               child: Row(children: [
                 Icon(icon, color: Colors.white, size: 40),
                 const SizedBox(width: 16),

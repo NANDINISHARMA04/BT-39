@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +37,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return LargeTitlePage(
       title: tr('Schedule'),
       subtitle: '${DateFormat('EEEE d MMMM').format(sel)} · ${tr('{n} appointments', {'n': visits.length})}${left > 0 ? ' · ${tr('{n} to see', {'n': left})}' : ''}',
-      trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => showBookSheet(context, null, day: sel), child: const Icon(CupertinoIcons.add_circled_solid, size: 28)),
+      trailing: Semantics(
+        label: tr('Book a visit'),
+        button: true,
+        child: Pressable(onTap: () => showBookSheet(context, null, day: sel), child: Icon(CupertinoIcons.add_circled_solid, color: c.blue, size: 28)),
+      ),
       children: [
         SizedBox(
           height: 78,
@@ -48,15 +53,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               final d = days[i];
               final on = i == _day;
               final n = cs.visitsOn(d).where((v) => v.status != VisitStatus.cancelled).length;
-              return GestureDetector(
-                onTap: () => setState(() => _day = i),
+              return Pressable(
+                scale: .94,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _day = i);
+                },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: Motion.quick,
                   width: 56,
-                  decoration: BoxDecoration(color: on ? c.blue : c.card, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: on ? c.blue : c.card, borderRadius: BorderRadius.circular(R.md)),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(i == 1 ? tr('Today') : DateFormat('EEE').format(d), style: T.caption.copyWith(color: on ? Colors.white : c.label2, fontWeight: FontWeight.w600)),
-                    Text('${d.day}', style: T.title3.copyWith(color: on ? Colors.white : c.label)),
+                    Text(i == 1 ? tr('Today') : DateFormat('EEE').format(d), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: on ? Colors.white : c.label2, fontWeight: FontWeight.w600)),
+                    Text('${d.day}', style: T.title3.copyWith(color: on ? Colors.white : c.label, fontFeatures: T.num)),
                     Text(n == 0 ? '–' : '$n', style: T.caption.copyWith(color: on ? Colors.white70 : c.label3)),
                   ]),
                 ),
@@ -127,24 +136,23 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
         IOSCard(child: Text(trData(v.reason), style: T.body.copyWith(color: c.label))),
         if (v.bookedByPatient) Padding(padding: const EdgeInsets.only(top: 8), child: Text(tr('Booked by the patient in the PulseOS app.'), style: T.caption.copyWith(color: c.label2))),
         const SizedBox(height: 14),
-        CupertinoButton.tinted(
-          onPressed: () {
+        AppButton(
+          tr('Open patient record'),
+          kind: ButtonKind.tinted,
+          onTap: () {
             Navigator.pop(ctx);
             openPatient(context, v.patientId);
           },
-          child: Text(tr('Open patient record')),
         ),
         if (v.status == VisitStatus.upcoming) ...[
           if (v.video) ...[
             const SizedBox(height: 8),
-            CupertinoButton.tinted(
-              onPressed: () => toast(ctx, tr('Video consult'), tr('In a full deployment this opens the video call with {name}.', {'name': v.patientName.split(' ').first})),
-              child: Text(tr('Start video consult')),
-            ),
+            AppButton(tr('Start video consult'), kind: ButtonKind.tinted, icon: CupertinoIcons.video_camera_solid, onTap: () => toast(ctx, tr('Video consult'), tr('In a full deployment this opens the video call with {name}.', {'name': v.patientName.split(' ').first}))),
           ],
           const SizedBox(height: 8),
-          CupertinoButton.filled(
-            onPressed: () async {
+          AppButton(
+            tr('Mark as seen'),
+            onTap: () async {
               final note = TextEditingController();
               final ok = await showCupertinoDialog<bool>(
                 context: ctx,
@@ -160,12 +168,11 @@ Future<void> showVisitSheet(BuildContext context, Visit v) {
               if (ok == true) await set(VisitStatus.completed, note: note.text);
               note.dispose();
             },
-            child: Text(tr('Mark as seen')),
           ),
           const SizedBox(height: 4),
           Row(children: [
-            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.noShow), child: Text(tr('No-show'), style: TextStyle(color: c.orange)))),
-            Expanded(child: CupertinoButton(onPressed: () => set(VisitStatus.cancelled), child: Text(tr('Cancel visit'), style: TextStyle(color: c.red)))),
+            Expanded(child: AppButton(tr('No-show'), kind: ButtonKind.plain, color: c.orange, onTap: () => set(VisitStatus.noShow))),
+            Expanded(child: AppButton(tr('Cancel visit'), kind: ButtonKind.plain, destructive: true, onTap: () => set(VisitStatus.cancelled))),
           ]),
         ],
       ]),
@@ -193,24 +200,18 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
     (ctx) => StatefulBuilder(builder: (ctx, set) {
       final c = ctx.ios;
       final slots = cs.bookingSlots(d);
-      Widget chip(String text, bool on, VoidCallback tap) => Padding(
-            padding: const EdgeInsets.only(right: 8, bottom: 8),
-            child: GestureDetector(onTap: tap, child: Pill(text, color: on ? c.blue : null, solid: on)),
-          );
+      Widget chip(String text, bool on, VoidCallback tap) => Padding(padding: const EdgeInsets.only(right: 8, bottom: 8), child: AppChip(text, selected: on, onTap: tap));
+      Widget head(String text) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 6), child: Text(text.toUpperCase(), style: T.footnote.copyWith(color: c.label2)));
       return Padding(
         padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.viewInsetsOf(ctx).bottom),
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(p == null ? tr('Book a visit') : tr('Book a visit with {name}', {'name': p!.name}), style: T.title3.copyWith(color: c.label)),
             if (patient == null) ...[
-              const SizedBox(height: 12),
-              Text(tr('PATIENT'), style: T.footnote.copyWith(color: c.label2)),
-              const SizedBox(height: 6),
+              head(tr('PATIENT')),
               Wrap(children: [for (final x in cs.patients) chip(x.name, p?.id == x.id, () => set(() => p = x))]),
             ],
-            const SizedBox(height: 12),
-            Text(tr('DAY'), style: T.footnote.copyWith(color: c.label2)),
-            const SizedBox(height: 6),
+            head(tr('DAY')),
             Wrap(children: [
               for (final x in days)
                 chip(DateUtils.isSameDay(x, now) ? tr('Today') : DateFormat('EEE d').format(x), DateUtils.isSameDay(x, d), () => set(() {
@@ -218,9 +219,7 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
                       slot = null;
                     })),
             ]),
-            const SizedBox(height: 6),
-            Text(tr('TIME'), style: T.footnote.copyWith(color: c.label2)),
-            const SizedBox(height: 6),
+            head(tr('TIME')),
             if (slots.isEmpty) Text(tr('No free slots left on this day.'), style: T.footnote.copyWith(color: c.label2)) else Wrap(children: [for (final s in slots) chip(DateFormat('h:mm a').format(s), slot == s, () => set(() => slot = s))]),
             const SizedBox(height: 6),
             CupertinoSlidingSegmentedControl<bool>(groupValue: video, children: {false: Text(tr('In clinic')), true: Text(tr('Video'))}, onValueChanged: (v) => set(() => video = v ?? false)),
@@ -230,21 +229,19 @@ Future<void> showBookSheet(BuildContext context, CarePatient? patient, {DateTime
               placeholder: tr('Reason, e.g. Follow-up after alert'),
               padding: const EdgeInsets.all(12),
               style: T.body.copyWith(color: c.label),
-              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(R.md)),
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: CupertinoButton.filled(
-                onPressed: p == null || slot == null
-                    ? null
-                    : () async {
-                        await cs.book(p!, slot!, reason.text, video: video);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (context.mounted) toast(context, tr('Visit booked'), '${p!.name}, ${DateFormat('EEE d MMM, h:mm a').format(slot!)}');
-                      },
-                child: Text(tr('Book visit')),
-              ),
+            AppButton(
+              tr('Book visit'),
+              expand: true,
+              onTap: p == null || slot == null
+                  ? null
+                  : () async {
+                      await cs.book(p!, slot!, reason.text, video: video);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) toast(context, tr('Visit booked'), '${p!.name}, ${DateFormat('EEE d MMM, h:mm a').format(slot!)}');
+                    },
             ),
           ]),
         ),

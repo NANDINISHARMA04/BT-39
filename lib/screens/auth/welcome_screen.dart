@@ -68,11 +68,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     final c = context.ios;
     final s = context.watch<Session>();
     final wide = MediaQuery.sizeOf(context).width >= 900;
+    final still = MediaQuery.disableAnimationsOf(context);
 
     final hero = Column(crossAxisAlignment: wide ? CrossAxisAlignment.start : CrossAxisAlignment.center, children: [
       FadeIn(
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const _AppIcon(size: 44),
+          const AppIcon(size: 44),
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('PulseOS', style: T.title2.copyWith(color: c.label)),
@@ -101,8 +102,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       FadeIn(
         delay: 180,
         child: Wrap(spacing: 10, runSpacing: 10, alignment: wide ? WrapAlignment.start : WrapAlignment.center, children: [
-          _CtaButton(
-            label: tr('Watch the demo with voice'),
+          AppButton(
+            tr('Watch the demo with voice'),
             icon: CupertinoIcons.play_fill,
             busy: s.starting == Role.patient && _tour,
             onTap: () {
@@ -112,7 +113,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               _start(Role.patient, tour: true);
             },
           ),
-          _CtaButton(label: tr('Research Lab'), icon: CupertinoIcons.lab_flask_solid, tinted: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
+          AppButton(tr('Research Lab'), icon: CupertinoIcons.lab_flask_solid, kind: ButtonKind.tinted, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
         ]),
       ),
       const SizedBox(height: 16),
@@ -127,7 +128,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     ]);
 
     final roles = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(tr('Sign in as'), style: T.title3.copyWith(color: c.label)),
+      Text(tr('Sign in as'), style: T.title3.copyWith(color: c.label, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       for (final (i, (r, sub)) in [
         (Role.patient, tr('Live vitals, explained alerts, appointments, records, SOS')),
@@ -143,7 +144,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             padding: const EdgeInsets.symmetric(horizontal: 8),
             minimumSize: const Size(30, 30),
             onPressed: s.starting != null ? null : () => _start(r),
-            child: s.starting == r && !_tour ? const CupertinoActivityIndicator(radius: 8) : Text(tr(roleLabel[r]!), style: const TextStyle(fontSize: 14)),
+            child: s.starting == r && !_tour ? const CupertinoActivityIndicator(radius: 8) : Text(tr(roleLabel[r]!), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           ),
       ]),
       if (s.starting != null)
@@ -156,33 +157,38 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     return Scaffold(
       backgroundColor: c.bg,
       body: Stack(children: [
-        Positioned.fill(child: AnimatedBuilder(animation: _a, builder: (_, _) => CustomPaint(painter: _Orbs(_a.value, [c.pink, c.blue, c.teal, c.indigo], c.bg)))),
+        // Soft colour behind the page. It drifts slowly; it holds still with reduced motion.
+        Positioned.fill(child: AnimatedBuilder(animation: _a, builder: (_, _) => CustomPaint(painter: _Orbs(still ? .3 : _a.value, [c.pink, c.blue, c.teal, c.indigo], c.bg)))),
         SafeArea(
-          child: ListView(padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: wide ? 48 : 24), children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1120),
-                child: Align(alignment: wide ? Alignment.centerRight : Alignment.center, child: const LangToggle()),
+          child: ListView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            padding: EdgeInsets.symmetric(horizontal: wide ? 48 : 20, vertical: wide ? 48 : 24),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: Align(alignment: wide ? Alignment.centerRight : Alignment.center, child: const LangToggle()),
+                ),
               ),
-            ),
-            SizedBox(height: wide ? 8 : 16),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1120),
-                child: wide
-                    ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(flex: 6, child: Padding(padding: const EdgeInsets.only(top: 24, right: 48), child: hero)),
-                        Expanded(flex: 5, child: roles),
-                      ])
-                    : Column(children: [hero, const SizedBox(height: 32), roles]),
+              SizedBox(height: wide ? 8 : 16),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: wide
+                      ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Expanded(flex: 6, child: Padding(padding: const EdgeInsets.only(top: 24, right: 48), child: hero)),
+                          Expanded(flex: 5, child: roles),
+                        ])
+                      : Column(children: [hero, const SizedBox(height: 32), roles]),
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1120), child: _HowItWorks(wide: wide))),
-            const SizedBox(height: 24),
-            Text(tr('* In a 30-day simulation of 40 virtual patients, compared with fixed thresholds. See the Research Lab.\nStudent research prototype (B.Tech CSE major project). Not a medical device.'),
-                textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3, height: 1.5)),
-          ]),
+              const SizedBox(height: 40),
+              Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1120), child: _HowItWorks(wide: wide))),
+              const SizedBox(height: 24),
+              Text(tr('* In a 30-day simulation of 40 virtual patients, compared with fixed thresholds. See the Research Lab.\nStudent research prototype (B.Tech CSE major project). Not a medical device.'),
+                  textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3, height: 1.5)),
+            ],
+          ),
         ),
       ]),
     );
@@ -203,7 +209,7 @@ class _RoleCard extends StatelessWidget {
       child: IOSCard(
         onTap: onLogin,
         child: Row(children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: col.withValues(alpha: .14), borderRadius: BorderRadius.circular(14)), child: Icon(roleIcon(role), color: col, size: 26)),
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: c.tint(col), borderRadius: BorderRadius.circular(R.md)), child: Icon(roleIcon(role), color: col, size: 26)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -213,15 +219,8 @@ class _RoleCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
-            CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              minimumSize: const Size(30, 32),
-              color: col,
-              borderRadius: BorderRadius.circular(99),
-              onPressed: onLogin,
-              child: Text(tr('Log in'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-            ),
-            CupertinoButton(padding: EdgeInsets.zero, minimumSize: const Size(30, 28), onPressed: onSignUp, child: Text(tr('Sign up'), style: TextStyle(color: col, fontSize: 13))),
+            AppButton(tr('Log in'), size: ButtonSize.small, color: col, onTap: onLogin),
+            AppButton(tr('Sign up'), kind: ButtonKind.plain, size: ButtonSize.small, color: col, onTap: onSignUp),
           ]),
         ]),
       ),
@@ -246,9 +245,9 @@ class _HowItWorks extends StatelessWidget {
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Icon(icon, color: col, size: 26),
+              IconSquare(icon, col, size: 34),
               const Spacer(),
-              Text('${i + 1}', style: T.title2.copyWith(color: c.label3)),
+              Text('${i + 1}', style: T.title2.copyWith(color: c.label3, fontFeatures: T.num)),
             ]),
             const SizedBox(height: 10),
             Text(t, style: T.headline.copyWith(color: c.label)),
@@ -281,50 +280,6 @@ class _Stat extends StatelessWidget {
   }
 }
 
-class _AppIcon extends StatelessWidget {
-  const _AppIcon({required this.size});
-  final double size;
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * .23),
-        gradient: LinearGradient(colors: [c.pink, c.red], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: c.pink.withValues(alpha: .35), blurRadius: 20, offset: const Offset(0, 8))],
-      ),
-      child: Icon(CupertinoIcons.waveform_path_ecg, color: Colors.white, size: size * .55),
-    );
-  }
-}
-
-class _CtaButton extends StatelessWidget {
-  const _CtaButton({required this.label, required this.icon, required this.onTap, this.tinted = false, this.busy = false});
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool tinted, busy;
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return Pressable(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(color: tinted ? c.blue.withValues(alpha: .14) : c.blue, borderRadius: BorderRadius.circular(16)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (busy) CupertinoActivityIndicator(radius: 9, color: tinted ? c.blue : Colors.white) else Icon(icon, size: 18, color: tinted ? c.blue : Colors.white),
-          const SizedBox(width: 8),
-          Text(label, style: T.headline.copyWith(color: tinted ? c.blue : Colors.white)),
-        ]),
-      ),
-    );
-  }
-}
-
 /// Slow-moving blurred colour fields behind the welcome screen.
 class _Orbs extends CustomPainter {
   _Orbs(this.t, this.colors, this.bg);
@@ -340,7 +295,7 @@ class _Orbs extends CustomPainter {
       canvas.drawCircle(
         center,
         r,
-        Paint()..shader = RadialGradient(colors: [colors[i].withValues(alpha: .26), colors[i].withValues(alpha: 0)]).createShader(Rect.fromCircle(center: center, radius: r)),
+        Paint()..shader = RadialGradient(colors: [colors[i].withValues(alpha: .18), colors[i].withValues(alpha: 0)]).createShader(Rect.fromCircle(center: center, radius: r)),
       );
     }
   }

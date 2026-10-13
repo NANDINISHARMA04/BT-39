@@ -51,8 +51,10 @@ class TodayScreen extends StatelessWidget {
           child: Pressable(
             onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const SosScreen())),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(99)),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(R.pill)),
               child: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: .5)),
             ),
           ),
@@ -66,27 +68,21 @@ class TodayScreen extends StatelessWidget {
           FadeIn(
             delay: 30,
             child: IOSCard(
-              onTap: () {
-                Narrator.instance.unlock();
-                context.read<TourController>().start();
-              },
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(children: [
-                Container(
-                  width: 38,
-                  height: 38,
+              padding: EdgeInsets.zero,
+              child: IOSRow(
+                leading: Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.indigo, c.purple])),
-                  child: const Icon(CupertinoIcons.play_fill, color: Colors.white, size: 18),
+                  child: const Icon(CupertinoIcons.play_fill, color: Colors.white, size: 17),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(tr('Watch the guided demo'), style: T.headline.copyWith(color: c.label)),
-                    Text(tr('With a voice guide: walk, loose band, coffee, a real emergency, and how AdaptAlert learns.'), style: T.footnote.copyWith(color: c.label2)),
-                  ]),
-                ),
-                Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
-              ]),
+                title: tr('Watch the guided demo'),
+                subtitle: tr('With a voice guide: walk, loose band, coffee, a real emergency, and how AdaptAlert learns.'),
+                onTap: () {
+                  Narrator.instance.unlock();
+                  context.read<TourController>().start();
+                },
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -96,7 +92,7 @@ class TodayScreen extends StatelessWidget {
           const SizedBox(height: 12),
           FadeIn(
             delay: 110,
-            child: Row(children: [
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: _SpO2Card(r: r)),
               const SizedBox(width: 12),
               Expanded(child: _TempCard(r: r, fahrenheit: store.prefs.fahrenheit)),
@@ -105,7 +101,7 @@ class TodayScreen extends StatelessWidget {
           const SizedBox(height: 12),
           FadeIn(
             delay: 160,
-            child: Row(children: [
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: _BarsCard(title: tr('Activity'), icon: CupertinoIcons.flame_fill, color: c.green, value: tr(r.act), bars: e.history.reversed.take(12).toList().reversed.map((h) => h.r.motion / .8).toList(), colorFor: (i, v) => v >= .56 ? c.green : v >= .19 ? c.green.withValues(alpha: .55) : c.fill2)),
               const SizedBox(width: 12),
               Expanded(
@@ -145,8 +141,11 @@ class TodayScreen extends StatelessWidget {
           delay: 320,
           child: Row(children: [
             _Quick(icon: CupertinoIcons.calendar_badge_plus, label: tr('Book'), color: c.blue, onTap: () => TabSwitcher.of(context, PatientTab.care)),
+            const SizedBox(width: 10),
             _Quick(icon: CupertinoIcons.doc_text_fill, label: tr('Records'), color: c.teal, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const RecordsScreen()))),
+            const SizedBox(width: 10),
             _Quick(icon: CupertinoIcons.shield_lefthalf_fill, label: tr('Insurance'), color: c.green, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const InsuranceScreen()))),
+            const SizedBox(width: 10),
             _Quick(icon: CupertinoIcons.person_3_fill, label: tr('Family'), color: c.orange, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const FamilyScreen()))),
           ]),
         ),
@@ -176,6 +175,7 @@ String alertStatusText(HealthAlert a) {
   return tr('Waiting for your reply');
 }
 
+/// A round, grey button for the navigation bar.
 class _NavIcon extends StatelessWidget {
   const _NavIcon({required this.icon, required this.label, required this.onTap});
   final IconData icon;
@@ -195,89 +195,55 @@ class _NavIcon extends StatelessWidget {
   }
 }
 
-class _Hero extends StatefulWidget {
+/// The status card: the one coloured card on Today. Its colour follows what
+/// AdaptAlert is doing right now.
+class _Hero extends StatelessWidget {
   const _Hero({required this.status, required this.r, required this.tau});
   final String status;
   final WindowRecord? r;
   final double tau;
-  @override
-  State<_Hero> createState() => _HeroState();
-}
-
-class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat(reverse: true);
-  @override
-  void dispose() {
-    _a.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    final (cols, tag, title, text) = switch (widget.status) {
-      'watch' => ([c.orange, c.yellow, c.pink], tr('Live · watching'), tr('Keeping an eye on it'), tr('Something is a little off. AdaptAlert waits 3 minutes to see if it lasts before deciding.')),
-      'held' => ([c.indigo, c.blue, c.teal], tr('Live · learned pattern'), tr('No alert needed'), tr('This looks like a pattern you and your doctor marked harmless before. Safety limits still apply.')),
-      'alert' => ([c.red, c.orange, c.pink], tr('Live · alert sent'), tr('Alert sent'), tr('Open Alerts to see why, and tell AdaptAlert how you feel.')),
-      'band' => ([c.gray, c.teal, c.indigo], tr('Live · signal lost'), tr('Check your band'), tr('The sensor isn\'t reading well. These readings are ignored, so they can\'t cause false alarms.')),
-      _ => ([c.green, c.teal, c.blue], tr('Live · band connected'), tr('All clear'), tr('Your vitals are inside your personal normal range.')),
+    final (col, to, tag, title, text) = switch (status) {
+      'watch' => (c.orange, c.pink, tr('Live · watching'), tr('Keeping an eye on it'), tr('Something is a little off. AdaptAlert waits 3 minutes to see if it lasts before deciding.')),
+      'held' => (c.indigo, c.blue, tr('Live · learned pattern'), tr('No alert needed'), tr('This looks like a pattern you and your doctor marked harmless before. Safety limits still apply.')),
+      'alert' => (c.red, c.pink, tr('Live · alert sent'), tr('Alert sent'), tr('Open Alerts to see why, and tell AdaptAlert how you feel.')),
+      'band' => (c.gray, c.indigo, tr('Live · signal lost'), tr('Check your band'), tr('The sensor isn\'t reading well. These readings are ignored, so they can\'t cause false alarms.')),
+      _ => (c.green, c.teal, tr('Live · band connected'), tr('All clear'), tr('Your vitals are inside your personal normal range.')),
     };
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOut,
-        color: cols[0],
-        child: Stack(children: [
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _a,
-              builder: (_, _) => CustomPaint(painter: _HeroOrbs(_a.value, cols[1], cols[2])),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                _Blink(color: Colors.white),
-                const SizedBox(width: 8),
-                Text(tag, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-              ]),
-              const SizedBox(height: 12),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                transitionBuilder: (ch, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, .2), end: Offset.zero).animate(a), child: ch)),
-                child: Text(title, key: ValueKey(title), style: T.title1.copyWith(color: Colors.white)),
-              ),
-              const SizedBox(height: 4),
-              Text(text, style: const TextStyle(color: Color(0xEBFFFFFF), fontSize: 14, height: 1.4)),
-              const SizedBox(height: 12),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                if (widget.r != null) _GlassChip(hhmm(widget.r!.t)),
-                if (widget.r != null) _GlassChip(tr(widget.r!.act)),
-                _GlassChip(tr('Sensitivity {pct}', {'pct': pct(widget.tau)})),
-              ]),
-            ]),
-          ),
-        ]),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(R.lg),
+        gradient: LinearGradient(colors: [col, Color.lerp(col, to, .55)!], begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const _Blink(color: Colors.white),
+          const SizedBox(width: 8),
+          Text(tag, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+        ]),
+        const SizedBox(height: 12),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (ch, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, .2), end: Offset.zero).animate(a), child: ch)),
+          child: Text(title, key: ValueKey(title), style: T.title1.copyWith(color: Colors.white)),
+        ),
+        const SizedBox(height: 4),
+        Text(text, style: const TextStyle(color: Color(0xEBFFFFFF), fontSize: 14, height: 1.4)),
+        const SizedBox(height: 12),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          if (r != null) _GlassChip(hhmm(r!.t)),
+          if (r != null) _GlassChip(tr(r!.act)),
+          _GlassChip(tr('Sensitivity {pct}', {'pct': pct(tau)})),
+        ]),
+      ]),
     );
   }
-}
-
-class _HeroOrbs extends CustomPainter {
-  _HeroOrbs(this.t, this.a, this.b);
-  final double t;
-  final Color a, b;
-  @override
-  void paint(Canvas canvas, Size s) {
-    void orb(Offset c, double r, Color col) => canvas.drawCircle(c, r, Paint()..shader = RadialGradient(colors: [col.withValues(alpha: .85), col.withValues(alpha: 0)]).createShader(Rect.fromCircle(center: c, radius: r)));
-    orb(Offset(s.width * (.85 - .1 * t), s.height * (.1 + .2 * t)), s.width * .5, a);
-    orb(Offset(s.width * (.1 + .15 * t), s.height * (1 - .2 * t)), s.width * .42, b);
-  }
-
-  @override
-  bool shouldRepaint(_HeroOrbs o) => o.t != t || o.a != a;
 }
 
 class _Blink extends StatefulWidget {
@@ -308,7 +274,7 @@ class _GlassChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .22), borderRadius: BorderRadius.circular(99)),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .22), borderRadius: BorderRadius.circular(R.pill)),
         child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFeatures: T.num)),
       );
 }
@@ -433,7 +399,7 @@ class _TempCard extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: AnimatedFractionallySizedBox(
               duration: const Duration(milliseconds: 900),
-              curve: Curves.easeOutCubic,
+              curve: Motion.enter,
               heightFactor: r.good ? ((r.r.temp - 35) / 4).clamp(.05, 1) : .05,
               child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(7), gradient: LinearGradient(colors: [c.orange, c.red], begin: Alignment.bottomCenter, end: Alignment.topCenter))),
             ),
@@ -463,7 +429,7 @@ class _BarsCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _CardTitle(Icon(icon, size: 17, color: color), title, color),
         const SizedBox(height: 8),
-        AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: Text(value, key: ValueKey(value), style: T.title2.copyWith(color: c.label))),
+        AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: Text(value, key: ValueKey(value), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.title2.copyWith(color: c.label))),
         const SizedBox(height: 10),
         MiniBars(values: bars, colorFor: colorFor),
       ]),
@@ -496,24 +462,14 @@ class _AssistantCard extends StatelessWidget {
                 Text(tr('Ask about your vitals, alerts, medicines or appointments'), style: T.footnote.copyWith(color: c.label2)),
               ]),
             ),
-            Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
+            const Chevron(),
           ]),
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
               for (final q in const ['How am I doing today?', 'Why did I get my last alert?', 'What has AdaptAlert learned?'])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Pressable(
-                    onTap: () => open(q),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(color: c.indigo.withValues(alpha: .12), borderRadius: BorderRadius.circular(99)),
-                      child: Text(tr(q), style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ),
+                Padding(padding: const EdgeInsets.only(right: 8), child: AppChip(tr(q), tinted: true, color: c.indigo, onTap: () => open(q))),
             ]),
           ),
         ]),
@@ -538,10 +494,10 @@ class _NextAppt extends StatelessWidget {
         Container(
           width: 54,
           padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(color: c.blue.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: c.tint(c.blue), borderRadius: BorderRadius.circular(R.sm)),
           child: Column(children: [
             Text(DateFormat('MMM').format(a.at).toUpperCase(), style: T.caption.copyWith(color: c.blue, fontWeight: FontWeight.w700)),
-            Text(DateFormat('d').format(a.at), style: T.title2.copyWith(color: c.blue)),
+            Text(DateFormat('d').format(a.at), style: T.title2.copyWith(color: c.blue, fontFeatures: T.num)),
           ]),
         ),
         const SizedBox(width: 14),
@@ -550,17 +506,20 @@ class _NextAppt extends StatelessWidget {
             Text(d.name, style: T.headline.copyWith(color: c.label)),
             Text('${trData(d.specialty)} · ${DateFormat('EEE, h:mm a').format(a.at)}', style: T.footnote.copyWith(color: c.label2)),
             const SizedBox(height: 6),
-            Wrap(spacing: 6, children: [
+            Wrap(spacing: 6, runSpacing: 6, children: [
               Pill(tr(a.mode == ApptMode.video ? 'Video' : 'In clinic'), icon: a.mode == ApptMode.video ? CupertinoIcons.video_camera_solid : CupertinoIcons.building_2_fill, color: c.blue),
               if (a.forMember != 'self') Pill(tr('For {name}', {'name': store.memberName(a.forMember).split(' ').first}), color: c.orange),
             ]),
           ]),
         ),
+        const SizedBox(width: 6),
+        const Chevron(),
       ]),
     );
   }
 }
 
+/// A square shortcut: a coloured symbol on a white tile, a word under it.
 class _Quick extends StatelessWidget {
   const _Quick({required this.icon, required this.label, required this.color, required this.onTap});
   final IconData icon;
@@ -573,15 +532,15 @@ class _Quick extends StatelessWidget {
     return Expanded(
       child: Pressable(
         onTap: onTap,
+        scale: .94,
         child: Column(children: [
           Container(
-            width: 58,
             height: 58,
-            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18), boxShadow: c.dark ? null : const [BoxShadow(color: Color(0x0F000000), blurRadius: 16, offset: Offset(0, 6))]),
+            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(R.md)),
             child: Icon(icon, color: color, size: 26),
           ),
           const SizedBox(height: 6),
-          Text(label, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w500)),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w500)),
         ]),
       ),
     );

@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -46,7 +45,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         ),
         const SizedBox(height: 14),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: Motion.base,
           child: Column(
             key: ValueKey('$_filter-${list.length}-${e.held.length}'),
             children: _filter == 'held'
@@ -68,6 +67,36 @@ class _AlertsScreenState extends State<AlertsScreen> {
         ),
       ],
     );
+  }
+}
+
+/// The first lines of an alert card: a coloured symbol, the level, the time
+/// and the title. Shared by sent and held-back alerts.
+class _AlertHead extends StatelessWidget {
+  const _AlertHead({required this.color, required this.icon, required this.level, required this.time, required this.title, this.tag});
+  final Color color;
+  final IconData icon;
+  final String level, time, title;
+  final Widget? tag;
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      IconSquare(icon, color, size: 34),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(level.toUpperCase(), style: T.overline.copyWith(color: color)),
+            if (tag != null) ...[const SizedBox(width: 8), Flexible(child: tag!)],
+            const Spacer(),
+            Text(time, style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
+          ]),
+          const SizedBox(height: 3),
+          Text(title, style: T.headline.copyWith(color: c.label)),
+        ]),
+      ),
+    ]);
   }
 }
 
@@ -103,67 +132,55 @@ class AlertCard extends StatelessWidget {
         : '${a.path.join(' → ')}. ${tr('Model says {p}', {'p': pct(a.pg)})}${a.n > 0 ? tr(', your history ({n} labels) says {pu}, weighted {w}', {'n': a.n.toStringAsFixed(1), 'pu': pct(a.pu), 'w': pct(a.w)}) : tr(', no personal history for this pattern yet')}.';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(color: c.card, border: Border(left: BorderSide(color: col, width: 4))),
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text(a.levelLabel.toUpperCase(), style: T.caption.copyWith(color: col, fontWeight: FontWeight.w800, letterSpacing: .6)),
-              if (a.safety) ...[const SizedBox(width: 8), Flexible(child: Pill(tr('Safety floor'), color: c.red))],
-              const Spacer(),
-              Text(hhmm(a.t), style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
-            ]),
-            const SizedBox(height: 6),
-            Text(a.title, style: T.headline.copyWith(color: c.label)),
-            const SizedBox(height: 8),
-            for (final r in a.reasons)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(width: 6, height: 6, margin: const EdgeInsets.only(top: 7, right: 8), decoration: BoxDecoration(color: col, shape: BoxShape.circle)),
-                  Expanded(child: Text(r, style: T.sub.copyWith(color: c.label, height: 1.35))),
-                ]),
-              ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(12)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
-                  const Spacer(),
-                  Flexible(child: Text(tr('{p} · sends at {tau}', {'p': pct(a.p), 'tau': pct(a.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700, fontFeatures: T.num))),
-                ]),
-                const SizedBox(height: 6),
-                ProbabilityBar(p: a.p, tau: a.tau, color: col),
-                const SizedBox(height: 8),
-                Text(ai, style: T.caption.copyWith(color: c.label2, height: 1.4)),
+      child: IOSCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _AlertHead(color: col, icon: CupertinoIcons.exclamationmark_triangle_fill, level: a.levelLabel, time: hhmm(a.t), title: a.title, tag: a.safety ? Pill(tr('Safety floor'), color: c.red) : null),
+          const SizedBox(height: 10),
+          for (final r in a.reasons)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(width: 6, height: 6, margin: const EdgeInsets.only(top: 7, right: 8), decoration: BoxDecoration(color: col, shape: BoxShape.circle)),
+                Expanded(child: Text(r, style: T.sub.copyWith(color: c.label, height: 1.35))),
               ]),
             ),
-            const SizedBox(height: 10),
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final s in a.escalation)
-                Pill('${trData(s.who)} · ${s.what}', color: switch (s.who) { 'Doctor' => c.blue, 'Caregiver' => c.orange, 'SOS' => c.red, _ => null }),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(R.sm)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
+                const Spacer(),
+                Flexible(child: Text(tr('{p} · sends at {tau}', {'p': pct(a.p), 'tau': pct(a.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700, fontFeatures: T.num))),
+              ]),
+              const SizedBox(height: 6),
+              ProbabilityBar(p: a.p, tau: a.tau, color: col),
+              const SizedBox(height: 8),
+              Text(ai, style: T.caption.copyWith(color: c.label2, height: 1.4)),
             ]),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => openAlertDetail(context, a, staffMode: staffMode, reviewer: reviewer),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(CupertinoIcons.sparkles, size: 16, color: c.indigo),
-                  const SizedBox(width: 6),
-                  Text(tr('See how AdaptAlert decided'), style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600)),
-                  Icon(CupertinoIcons.chevron_forward, size: 14, color: c.indigo),
-                ]),
-              ),
-            ),
-            AlertActions(a: a, staffMode: staffMode, reviewer: reviewer),
+          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final s in a.escalation)
+              Pill('${trData(s.who)} · ${s.what}', color: switch (s.who) { 'Doctor' => c.blue, 'Caregiver' => c.orange, 'SOS' => c.red, _ => null }),
           ]),
-        ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => openAlertDetail(context, a, staffMode: staffMode, reviewer: reviewer),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(CupertinoIcons.sparkles, size: 16, color: c.indigo),
+                const SizedBox(width: 6),
+                Flexible(child: Text(tr('See how AdaptAlert decided'), style: T.footnote.copyWith(color: c.indigo, fontWeight: FontWeight.w600))),
+                Icon(CupertinoIcons.chevron_forward, size: 14, color: c.indigo),
+              ]),
+            ),
+          ),
+          AlertActions(a: a, staffMode: staffMode, reviewer: reviewer),
+        ]),
       ),
     );
   }
@@ -182,85 +199,84 @@ class AlertActions extends StatelessWidget {
     final c = context.ios;
     final m = context.watch<MonitorController>();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SizedBox(height: 12),
-            if (staffMode)
-              Text(a.patientFeedback == null ? tr('The patient hasn\'t answered yet.') : tr(AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said you were', 'Patient said they were').replaceFirst('You said you', 'Patient said they').replaceFirst('You said the', 'Patient said the').replaceFirst('You weren\'t', 'Patient wasn\'t')), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))
-            else if (a.patientFeedback == null) ...[
-              Text(tr('What was happening?'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 3.4,
-                children: [
-                  for (final (k, emoji, label) in AlertCard.feedbackOptions)
-                    Pressable(
-                      scale: .93,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        m.feedback(a, k);
-                        toast(context, tr('Thanks for the feedback'), switch (k) {
-                          PatientFeedback.unwell => tr('Your doctor has been told you feel unwell.'),
-                          PatientFeedback.notSure => tr('Your doctor will review it.'),
-                          _ => tr('AdaptAlert will learn from this.'),
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(12)),
-                        child: Row(children: [
-                          Text(emoji, style: const TextStyle(fontSize: 17)),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(tr(label), style: T.footnote.copyWith(color: c.label, fontWeight: FontWeight.w600))),
-                        ]),
-                      ),
-                    ),
-                ],
-              ),
-            ] else
-              Text(tr(AlertCard.fbText[a.patientFeedback]!), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
-            if (a.level >= 2 && !staffMode) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.tinted(
-                  sizeStyle: CupertinoButtonSize.medium,
-                  onPressed: () => Navigator.of(context).push(CupertinoPageRoute(
-                    fullscreenDialog: true,
-                    builder: (_) => AppointmentEditor(
-                      initial: Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: tr('Follow-up after alert: {title}', {'title': a.title}), fromAlert: '${a.id}'),
-                      isNew: true,
-                    ),
-                  )),
-                  child: Text(tr('Book a follow-up')),
+      const SizedBox(height: 12),
+      if (staffMode)
+        Text(a.patientFeedback == null ? tr('The patient hasn\'t answered yet.') : tr(AlertCard.fbText[a.patientFeedback]!.replaceFirst('You said you were', 'Patient said they were').replaceFirst('You said you', 'Patient said they').replaceFirst('You said the', 'Patient said the').replaceFirst('You weren\'t', 'Patient wasn\'t')), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600))
+      else if (a.patientFeedback == null) ...[
+        Text(tr('What was happening?'), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 3.4,
+          children: [
+            for (final (k, emoji, label) in AlertCard.feedbackOptions)
+              Pressable(
+                scale: .94,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  m.feedback(a, k);
+                  toast(context, tr('Thanks for the feedback'), switch (k) {
+                    PatientFeedback.unwell => tr('Your doctor has been told you feel unwell.'),
+                    PatientFeedback.notSure => tr('Your doctor will review it.'),
+                    _ => tr('AdaptAlert will learn from this.'),
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(R.sm)),
+                  child: Row(children: [
+                    Text(emoji, style: const TextStyle(fontSize: 17)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(tr(label), maxLines: 2, overflow: TextOverflow.ellipsis, style: T.footnote.copyWith(color: c.label, fontWeight: FontWeight.w600))),
+                  ]),
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
-            Divider(height: 1, color: c.sep),
-            const SizedBox(height: 10),
-            Row(children: [
-              Text(tr('Doctor review'), style: T.footnote.copyWith(color: c.label2)),
-              const Spacer(),
-              switch (a.doctor) {
-                DoctorLabel.confirmed => Flexible(child: Pill('${tr('Confirmed real')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.red)),
-                DoctorLabel.rejected => Flexible(child: Pill('${tr('False alarm')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.green)),
-                DoctorLabel.pending => Pill(tr('Pending'), color: c.gray),
-              },
-            ]),
-            if (a.doctor == DoctorLabel.pending) ...[
-              const SizedBox(height: 8),
-              Text(staffMode ? tr('Your review teaches AdaptAlert about this patient.') : tr('Demo control: answer as {name}', {'name': reviewer}), style: T.caption.copyWith(color: c.label3)),
-              const SizedBox(height: 6),
-              Row(children: [
-                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.red, onPressed: () => _label(context, m, true), child: Text(tr('Confirm real'), style: TextStyle(color: c.red)))),
-                const SizedBox(width: 8),
-                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, color: c.green, onPressed: () => _label(context, m, false), child: Text(tr('False alarm'), style: TextStyle(color: c.green)))),
-              ]),
-            ],
+          ],
+        ),
+      ] else
+        Text(tr(AlertCard.fbText[a.patientFeedback]!), style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+      if (a.level >= 2 && !staffMode) ...[
+        const SizedBox(height: 10),
+        AppButton(
+          tr('Book a follow-up'),
+          kind: ButtonKind.tinted,
+          size: ButtonSize.medium,
+          expand: true,
+          onTap: () => Navigator.of(context).push(CupertinoPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => AppointmentEditor(
+              initial: Appointment(id: context.read<PatientStore>().newId(), doctorId: 'd1', forMember: 'self', at: DateTime.now(), mode: ApptMode.video, reason: tr('Follow-up after alert: {title}', {'title': a.title}), fromAlert: '${a.id}'),
+              isNew: true,
+            ),
+          )),
+        ),
+      ],
+      const SizedBox(height: 12),
+      const Hairline(),
+      const SizedBox(height: 10),
+      Row(children: [
+        Text(tr('Doctor review'), style: T.footnote.copyWith(color: c.label2)),
+        const Spacer(),
+        switch (a.doctor) {
+          DoctorLabel.confirmed => Flexible(child: Pill('${tr('Confirmed real')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.red)),
+          DoctorLabel.rejected => Flexible(child: Pill('${tr('False alarm')}${a.reviewedBy == null ? '' : ' · ${a.reviewedBy}'}', color: c.green)),
+          DoctorLabel.pending => Pill(tr('Pending'), color: c.gray),
+        },
+      ]),
+      if (a.doctor == DoctorLabel.pending) ...[
+        const SizedBox(height: 8),
+        Text(staffMode ? tr('Your review teaches AdaptAlert about this patient.') : tr('Demo control: answer as {name}', {'name': reviewer}), style: T.caption.copyWith(color: c.label3)),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(child: AppButton(tr('Confirm real'), kind: ButtonKind.tinted, size: ButtonSize.small, color: c.red, onTap: () => _label(context, m, true))),
+          const SizedBox(width: 8),
+          Expanded(child: AppButton(tr('False alarm'), kind: ButtonKind.tinted, size: ButtonSize.small, color: c.green, onTap: () => _label(context, m, false))),
+        ]),
+      ],
     ]);
   }
 
@@ -282,17 +298,7 @@ class ProbabilityBar extends StatelessWidget {
       return SizedBox(
         height: 14,
         child: Stack(clipBehavior: Clip.none, children: [
-          Positioned(left: 0, right: 0, top: 3, child: Container(height: 8, decoration: BoxDecoration(color: c.fill2, borderRadius: BorderRadius.circular(4)))),
-          Positioned(
-            left: 0,
-            top: 3,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: p),
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.easeOutCubic,
-              builder: (_, v, _) => Container(width: box.maxWidth * v, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-            ),
-          ),
+          Positioned(left: 0, right: 0, top: 3, child: ProgressBar(value: p, height: 8, color: color)),
           Positioned(left: box.maxWidth * tau - 1, top: 0, bottom: 0, child: Container(width: 2, decoration: BoxDecoration(color: c.label, borderRadius: BorderRadius.circular(1)))),
         ]),
       );
@@ -308,33 +314,22 @@ class _HeldCard extends StatelessWidget {
     final c = context.ios;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(color: c.card, border: Border(left: BorderSide(color: c.indigo, width: 4))),
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text(tr('HELD BACK'), style: T.caption.copyWith(color: c.indigo, fontWeight: FontWeight.w800, letterSpacing: .6)),
-              const Spacer(),
-              Text(hhmm(h.t), style: T.caption.copyWith(color: c.label2)),
-            ]),
-            const SizedBox(height: 6),
-            Text(bucketLabel(h.key), style: T.headline.copyWith(color: c.label)),
-            const SizedBox(height: 6),
-            Text(tr('Heart rate {hr} bpm, oxygen {spo2}%, temperature {temp} °C. Model said {pg}; your history ({n} labels) said {pu}.', {'hr': h.rec.r.hr, 'spo2': h.rec.r.spo2, 'temp': h.rec.r.temp.toStringAsFixed(1), 'pg': pct(h.pg), 'n': h.n.toStringAsFixed(1), 'pu': pct(h.pu)}), style: T.footnote.copyWith(color: c.label2, height: 1.4)),
-            const SizedBox(height: 10),
-            Row(children: [
-              Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
-              const Spacer(),
-              Flexible(child: Text(tr('{p} · needs {tau}', {'p': pct(h.p), 'tau': pct(h.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700))),
-            ]),
-            const SizedBox(height: 6),
-            ProbabilityBar(p: h.p, tau: h.tau, color: c.indigo),
-            const SizedBox(height: 8),
-            Text(tr('Not sent. If this gets worse, or hits a safety limit, AdaptAlert alerts right away.'), style: T.caption.copyWith(color: c.label2)),
+      child: IOSCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _AlertHead(color: c.indigo, icon: CupertinoIcons.bell_slash_fill, level: tr('HELD BACK'), time: hhmm(h.t), title: bucketLabel(h.key)),
+          const SizedBox(height: 8),
+          Text(tr('Heart rate {hr} bpm, oxygen {spo2}%, temperature {temp} °C. Model said {pg}; your history ({n} labels) said {pu}.', {'hr': h.rec.r.hr, 'spo2': h.rec.r.spo2, 'temp': h.rec.r.temp.toStringAsFixed(1), 'pg': pct(h.pg), 'n': h.n.toStringAsFixed(1), 'pu': pct(h.pu)}), style: T.footnote.copyWith(color: c.label2, height: 1.4)),
+          const SizedBox(height: 10),
+          Row(children: [
+            Text(tr('Likely real'), style: T.caption.copyWith(color: c.label2)),
+            const Spacer(),
+            Flexible(child: Text(tr('{p} · needs {tau}', {'p': pct(h.p), 'tau': pct(h.tau)}), textAlign: TextAlign.right, style: T.caption.copyWith(color: c.label, fontWeight: FontWeight.w700, fontFeatures: T.num))),
           ]),
-        ),
+          const SizedBox(height: 6),
+          ProbabilityBar(p: h.p, tau: h.tau, color: c.indigo),
+          const SizedBox(height: 8),
+          Text(tr('Not sent. If this gets worse, or hits a safety limit, AdaptAlert alerts right away.'), style: T.caption.copyWith(color: c.label2)),
+        ]),
       ),
     );
   }

@@ -13,10 +13,12 @@ import '../../services/session.dart';
 import '../../services/staff_controller.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
-import '../../widgets/vitals.dart';
 import '../../widgets/demo_banner.dart';
 import '../../widgets/lang_switch.dart';
 import '../../widgets/shell_navigator.dart';
+import '../../widgets/side_nav.dart';
+import '../../widgets/tab_bar.dart';
+import '../../widgets/vitals.dart';
 import '../patient/accessibility_screen.dart';
 import '../patient/patient_shell.dart' show isWide, showSimulator;
 import 'bed_screen.dart';
@@ -131,73 +133,35 @@ class StaffSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final s = context.watch<Session>();
-    return Material(
-      color: c.card,
-      child: Container(
-        width: 260,
-        decoration: BoxDecoration(color: c.card, border: Border(right: BorderSide(color: c.sep, width: .5))),
-        child: SafeArea(
-          right: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
-            child: ValueListenableBuilder<int>(
-              valueListenable: staffSec,
-              builder: (context, cur, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), gradient: LinearGradient(colors: [c.pink, c.red])),
-                    child: const Icon(CupertinoIcons.waveform_path_ecg, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('PulseOS', style: T.headline.copyWith(color: c.label)),
-                      Text('${s.name} · ${s.role == null ? '' : tr(roleLabel[s.role]!)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
-                    ]),
-                  ),
-                ]),
-                const SizedBox(height: 24),
-                for (final sec in staffSections(s.role))
-                  Builder(builder: (context) {
-                    final on = cur == sec.index;
-                    final (icon, active, label) = _secItem(sec, s.role);
-                    final n = _badge(context, sec);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Material(
-                        color: on ? c.blue.withValues(alpha: .12) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => openStaffSection(context, sec),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            child: Row(children: [
-                              Icon(on ? active : icon, size: 21, color: on ? c.blue : c.label2),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(label, style: T.callout.copyWith(color: on ? c.blue : c.label, fontWeight: on ? FontWeight.w600 : FontWeight.w400))),
-                              if (n > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                                  decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
-                                  child: Text('$n', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                                ),
-                            ]),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                const Spacer(),
-                CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: () => showSimulator(staffNavKey.currentContext!), child: Text(tr('Simulate home patient'))),
-                const SizedBox(height: 10),
-                Text(tr('Research prototype. Not a medical device.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
-              ]),
-            ),
+    return ValueListenableBuilder<int>(
+      valueListenable: staffSec,
+      builder: (context, cur, _) => SideNav(
+        header: Row(children: [
+          const AppIcon(size: 40, glow: false),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('PulseOS', style: T.headline.copyWith(color: c.label)),
+              Text('${s.name} · ${s.role == null ? '' : tr(roleLabel[s.role]!)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
+            ]),
           ),
-        ),
+        ]),
+        items: [
+          for (final sec in staffSections(s.role))
+            SideNavItem(
+              icon: _secItem(sec, s.role).$1,
+              activeIcon: _secItem(sec, s.role).$2,
+              label: _secItem(sec, s.role).$3,
+              selected: cur == sec.index,
+              badge: _badge(context, sec),
+              onTap: () => openStaffSection(context, sec),
+            ),
+        ],
+        footer: [
+          AppButton(tr('Simulate home patient'), kind: ButtonKind.tinted, size: ButtonSize.medium, onTap: () => showSimulator(staffNavKey.currentContext!)),
+          const SizedBox(height: 10),
+          Text(tr('Research prototype. Not a medical device.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        ],
       ),
     );
   }
@@ -218,26 +182,20 @@ class StaffShell extends StatelessWidget {
         final idx = all.indexWhere((x) => x.index == cur);
         return Scaffold(
           backgroundColor: c.bg,
-          body: IndexedStack(index: idx < 0 ? 0 : idx, children: [for (final sec in all) sec == StaffSec.ask ? const SizedBox.shrink() : _secPage(sec)]),
-          bottomNavigationBar: wide
-              ? null
-              : CupertinoTabBar(
-                  currentIndex: tabs.indexWhere((x) => x.index == cur).clamp(0, tabs.length - 1),
-                  backgroundColor: c.material,
-                  activeColor: c.blue,
-                  onTap: (i) {
-                    HapticFeedback.selectionClick();
-                    staffSec.value = tabs[i].index;
-                  },
-                  items: [
-                    for (final sec in tabs)
-                      BottomNavigationBarItem(
-                        icon: Badge(isLabelVisible: _badge(context, sec) > 0, label: Text('${_badge(context, sec)}'), child: Icon(_secItem(sec, role).$1)),
-                        activeIcon: Badge(isLabelVisible: _badge(context, sec) > 0, label: Text('${_badge(context, sec)}'), child: Icon(_secItem(sec, role).$2)),
-                        label: _secItem(sec, role).$3,
-                      ),
-                  ],
+          body: Stack(children: [
+            TabPages(index: idx < 0 ? 0 : idx, children: [for (final sec in all) sec == StaffSec.ask ? const SizedBox.shrink() : _secPage(sec)]),
+            if (!wide)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AppTabBar(
+                  items: [for (final sec in tabs) TabItem(icon: _secItem(sec, role).$1, activeIcon: _secItem(sec, role).$2, label: _secItem(sec, role).$3, badge: _badge(context, sec))],
+                  index: tabs.indexWhere((x) => x.index == cur).clamp(0, tabs.length - 1),
+                  onSelect: (i) => staffSec.value = tabs[i].index,
                 ),
+              ),
+          ]),
         );
       },
     );
@@ -279,20 +237,20 @@ class WardScreen extends StatelessWidget {
           IOSCard(child: Text(tr('Connecting to the BT39 service. On the free plan it can take about a minute to wake up.'), style: T.footnote.copyWith(color: c.label2))),
         if (sc.beds.isNotEmpty) ...[
           Row(children: [
-            for (final (band, label) in [('high', 'High'), ('medium', 'Medium'), ('low_medium', 'Low–med'), ('low', 'Low')])
+            for (final (i, (band, label)) in [('high', 'High'), ('medium', 'Medium'), ('low_medium', 'Low–med'), ('low', 'Low')].indexed)
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  margin: EdgeInsets.only(left: i == 0 ? 0 : 8),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(color: bandColor(context, band).withValues(alpha: .14), borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(color: c.tint(bandColor(context, band)), borderRadius: BorderRadius.circular(R.md)),
                   child: Column(children: [
-                    Text('${sc.beds.where((b) => b.band == band).length}', style: T.title2.copyWith(color: bandColor(context, band))),
-                    Text(tr(label), style: T.caption.copyWith(color: c.label2)),
+                    Text('${sc.beds.where((b) => b.band == band).length}', style: T.title2.copyWith(color: bandColor(context, band), fontFeatures: T.num)),
+                    Text(tr(label), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
                   ]),
                 ),
               ),
           ]),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -317,7 +275,7 @@ class BedTile extends StatelessWidget {
     final sc = context.read<StaffController>();
     if (b.empty) {
       return Container(
-        decoration: BoxDecoration(color: c.card.withValues(alpha: .5), borderRadius: BorderRadius.circular(18), border: Border.all(color: c.sep)),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(R.md), border: Border.all(color: c.sep)),
         alignment: Alignment.center,
         child: Text('${b.bed}\n${tr('Empty')}', textAlign: TextAlign.center, style: T.footnote.copyWith(color: c.label3)),
       );
@@ -343,11 +301,7 @@ class BedTile extends StatelessWidget {
           Row(children: [
             Text(b.bed, style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w700)),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(99)),
-              child: Text('NEWS2 ${b.news2 ?? '—'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11.5)),
-            ),
+            Pill('NEWS2 ${b.news2 ?? '—'}', color: col, solid: true),
           ]),
           const SizedBox(height: 6),
           Text(b.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.headline.copyWith(color: c.label)),
@@ -394,13 +348,13 @@ class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     if (!widget.on || MediaQuery.disableAnimationsOf(context)) {
-      return widget.on ? DecoratedBox(position: DecorationPosition.foreground, decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: widget.color, width: 2)), child: widget.child) : widget.child;
+      return widget.on ? DecoratedBox(position: DecorationPosition.foreground, decoration: BoxDecoration(borderRadius: BorderRadius.circular(R.md), border: Border.all(color: widget.color, width: 2)), child: widget.child) : widget.child;
     }
     return AnimatedBuilder(
       animation: _a,
       builder: (_, ch) => DecoratedBox(
         position: DecorationPosition.foreground,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: widget.color.withValues(alpha: .3 + .7 * _a.value), width: 2.5)),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(R.md), border: Border.all(color: widget.color.withValues(alpha: .3 + .7 * _a.value), width: 2.5)),
         child: ch,
       ),
       child: widget.child,
@@ -473,84 +427,73 @@ class StaffAlertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final sc = context.watch<StaffController>();
-    final col = severityColor(context, a.severity);
+    final col = a.open ? severityColor(context, a.severity) : c.gray;
     final label = sc.labels[a.id];
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          decoration: BoxDecoration(color: c.card, border: Border(left: BorderSide(color: a.open ? col : c.gray, width: 4))),
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text(tr(severityLabel[a.severity]!).toUpperCase(), style: T.caption.copyWith(color: col, fontWeight: FontWeight.w800, letterSpacing: .5)),
-              const SizedBox(width: 8),
-              Pill(trData(a.kindName)),
-              const Spacer(),
-              Text(DateFormat('h:mm:ss a').format(a.startedAt), style: T.caption.copyWith(color: c.label2)),
-            ]),
-            const SizedBox(height: 6),
-            if (showPatient) Text('${a.bed} · ${a.patientName}', style: T.headline.copyWith(color: c.label)),
-            Text(trData(a.message), style: T.footnote.copyWith(color: c.label2)),
-            const SizedBox(height: 10),
-            if (a.open)
-              Row(children: [
-                Expanded(
-                  child: CupertinoButton.filled(
-                    sizeStyle: CupertinoButtonSize.small,
-                    onPressed: a.ackAt != null
-                        ? null
-                        : () async {
-                            HapticFeedback.mediumImpact();
-                            final err = await sc.ack(a);
-                            if (context.mounted && err != null) toast(context, tr('Acknowledge'), err);
-                          },
-                    child: Text(a.ackAt != null ? tr('Acknowledged') : tr('Acknowledge')),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => _resolve(context), child: Text(tr('Resolve')))),
-              ])
-            else
-              Text('${tr('Resolved')} · ${a.resolution == 'auto' ? tr('automatically after 10 quiet minutes') : a.resolution == 'resolved' ? tr('resolved') : a.resolution ?? ''}', style: T.caption.copyWith(color: c.label2)),
-            if (a.ackAt != null && a.open) Padding(padding: const EdgeInsets.only(top: 6), child: Text(tr('Acknowledged by {who} at {time}', {'who': a.ackBy ?? tr('staff'), 'time': DateFormat('h:mm a').format(a.ackAt!)}), style: T.caption.copyWith(color: c.label2))),
-            const SizedBox(height: 10),
-            Row(children: [
-              Icon(CupertinoIcons.sparkles, size: 14, color: c.indigo),
-              const SizedBox(width: 4),
-              Text(tr('Was this clinically real?'), style: T.caption.copyWith(color: c.label2)),
-              const Spacer(),
-              _LabelBtn(text: tr('Real'), on: label == true, color: c.red, onTap: () => sc.label(a, true)),
-              const SizedBox(width: 6),
-              _LabelBtn(text: tr('False alarm'), on: label == false, color: c.green, onTap: () => sc.label(a, false)),
-            ]),
+      child: IOSCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            IconSquare(CupertinoIcons.bell_fill, col, size: 32),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(tr(severityLabel[a.severity]!).toUpperCase(), style: T.overline.copyWith(color: col)),
+                if (showPatient) Text('${a.bed} · ${a.patientName}', style: T.headline.copyWith(color: c.label)),
+              ]),
+            ),
+            const SizedBox(width: 8),
+            Text(DateFormat('h:mm:ss a').format(a.startedAt), style: T.caption.copyWith(color: c.label2, fontFeatures: T.num)),
           ]),
-        ),
+          const SizedBox(height: 8),
+          Text(trData(a.message), style: T.sub.copyWith(color: c.label, height: 1.35)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            Pill(trData(a.kindName)),
+            if (!a.open) Pill('${tr('Resolved')} · ${a.resolution == 'auto' ? tr('automatically after 10 quiet minutes') : a.resolution == 'resolved' ? tr('resolved') : a.resolution ?? ''}', color: c.green),
+          ]),
+          if (a.open) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: AppButton(
+                  a.ackAt != null ? tr('Acknowledged') : tr('Acknowledge'),
+                  size: ButtonSize.small,
+                  onTap: a.ackAt != null
+                      ? null
+                      : () async {
+                          HapticFeedback.mediumImpact();
+                          final err = await sc.ack(a);
+                          if (context.mounted && err != null) toast(context, tr('Acknowledge'), err);
+                        },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: AppButton(tr('Resolve'), kind: ButtonKind.tinted, size: ButtonSize.small, onTap: () => _resolve(context))),
+            ]),
+            if (a.ackAt != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(tr('Acknowledged by {who} at {time}', {'who': a.ackBy ?? tr('staff'), 'time': DateFormat('h:mm a').format(a.ackAt!)}), style: T.caption.copyWith(color: c.label2))),
+          ],
+          const SizedBox(height: 12),
+          const Hairline(),
+          const SizedBox(height: 10),
+          Row(children: [
+            Icon(CupertinoIcons.sparkles, size: 14, color: c.indigo),
+            const SizedBox(width: 5),
+            Expanded(child: Text(tr('Was this clinically real?'), style: T.caption.copyWith(color: c.label2))),
+            AppChip(tr('Real'), selected: label == true, color: c.red, onTap: () => _label(sc, true)),
+            const SizedBox(width: 6),
+            AppChip(tr('False alarm'), selected: label == false, color: c.green, onTap: () => _label(sc, false)),
+          ]),
+        ]),
       ),
     );
   }
-}
 
-class _LabelBtn extends StatelessWidget {
-  const _LabelBtn({required this.text, required this.on, required this.color, required this.onTap});
-  final String text;
-  final bool on;
-  final Color color;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Pressable(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: on ? color : color.withValues(alpha: .12), borderRadius: BorderRadius.circular(99)),
-          child: Text(text, style: T.caption.copyWith(color: on ? Colors.white : color, fontWeight: FontWeight.w700)),
-        ),
-      );
+  void _label(StaffController sc, bool real) {
+    HapticFeedback.selectionClick();
+    sc.label(a, real);
+  }
 }
 
 /// What staff labels say about each alert rule: the data AdaptAlert needs
@@ -593,10 +536,7 @@ class LearningScreen extends StatelessWidget {
                       Text(tr('{real} of {total} real', {'real': e.value.real, 'total': e.value.total}), style: T.caption.copyWith(color: c.label2)),
                     ]),
                     const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(value: e.value.real / e.value.total, minHeight: 8, color: c.red, backgroundColor: c.green.withValues(alpha: .35)),
-                    ),
+                    ProgressBar(value: e.value.real / e.value.total, height: 8, color: c.red, track: c.tint(c.green)),
                   ]),
                 ),
             ]),
@@ -611,7 +551,7 @@ class _Big extends StatelessWidget {
   final String v, l;
   final Color col;
   @override
-  Widget build(BuildContext context) => Column(children: [Text(v, style: T.title1.copyWith(color: col)), Text(l, style: T.caption.copyWith(color: context.ios.label2))]);
+  Widget build(BuildContext context) => Column(children: [Text(v, style: T.title1.copyWith(color: col, fontFeatures: T.num)), Text(l, style: T.caption.copyWith(color: context.ios.label2))]);
 }
 
 class StaffMeScreen extends StatelessWidget {
@@ -640,15 +580,15 @@ class StaffMeScreen extends StatelessWidget {
         ),
         if (s.demo) ...[const SizedBox(height: 12), const DemoBanner()],
         FormGroup(header: tr('Work'), children: [
-          IOSRow(icon: CupertinoIcons.number, iconColor: c.indigo, title: tr('Registration no.'), trailing: Text(s.details['registration']?.isNotEmpty == true ? s.details['registration']! : (s.role == Role.doctor ? 'DMC-48213' : 'DNC-20917'), style: T.body.copyWith(color: c.label2)), chevron: false),
+          IOSRow(icon: CupertinoIcons.number, iconColor: c.indigo, title: tr('Registration no.'), value: s.details['registration']?.isNotEmpty == true ? s.details['registration']! : (s.role == Role.doctor ? 'DMC-48213' : 'DNC-20917'), chevron: false),
           if (s.role == Role.doctor) ...[
-            IOSRow(icon: CupertinoIcons.heart_fill, iconColor: c.pink, title: tr('Speciality'), trailing: Text(trData(s.details['specialty'] ?? 'Cardiologist'), style: T.body.copyWith(color: c.label2)), chevron: false),
-            IOSRow(icon: CupertinoIcons.building_2_fill, iconColor: c.blue, title: tr('Hospital'), trailing: Text(s.details['hospital']?.isNotEmpty == true ? s.details['hospital']! : 'Fortis Heart Institute', style: T.body.copyWith(color: c.label2)), chevron: false),
+            IOSRow(icon: CupertinoIcons.heart_fill, iconColor: c.pink, title: tr('Speciality'), value: trData(s.details['specialty'] ?? 'Cardiologist'), chevron: false),
+            IOSRow(icon: CupertinoIcons.building_2_fill, iconColor: c.blue, title: tr('Hospital'), value: s.details['hospital']?.isNotEmpty == true ? s.details['hospital']! : 'Fortis Heart Institute', chevron: false),
           ] else ...[
-            IOSRow(icon: CupertinoIcons.bed_double_fill, iconColor: c.teal, title: tr('Ward'), trailing: Text(trData(s.details['ward'] ?? 'Ward A'), style: T.body.copyWith(color: c.label2)), chevron: false),
-            IOSRow(icon: CupertinoIcons.clock_fill, iconColor: c.orange, title: tr('Shift'), trailing: Text(trData(s.details['shift'] ?? 'Morning'), style: T.body.copyWith(color: c.label2)), chevron: false),
+            IOSRow(icon: CupertinoIcons.bed_double_fill, iconColor: c.teal, title: tr('Ward'), value: trData(s.details['ward'] ?? 'Ward A'), chevron: false),
+            IOSRow(icon: CupertinoIcons.clock_fill, iconColor: c.orange, title: tr('Shift'), value: trData(s.details['shift'] ?? 'Morning'), chevron: false),
           ],
-          IOSRow(icon: CupertinoIcons.mail_solid, iconColor: c.gray, title: tr('Email'), trailing: Text(s.email, style: T.body.copyWith(color: c.label2)), chevron: false),
+          IOSRow(icon: CupertinoIcons.mail_solid, iconColor: c.gray, title: tr('Email'), value: s.email, chevron: false),
         ]),
         FormGroup(header: tr('Connection'), children: [
           IOSRow(icon: CupertinoIcons.antenna_radiowaves_left_right, iconColor: c.green, title: tr('Live stream'), trailing: StatusPill(status: sc.status), chevron: false),

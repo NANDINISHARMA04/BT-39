@@ -47,10 +47,10 @@ class AlertDetailScreen extends StatelessWidget {
     final primary = _primaryVital(a, rec);
     final window = e.history.where((h) => h.t >= a.t - 30 && h.t <= a.t + 15).toList();
 
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: tr('Alerts'), backgroundColor: c.material, middle: Text(tr('Why this alert'))),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 60), children: [
+    return PlainPage(
+      title: tr('Why this alert'),
+      previousTitle: tr('Alerts'),
+      children: [
         FadeIn(child: _Header(a: a, color: col)),
         if (window.length > 3) ...[
           SectionHeader(tr('What the band saw'), trailing: '${tr(_label[primary]!)} · ${_unit[primary]}'),
@@ -79,7 +79,7 @@ class AlertDetailScreen extends StatelessWidget {
         IOSCard(child: AlertActions(a: a, staffMode: staffMode, reviewer: reviewer)),
         const SizedBox(height: 12),
         Text(tr('Explanations are generated from the same numbers the engine used. Research prototype, not a diagnosis.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
-      ]),
+      ],
     );
   }
 }
@@ -99,12 +99,8 @@ class _Header extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(colors: [color, Color.lerp(color, Colors.black, .25)!], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
+    return AccentCard(
+      color: color,
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -158,13 +154,7 @@ class _Contributions extends StatelessWidget {
               const SizedBox(height: 6),
               LayoutBuilder(
                 builder: (_, box) => Stack(children: [
-                  Container(height: 10, decoration: BoxDecoration(color: c.fill2, borderRadius: BorderRadius.circular(5))),
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: (dev[v]! / top).clamp(0, 1)),
-                    duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutCubic,
-                    builder: (_, t, _) => Container(width: box.maxWidth * t, height: 10, decoration: BoxDecoration(color: dev[v]! >= 1.5 ? colors[v] : c.gray, borderRadius: BorderRadius.circular(5))),
-                  ),
+                  ProgressBar(value: (dev[v]! / top).clamp(0, 1), height: 10, color: dev[v]! >= 1.5 ? colors[v] : c.gray),
                   // The point where a vital starts counting as abnormal (2.5 SD).
                   Positioned(left: box.maxWidth * (2.5 / top) - 1, child: Container(width: 2, height: 10, color: c.label)),
                 ]),
@@ -194,7 +184,7 @@ class _Decision extends StatelessWidget {
     final c = context.ios;
     if (a.safety) {
       return IOSCard(
-        color: c.red.withValues(alpha: .1),
+        color: c.tint(c.red),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(CupertinoIcons.shield_lefthalf_fill, color: c.red, size: 28),
           const SizedBox(width: 12),
@@ -212,7 +202,7 @@ class _Decision extends StatelessWidget {
     Widget box(String title, String value, String sub, Color col) => Expanded(
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: col.withValues(alpha: .1), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: c.tint(col), borderRadius: BorderRadius.circular(R.sm)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: T.caption.copyWith(color: c.label2)),
               Text(value, style: T.title2.copyWith(color: col, fontFeatures: T.num)),
@@ -307,7 +297,7 @@ class _Counterfactual extends StatelessWidget {
     return IOSCard(
       child: Column(children: [
         for (final (i, (icon, col, text)) in lines.indexed) ...[
-          if (i > 0) Divider(height: 20, color: c.sep),
+          if (i > 0) const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Hairline()),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Icon(icon, color: col, size: 22),
             const SizedBox(width: 12),

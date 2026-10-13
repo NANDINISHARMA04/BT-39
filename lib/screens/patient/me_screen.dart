@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
@@ -42,12 +41,14 @@ class MeScreen extends StatelessWidget {
                   Text(p.name, style: T.title2.copyWith(color: c.label)),
                   Text(p.email.isEmpty ? tr('No email') : p.email, style: T.footnote.copyWith(color: c.label2)),
                   const SizedBox(height: 6),
-                  Wrap(spacing: 6, children: [
+                  Wrap(spacing: 6, runSpacing: 6, children: [
                     Pill(switch (s.mode) { AuthMode.demo => tr('Demo Mode'), AuthMode.cloud => tr('Signed in') }, color: s.demo ? c.orange : c.green, icon: s.demo ? CupertinoIcons.play_circle_fill : CupertinoIcons.checkmark_shield_fill),
                     Pill(tr('Edit profile'), color: c.blue),
                   ]),
                 ]),
               ),
+              const SizedBox(width: 6),
+              const Chevron(),
             ]),
           ),
         ),
@@ -56,8 +57,11 @@ class MeScreen extends StatelessWidget {
           delay: 60,
           child: Row(children: [
             _Fact(tr('Age'), '${p.age}'),
+            const SizedBox(width: 8),
             _Fact(tr('Blood'), p.bloodGroup),
+            const SizedBox(width: 8),
             _Fact('BMI', p.bmi.toStringAsFixed(1)),
+            const SizedBox(width: 8),
             _Fact(tr('Height'), '${p.heightCm.round()} cm'),
           ]),
         ),
@@ -86,27 +90,27 @@ class MeScreen extends StatelessWidget {
           IOSRow(icon: CupertinoIcons.slider_horizontal_3, iconColor: c.gray, title: tr('Band simulator'), subtitle: tr('Demo scenarios'), onTap: () => showSimulator(context)),
         ]),
         FormGroup(header: tr('Preferences'), children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 10, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.circle_lefthalf_fill, c.indigo), const SizedBox(width: 14), Text(tr('Appearance'), style: T.body.copyWith(color: c.label))]),
-              CupertinoSlidingSegmentedControl<String>(
-                groupValue: prefs.theme,
-                children: {'system': Text(tr('Auto')), 'light': Text(tr('Light')), 'dark': Text(tr('Dark'))},
-                onValueChanged: (v) => store.updatePrefs((x) => x.theme = v ?? 'system'),
-              ),
-            ]),
+          IOSRow(
+            icon: CupertinoIcons.circle_lefthalf_fill,
+            iconColor: c.indigo,
+            title: tr('Appearance'),
+            chevron: false,
+            trailing: CupertinoSlidingSegmentedControl<String>(
+              groupValue: prefs.theme,
+              children: {'system': Text(tr('Auto')), 'light': Text(tr('Light')), 'dark': Text(tr('Dark'))},
+              onValueChanged: (v) => store.updatePrefs((x) => x.theme = v ?? 'system'),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 10, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [IconSquare(CupertinoIcons.thermometer, c.orange), const SizedBox(width: 14), Text(tr('Temperature'), style: T.body.copyWith(color: c.label))]),
-              CupertinoSlidingSegmentedControl<bool>(
-                groupValue: prefs.fahrenheit,
-                children: const {false: Text('°C'), true: Text('°F')},
-                onValueChanged: (v) => store.updatePrefs((x) => x.fahrenheit = v ?? false),
-              ),
-            ]),
+          IOSRow(
+            icon: CupertinoIcons.thermometer,
+            iconColor: c.orange,
+            title: tr('Temperature'),
+            chevron: false,
+            trailing: CupertinoSlidingSegmentedControl<bool>(
+              groupValue: prefs.fahrenheit,
+              children: const {false: Text('°C'), true: Text('°F')},
+              onValueChanged: (v) => store.updatePrefs((x) => x.fahrenheit = v ?? false),
+            ),
           ),
           const LanguageRow(),
           IOSRow(icon: CupertinoIcons.person_crop_circle_badge_checkmark, iconColor: c.blue, title: tr('Accessibility'), subtitle: tr('Larger text, easy home, flash and spoken alerts'), onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AccessibilityScreen()))),
@@ -140,13 +144,11 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16)),
+      child: IOSCard(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Column(children: [
-          Text(value, style: T.headline.copyWith(color: c.label)),
-          Text(label, style: T.caption.copyWith(color: c.label2)),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.headline.copyWith(color: c.label, fontFeatures: T.num)),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
         ]),
       ),
     );
@@ -188,8 +190,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
           Text(i == null ? tr('Add medicine') : tr('Edit medicine'), style: T.title2.copyWith(color: c.label)),
           FormGroup(children: [FormField2(label: tr('Name'), controller: n), FormField2(label: tr('Dose'), controller: d, hint: tr('e.g. 75 mg')), FormField2(label: tr('When'), controller: s, hint: tr('e.g. Twice daily'))]),
           const SizedBox(height: 16),
-          CupertinoButton.filled(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('Done'))),
-          if (i != null) CupertinoButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('Remove medicine'), style: TextStyle(color: c.red))),
+          AppButton(tr('Done'), onTap: () => Navigator.pop(ctx, true)),
+          if (i != null) ...[const SizedBox(height: 4), AppButton(tr('Remove medicine'), kind: ButtonKind.plain, destructive: true, onTap: () => Navigator.pop(ctx, false))],
         ]),
       );
     });
@@ -209,36 +211,33 @@ class _ProfileEditorState extends State<ProfileEditor> {
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(tr('Profile')),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            if (_name.text.trim().isEmpty) return toast(context, tr('Add your name'));
-            context.read<PatientStore>().updateProfile((x) => x
-              ..name = _name.text.trim()
-              ..email = _email.text.trim()
-              ..phone = _phone.text.trim()
-              ..age = int.tryParse(_age.text) ?? x.age
-              ..heightCm = double.tryParse(_h.text) ?? x.heightCm
-              ..weightKg = double.tryParse(_w.text) ?? x.weightKg
-              ..city = _city.text.trim()
-              ..sex = _sex
-              ..bloodGroup = _blood
-              ..conditions = _split(_cond.text)
-              ..allergies = _split(_allergy.text)
-              ..medications = _meds);
-            Navigator.pop(context);
-            toast(context, tr('Profile saved'));
-          },
-          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+    return PlainPage(
+      title: tr('Profile'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(
+        tr('Save'),
+        bold: true,
+        onTap: () {
+          if (_name.text.trim().isEmpty) return toast(context, tr('Add your name'));
+          context.read<PatientStore>().updateProfile((x) => x
+            ..name = _name.text.trim()
+            ..email = _email.text.trim()
+            ..phone = _phone.text.trim()
+            ..age = int.tryParse(_age.text) ?? x.age
+            ..heightCm = double.tryParse(_h.text) ?? x.heightCm
+            ..weightKg = double.tryParse(_w.text) ?? x.weightKg
+            ..city = _city.text.trim()
+            ..sex = _sex
+            ..bloodGroup = _blood
+            ..conditions = _split(_cond.text)
+            ..allergies = _split(_allergy.text)
+            ..medications = _meds);
+          Navigator.pop(context);
+          toast(context, tr('Profile saved'));
+        },
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
         FormGroup(header: tr('About you'), children: [
           FormField2(label: tr('Name'), controller: _name),
           FormField2(label: tr('Email'), controller: _email, keyboard: TextInputType.emailAddress),
@@ -255,7 +254,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
           FormField2(label: tr('Weight (kg)'), controller: _w, keyboard: TextInputType.number),
           IOSRow(
             title: tr('Blood group'),
-            trailing: Text(_blood, style: T.sub.copyWith(color: c.label2)),
+            value: _blood,
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -276,7 +275,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
           for (final (i, m) in _meds.indexed) IOSRow(icon: CupertinoIcons.capsule_fill, iconColor: c.purple, title: '${m.name} ${m.dose}', subtitle: trData(m.schedule), onTap: () => _editMed(i)),
           IOSRow(icon: CupertinoIcons.add, iconColor: c.green, title: tr('Add medicine'), chevron: false, onTap: _editMed),
         ]),
-      ]),
+      ],
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/l10n.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
+import '../../widgets/common.dart';
 import 'role_auth_screen.dart';
 
 /// Shown the moment the guided demo ends: log in or sign up now.
@@ -25,21 +26,6 @@ class LoginNowScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     final s = context.read<Session>();
-    Widget logIn(Role r) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: SizedBox(
-            width: double.infinity,
-            child: CupertinoButton.filled(
-              color: roleColor(context, r),
-              onPressed: () => s.leaveDemoToLogIn(r),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(roleIcon(r), color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Flexible(child: Text(tr('Log in as {role}', {'role': tr(roleLabel[r]!)}), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ]),
-            ),
-          ),
-        );
     return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: .35),
       body: BackdropFilter(
@@ -52,7 +38,7 @@ class LoginNowScreen extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(22, 26, 22, 14),
-                  decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(28)),
+                  decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(R.xl)),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Container(
                       width: 64,
@@ -65,21 +51,17 @@ class LoginNowScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(tr('Log in now to use PulseOS with your own account.'), textAlign: TextAlign.center, style: T.body.copyWith(color: c.label2)),
                     const SizedBox(height: 20),
-                    for (final r in Role.values) logIn(r),
+                    for (final r in Role.values)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: AppButton(tr('Log in as {role}', {'role': tr(roleLabel[r]!)}), icon: roleIcon(r), color: roleColor(context, r), expand: true, onTap: () => s.leaveDemoToLogIn(r)),
+                      ),
                     const SizedBox(height: 4),
                     Text(tr('New here? Create an account'), style: T.footnote.copyWith(color: c.label2)),
                     Wrap(alignment: WrapAlignment.center, children: [
-                      for (final r in Role.values)
-                        CupertinoButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          onPressed: () => s.leaveDemoToLogIn(r, signUp: true),
-                          child: Text(tr(roleLabel[r]!), style: TextStyle(color: roleColor(context, r), fontWeight: FontWeight.w600)),
-                        ),
+                      for (final r in Role.values) AppButton(tr(roleLabel[r]!), kind: ButtonKind.plain, size: ButtonSize.medium, color: roleColor(context, r), onTap: () => s.leaveDemoToLogIn(r, signUp: true)),
                     ]),
-                    CupertinoButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(tr('Keep exploring the demo'), style: T.footnote.copyWith(color: c.label2)),
-                    ),
+                    AppButton(tr('Keep exploring the demo'), kind: ButtonKind.plain, size: ButtonSize.medium, color: c.label2, onTap: () => Navigator.of(context).pop()),
                   ]),
                 ),
               ),

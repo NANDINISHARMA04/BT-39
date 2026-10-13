@@ -13,7 +13,8 @@ import '../research/research_lab_screen.dart';
 import 'insights_screen.dart';
 
 /// The project's core idea at a glance: what a fixed-threshold monitor would
-/// have done today against what AdaptAlert did.
+/// have done today against what AdaptAlert did. The one coloured card on the
+/// Alerts tab.
 class AdaptAlertHero extends StatelessWidget {
   const AdaptAlertHero({super.key});
 
@@ -27,7 +28,7 @@ class AdaptAlertHero extends StatelessWidget {
     Widget bar(String label, int v, Color col) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(children: [
-            SizedBox(width: 108, child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))),
+            SizedBox(width: 108, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))),
             Expanded(
               child: LayoutBuilder(
                 builder: (_, box) => Stack(children: [
@@ -35,7 +36,7 @@ class AdaptAlertHero extends StatelessWidget {
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: v / top),
                     duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutCubic,
+                    curve: Motion.enter,
                     builder: (_, t, _) => Container(
                       width: max(22, box.maxWidth * t),
                       height: 22,
@@ -50,13 +51,9 @@ class AdaptAlertHero extends StatelessWidget {
             ),
           ]),
         );
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(colors: [c.indigo, c.purple], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: c.indigo.withValues(alpha: .35), blurRadius: 24, offset: const Offset(0, 10))],
-      ),
+    return AccentCard(
+      color: c.indigo,
+      to: c.purple,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 20),
@@ -83,12 +80,13 @@ class AdaptAlertHero extends StatelessWidget {
           width: double.infinity,
           child: CupertinoButton(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            borderRadius: BorderRadius.circular(14),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            minimumSize: const Size(44, 44),
+            borderRadius: BorderRadius.circular(12),
             onPressed: () => Navigator.of(context).push(CupertinoPageRoute(
               builder: (_) => ChangeNotifierProvider.value(value: context.read<MonitorController>(), child: const HowItWorksScreen()),
             )),
-            child: Text(tr('See how AdaptAlert works'), style: TextStyle(color: c.indigo, fontWeight: FontWeight.w700)),
+            child: Text(tr('See how AdaptAlert works'), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: c.indigo, fontWeight: FontWeight.w600, fontSize: 16)),
           ),
         ),
       ]),
@@ -102,7 +100,7 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .18), borderRadius: BorderRadius.circular(99)),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .18), borderRadius: BorderRadius.circular(R.pill)),
         child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFeatures: T.num)),
       );
 }
@@ -143,12 +141,7 @@ class HowItWorksScreen extends StatelessWidget {
         SectionHeader(tr('The learning rule')),
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(12)),
-              child: Text('P(real) = (1 − w) · P_model + w · P_you\nw = n / (n + 4)\nalert if P(real) ≥ τ', style: T.sub.copyWith(color: c.label, fontFamily: 'monospace', height: 1.6, fontFamilyFallback: const ['Menlo', 'Courier'])),
-            ),
+            const _Formula(),
             const SizedBox(height: 10),
             Text(
               tr('P_model comes from a small, readable decision tree. P_you comes from this person\'s answers for the same kind of event. With no answers yet, the model decides; as answers build up, the person\'s own history counts more. τ is their personal threshold, now {tau}.', {'tau': pct(e.tau)}),
@@ -181,11 +174,40 @@ class HowItWorksScreen extends StatelessWidget {
                 ]),
         ),
         const SizedBox(height: 16),
-        CupertinoButton.tinted(
-          onPressed: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen())),
-          child: Text(tr('See the evidence in the Research Lab')),
-        ),
+        AppButton(tr('See the evidence in the Research Lab'), kind: ButtonKind.tinted, expand: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
       ],
+    );
+  }
+}
+
+/// The three lines of the rule, set in the app's own type: a variable and its
+/// small subscript, like a textbook, rather than a typewriter font.
+class _Formula extends StatelessWidget {
+  const _Formula();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final base = T.body.copyWith(color: c.label, fontFeatures: T.num, height: 1.5, fontWeight: FontWeight.w500);
+    InlineSpan sub(String s) => WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: Transform.translate(offset: const Offset(0, 4), child: Text(s, style: T.caption.copyWith(color: c.label2, fontWeight: FontWeight.w600))),
+        );
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(R.sm)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text.rich(TextSpan(style: base, children: [
+          const TextSpan(text: 'P(real) = (1 − w) · P'),
+          sub('model'),
+          const TextSpan(text: ' + w · P'),
+          sub('you'),
+        ])),
+        Text('w = n / (n + 4)', style: base),
+        Text('alert if P(real) ≥ τ', style: base),
+      ]),
     );
   }
 }

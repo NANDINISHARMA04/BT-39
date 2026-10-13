@@ -16,6 +16,8 @@ import '../../services/speech.dart';
 import '../../services/tour.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/side_nav.dart';
+import '../../widgets/tab_bar.dart';
 import '../auth/login_now_screen.dart';
 import 'alerts_screen.dart';
 import 'assistant_screen.dart';
@@ -65,113 +67,35 @@ class PatientSidebar extends StatelessWidget {
     final c = context.ios;
     final m = context.watch<MonitorController>();
     final store = context.watch<PatientStore>();
-    return Material(
-      color: c.card,
-      child: Container(
-        width: 260,
-        decoration: BoxDecoration(
-          color: c.card,
-          border: Border(right: BorderSide(color: c.sep, width: .5)),
-        ),
-        child: SafeArea(
-          right: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
-            child: ValueListenableBuilder<int>(
-              valueListenable: patientTab,
-              builder: (context, tab, _) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          gradient: LinearGradient(colors: [c.pink, c.red]),
-                        ),
-                        child: const Icon(CupertinoIcons.waveform_path_ecg, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('PulseOS', style: T.headline.copyWith(color: c.label)),
-                            Text(
-                              store.profile.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: T.caption.copyWith(color: c.label2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  for (var i = 0; i < _tabItems.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Material(
-                        color: i == tab ? c.blue.withValues(alpha: .12) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => onSelect(i),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            child: Row(
-                              children: [
-                                Icon(i == tab ? _tabItems[i].$2 : _tabItems[i].$1, size: 21, color: i == tab ? c.blue : c.label2),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    tr(_tabItems[i].$3),
-                                    style: T.callout.copyWith(color: i == tab ? c.blue : c.label, fontWeight: i == tab ? FontWeight.w600 : FontWeight.w400),
-                                  ),
-                                ),
-                                if (i == PatientTab.alerts && m.needsReply > 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                                    decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
-                                    child: Text(
-                                      '${m.needsReply}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  const Spacer(),
-                  CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: onSimulate, child: Text(tr('Simulate a scenario'))),
-                  const SizedBox(height: 8),
-                  Semantics(
-                    label: tr('Emergency SOS'),
-                    button: true,
-                    excludeSemantics: true,
-                    child: CupertinoButton.filled(
-                      sizeStyle: CupertinoButtonSize.medium,
-                      color: c.red,
-                      onPressed: onSos,
-                      child: const Text('SOS', style: TextStyle(fontWeight: FontWeight.w800)),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    tr('Research prototype. Not a medical device.'),
-                    textAlign: TextAlign.center,
-                    style: T.caption.copyWith(color: c.label3),
-                  ),
-                ],
-              ),
-            ),
+    return ValueListenableBuilder<int>(
+      valueListenable: patientTab,
+      builder: (context, tab, _) => SideNav(
+        header: Row(children: [
+          const AppIcon(size: 40, glow: false),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('PulseOS', style: T.headline.copyWith(color: c.label)),
+              Text(store.profile.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label2)),
+            ]),
           ),
-        ),
+        ]),
+        items: [
+          for (var i = 0; i < _tabItems.length; i++)
+            SideNavItem(icon: _tabItems[i].$1, activeIcon: _tabItems[i].$2, label: tr(_tabItems[i].$3), selected: i == tab, badge: i == PatientTab.alerts ? m.needsReply : 0, onTap: () => onSelect(i)),
+        ],
+        footer: [
+          AppButton(tr('Simulate a scenario'), kind: ButtonKind.tinted, size: ButtonSize.medium, onTap: onSimulate),
+          const SizedBox(height: 8),
+          Semantics(
+            label: tr('Emergency SOS'),
+            button: true,
+            excludeSemantics: true,
+            child: AppButton('SOS', size: ButtonSize.medium, destructive: true, onTap: onSos),
+          ),
+          const SizedBox(height: 10),
+          Text(tr('Research prototype. Not a medical device.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        ],
       ),
     );
   }
@@ -283,7 +207,6 @@ class _PatientShellState extends State<PatientShell> {
 
   void go(int i) {
     if (i == _tab) return;
-    HapticFeedback.selectionClick();
     patientTab.value = i;
   }
 
@@ -293,88 +216,20 @@ class _PatientShellState extends State<PatientShell> {
     final m = context.watch<MonitorController>();
     final a11y = context.watch<AccessibilitySettings>();
     final tour = context.watch<TourController>();
+    final wide = isWide(context);
     final pages = [a11y.easyHome ? const EasyHomeScreen() : const TodayScreen(), const AlertsScreen(), const InsightsScreen(), const CareScreen(), const MeScreen()];
     final items = [
-      (CupertinoIcons.heart, CupertinoIcons.heart_fill, tr('Today'), 0),
-      (CupertinoIcons.bell, CupertinoIcons.bell_fill, tr('Alerts'), m.needsReply),
-      (CupertinoIcons.chart_bar_alt_fill, CupertinoIcons.chart_bar_alt_fill, tr('Insights'), 0),
-      (CupertinoIcons.calendar, CupertinoIcons.calendar_today, tr('Care'), 0),
-      (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, tr('Me'), 0),
+      for (var i = 0; i < _tabItems.length; i++) TabItem(icon: _tabItems[i].$1, activeIcon: _tabItems[i].$2, label: tr(_tabItems[i].$3), badge: i == PatientTab.alerts ? m.needsReply : 0),
     ];
-    final bottom = MediaQuery.of(context).padding.bottom;
     return TabSwitcher(
       go: go,
       child: Scaffold(
         backgroundColor: c.bg,
         body: Stack(
           children: [
-            for (var i = 0; i < pages.length; i++) _TabPage(active: i == _tab, child: pages[i]),
-            if (!isWide(context))
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Glass(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: c.sep, width: .5)),
-                    ),
-                    padding: EdgeInsets.only(top: 6, bottom: bottom > 0 ? bottom : 10),
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < items.length; i++)
-                          Expanded(
-                            child: Semantics(
-                              selected: i == _tab,
-                              button: true,
-                              label: items[i].$3,
-                              child: Pressable(
-                                scale: .86,
-                                onTap: () => go(i),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 250),
-                                          transitionBuilder: (ch, a) => ScaleTransition(scale: a, child: ch),
-                                          child: Icon(i == _tab ? items[i].$2 : items[i].$1, key: ValueKey(i == _tab), size: 26, color: i == _tab ? c.blue : c.gray),
-                                        ),
-                                        if (items[i].$4 > 0)
-                                          Positioned(
-                                            right: -10,
-                                            top: -4,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                              constraints: const BoxConstraints(minWidth: 18),
-                                              decoration: BoxDecoration(color: c.red, borderRadius: BorderRadius.circular(9)),
-                                              child: Text(
-                                                '${items[i].$4}',
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      items[i].$3,
-                                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: i == _tab ? c.blue : c.gray),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            if (!tour.running && tour.step == null) _HelpButton(above: isWide(context) ? 24 : (bottom > 0 ? bottom : 10) + 6 + 28 + MediaQuery.textScalerOf(context).scale(10.5) * 1.3 + 16),
+            TabPages(index: _tab, children: pages),
+            if (!wide) Positioned(left: 0, right: 0, bottom: 0, child: AppTabBar(items: items, index: _tab, onSelect: go)),
+            if (!tour.running && tour.step == null) _HelpCapsule(above: wide ? 24 : AppTabBar.heightOf(context) + 12),
             if (_flash != null) Positioned.fill(child: _FlashBorder(color: _flash!)),
             _AlertBanner(
               alert: _banner,
@@ -396,29 +251,6 @@ class _PatientShellState extends State<PatientShell> {
   }
 }
 
-class _TabPage extends StatelessWidget {
-  const _TabPage({required this.active, required this.child});
-  final bool active;
-  final Widget child;
-  @override
-  // The fade must keep running when a tab is left, so only the page's own
-  // animations are paused, not the fade itself. Otherwise a page that is
-  // left half-faded stays drawn over the tab below it.
-  Widget build(BuildContext context) => IgnorePointer(
-    ignoring: !active,
-    child: AnimatedOpacity(
-      opacity: active ? 1 : 0,
-      duration: const Duration(milliseconds: 260),
-      child: AnimatedSlide(
-        offset: active ? Offset.zero : const Offset(.03, 0),
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-        child: TickerMode(enabled: active, child: ExcludeSemantics(excluding: !active, child: child)),
-      ),
-    ),
-  );
-}
-
 /// A Dynamic-Island-style banner that drops in when an alert is sent.
 class _AlertBanner extends StatelessWidget {
   const _AlertBanner({required this.alert, required this.onTap, this.big = false});
@@ -435,7 +267,7 @@ class _AlertBanner extends StatelessWidget {
     final col = a == null ? c.red : levelColor(context, a.level);
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 550),
-      curve: Curves.easeOutBack,
+      curve: Motion.spring,
       left: 10,
       right: 10,
       top: a == null ? (big ? -400 : -140) : top + 6,
@@ -446,53 +278,48 @@ class _AlertBanner extends StatelessWidget {
             liveRegion: true,
             button: true,
             child: Pressable(
-            onTap: onTap,
-            child: Container(
-              padding: EdgeInsets.all(big ? 18 : 14),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a == null ? '' : '${a.levelLabel} · ${a.title}',
-                          maxLines: big ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: big ? 19 : 15),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          a == null || a.reasons.isEmpty ? '' : a.reasons.first,
-                          maxLines: big ? 3 : 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: const Color(0xB3FFFFFF), fontSize: big ? 16 : 13),
-                        ),
-                        if (big) ...[
-                          const SizedBox(height: 6),
-                          Text(tr('Tap to see the alert'), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              onTap: onTap,
+              child: Container(
+                padding: EdgeInsets.all(big ? 18 : 14),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(R.xl),
+                  boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
+                ),
+                child: Row(
+                  children: [
+                    IconSquare(CupertinoIcons.exclamationmark_triangle_fill, col, size: 44),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a == null ? '' : '${a.levelLabel} · ${a.title}',
+                            maxLines: big ? 2 : 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: big ? 19 : 15),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            a == null || a.reasons.isEmpty ? '' : a.reasons.first,
+                            maxLines: big ? 3 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: const Color(0xB3FFFFFF), fontSize: big ? 16 : 13),
+                          ),
+                          if (big) ...[
+                            const SizedBox(height: 6),
+                            Text(tr('Tap to see the alert'), style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(tr('now'), style: const TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
-                ],
+                    const SizedBox(width: 8),
+                    Text(tr('now'), style: const TextStyle(color: Color(0x8CFFFFFF), fontSize: 12)),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ),
       ),
@@ -500,9 +327,10 @@ class _AlertBanner extends StatelessWidget {
   }
 }
 
-/// The round Help button above the tab bar: opens the assistant.
-class _HelpButton extends StatelessWidget {
-  const _HelpButton({required this.above});
+/// The Help capsule that floats above the tab bar, like the controls in Maps:
+/// frosted glass, the assistant's sparkle, one word. Opens the assistant.
+class _HelpCapsule extends StatelessWidget {
+  const _HelpCapsule({required this.above});
 
   /// Distance from the bottom of the shell.
   final double above;
@@ -517,24 +345,27 @@ class _HelpButton extends StatelessWidget {
         label: tr('Help: ask the assistant'),
         excludeSemantics: true,
         child: Pressable(
-          scale: .9,
+          scale: .94,
           onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AssistantScreen())),
           child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [c.indigo, c.purple], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 6))],
-            ),
-            padding: const EdgeInsets.all(8),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(CupertinoIcons.question, color: Colors.white, size: 26),
-                Text(tr('Help'), maxLines: 1, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-              ]),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(R.pill), boxShadow: const [BoxShadow(color: Color(0x2E000000), blurRadius: 18, offset: Offset(0, 6))]),
+            child: Glass(
+              radius: R.pill,
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.fromLTRB(6, 0, 16, 0),
+                decoration: BoxDecoration(border: Border.all(color: c.sep, width: .5), borderRadius: BorderRadius.circular(R.pill)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.indigo, c.purple], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                    child: const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 17),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(tr('Help'), style: T.sub.copyWith(fontWeight: FontWeight.w600, color: c.label)),
+                ]),
+              ),
             ),
           ),
         ),
@@ -679,10 +510,10 @@ class TourOverlay extends StatelessWidget {
     final c = context.ios;
     final tour = context.watch<TourController>();
     final s = tour.step;
-    final bottom = isWide(context) ? 24.0 : MediaQuery.of(context).padding.bottom + 74;
+    final bottom = isWide(context) ? 24.0 : AppTabBar.heightOf(context) + 10;
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutBack,
+      curve: Motion.spring,
       left: 12,
       right: 12,
       bottom: s == null ? -320 : bottom,
@@ -690,10 +521,10 @@ class TourOverlay extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             decoration: BoxDecoration(
               color: const Color(0xF2111114),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(R.lg),
               boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 30, offset: Offset(0, 10))],
             ),
             child: AnimatedSwitcher(
@@ -735,34 +566,21 @@ class TourOverlay extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(children: [
                           Expanded(
-                            child: CupertinoButton.filled(
-                              sizeStyle: CupertinoButtonSize.medium,
-                              onPressed: () {
+                            child: AppButton(
+                              tr('Log in or sign up'),
+                              size: ButtonSize.medium,
+                              onTap: () {
                                 tour.finish();
                                 showLoginNow(context);
                               },
-                              child: Text(tr('Log in or sign up'), maxLines: 1),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: CupertinoButton(
-                              sizeStyle: CupertinoButtonSize.medium,
-                              onPressed: tour.finish,
-                              child: Text(tr('Keep exploring'), maxLines: 1, style: const TextStyle(color: Colors.white)),
-                            ),
-                          ),
+                          Expanded(child: AppButton(tr('Keep exploring'), kind: ButtonKind.plain, size: ButtonSize.medium, color: Colors.white, onTap: tour.finish)),
                         ]),
                       ],
                       const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(end: tour.index / TourController.totalSteps),
-                          duration: const Duration(milliseconds: 600),
-                          builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 3, backgroundColor: Colors.white12, color: c.green),
-                        ),
-                      ),
+                      ProgressBar(value: tour.index / TourController.totalSteps, height: 3, color: c.green, track: Colors.white12),
                     ]),
             ),
           ),

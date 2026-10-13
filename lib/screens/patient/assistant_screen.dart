@@ -189,9 +189,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final speech = Speech.instance;
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        previousPageTitle: tr('Today'),
-        backgroundColor: c.material,
+      appBar: plainBar(
+        context,
+        previousTitle: tr('Today'),
         middle: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 22, height: 22, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.indigo, c.pink])), child: const Icon(CupertinoIcons.sparkles, size: 13, color: Colors.white)),
@@ -256,57 +256,25 @@ class _HelpTopics extends StatelessWidget {
     Widget group(String title, List<_Topic> topics, Color color) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(padding: const EdgeInsets.only(top: 12, bottom: 8), child: Text(title, style: T.headline.copyWith(color: c.label))),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final t in topics) _Chip(icon: t.$1, label: tr(t.$2), color: t.$3 == null ? c.red : color, strong: t.$3 == null, onTap: () => onTap(t)),
+            for (final t in topics) AppChip(tr(t.$2), icon: t.$1, large: true, tinted: t.$3 != null, selected: t.$3 == null, color: t.$3 == null ? c.red : color, onTap: () => onTap(t)),
           ]),
         ]);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14, top: 2),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.sep)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(CupertinoIcons.question_circle_fill, color: c.indigo, size: 24),
-          const SizedBox(width: 8),
-          Expanded(child: Text(tr('Help topics'), style: T.title3.copyWith(color: c.label))),
-        ]),
-        const SizedBox(height: 2),
-        Text(tr('Tap a topic. I\'ll show you where it is, step by step.'), style: T.sub.copyWith(color: c.label2)),
-        group(tr('Find something'), _findTopics, c.blue),
-        group(tr('Get help'), _helpTopics, c.orange),
-        group(tr('Make it easier'), _easierTopics, c.indigo),
-      ]),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.color, required this.onTap, this.icon, this.strong = false});
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  final IconData? icon;
-  final bool strong;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return Semantics(
-      button: true,
-      child: Pressable(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 52),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: strong ? color : color.withValues(alpha: .12),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: strong ? color : color.withValues(alpha: .45), width: 1.5),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null) ...[Icon(icon, size: 22, color: strong ? Colors.white : color), const SizedBox(width: 8)],
-            Flexible(child: Text(label, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: strong ? Colors.white : c.label))),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14, top: 2),
+      child: IOSCard(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(CupertinoIcons.question_circle_fill, color: c.indigo, size: 24),
+            const SizedBox(width: 8),
+            Expanded(child: Text(tr('Help topics'), style: T.title3.copyWith(color: c.label))),
           ]),
-        ),
+          const SizedBox(height: 2),
+          Text(tr('Tap a topic. I\'ll show you where it is, step by step.'), style: T.sub.copyWith(color: c.label2)),
+          group(tr('Find something'), _findTopics, c.blue),
+          group(tr('Get help'), _helpTopics, c.orange),
+          group(tr('Make it easier'), _easierTopics, c.indigo),
+        ]),
       ),
     );
   }

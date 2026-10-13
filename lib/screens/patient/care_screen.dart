@@ -35,19 +35,8 @@ class _CareScreenState extends State<CareScreen> {
         child: Pressable(onTap: _findDoctor, child: Icon(CupertinoIcons.add_circled_solid, color: c.blue, size: 28)),
       ),
       children: [
-        Pressable(
-          onTap: _findDoctor,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              Icon(CupertinoIcons.search, size: 18, color: c.label2),
-              const SizedBox(width: 8),
-              Expanded(child: Text(tr('Search doctors, specialities, hospitals'), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.callout.copyWith(color: c.label2))),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 12),
+        SearchBox(placeholder: tr('Search doctors, specialities, hospitals'), onTap: _findDoctor),
+        const SizedBox(height: 14),
         SizedBox(
           height: 92,
           child: ListView(scrollDirection: Axis.horizontal, children: [
@@ -64,10 +53,11 @@ class _CareScreenState extends State<CareScreen> {
                 padding: const EdgeInsets.only(right: 10),
                 child: Pressable(
                   onTap: () => _findDoctor(s),
+                  scale: .94,
                   child: SizedBox(
                     width: 84,
                     child: Column(children: [
-                      Container(width: 56, height: 56, decoration: BoxDecoration(color: col.withValues(alpha: .15), borderRadius: BorderRadius.circular(18)), child: Icon(icon, color: col)),
+                      Container(width: 56, height: 56, decoration: BoxDecoration(color: c.tint(col), borderRadius: BorderRadius.circular(R.md)), child: Icon(icon, color: col)),
                       const SizedBox(height: 6),
                       Text(hindi ? short : s.split(' ').first, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption.copyWith(color: c.label)),
                     ]),
@@ -86,7 +76,6 @@ class _CareScreenState extends State<CareScreen> {
         if (list.isEmpty)
           EmptyState(
             icon: CupertinoIcons.calendar,
-            color: c.blue,
             title: _past ? tr('No past appointments') : tr('Nothing booked'),
             message: _past ? tr('Completed and cancelled visits show up here.') : tr('Find a doctor and book a video or clinic visit.'),
             action: _past ? null : tr('Find a doctor'),
@@ -133,7 +122,7 @@ class _ApptCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: c.card2, borderRadius: BorderRadius.circular(R.sm)),
             child: Row(children: [
               Icon(CupertinoIcons.calendar, size: 18, color: c.blue),
               const SizedBox(width: 8),
@@ -149,48 +138,40 @@ class _ApptCard extends StatelessWidget {
           if (upcoming) ...[
             const SizedBox(height: 12),
             Row(children: [
-              if (a.mode == ApptMode.video)
-                Expanded(
-                  child: CupertinoButton.filled(
-                    sizeStyle: CupertinoButtonSize.small,
-                    onPressed: () => toast(context, tr('Video call'), tr('The call opens 10 minutes before the start time. Demo only.')),
-                    child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Join call'), maxLines: 1)),
-                  ),
-                ),
-              if (a.mode == ApptMode.video) const SizedBox(width: 8),
-              Expanded(
-                child: CupertinoButton.tinted(
-                  sizeStyle: CupertinoButtonSize.small,
-                  onPressed: () => _edit(context),
-                  child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Reschedule'), maxLines: 1)),
-                ),
-              ),
+              if (a.mode == ApptMode.video) ...[
+                Expanded(child: AppButton(tr('Join call'), size: ButtonSize.small, onTap: () => toast(context, tr('Video call'), tr('The call opens 10 minutes before the start time. Demo only.')))),
+                const SizedBox(width: 8),
+              ],
+              Expanded(child: AppButton(tr('Reschedule'), kind: ButtonKind.tinted, size: ButtonSize.small, onTap: () => _edit(context))),
               const SizedBox(width: 8),
               Expanded(
-                child: CupertinoButton.tinted(
-                  sizeStyle: CupertinoButtonSize.small,
-                  color: c.red,
-                  onPressed: () async {
+                child: AppButton(
+                  tr('Cancel'),
+                  kind: ButtonKind.tinted,
+                  size: ButtonSize.small,
+                  destructive: true,
+                  onTap: () async {
                     if (await confirm(context, title: tr('Cancel appointment?'), message: '${d.name}, ${DateFormat('EEE d MMM, h:mm a').format(a.at)}', action: tr('Cancel appointment'))) {
                       store.cancelAppointment(a.id);
                       if (context.mounted) toast(context, tr('Appointment cancelled'));
                     }
                   },
-                  child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Cancel'), maxLines: 1, style: TextStyle(color: c.red))),
                 ),
               ),
             ]),
           ] else
             Align(
               alignment: Alignment.centerRight,
-              child: CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () async {
+              child: AppButton(
+                tr('Delete'),
+                kind: ButtonKind.plain,
+                size: ButtonSize.small,
+                destructive: true,
+                onTap: () async {
                   if (await confirm(context, title: tr('Delete this record?'), message: tr('It will be removed from your appointment history.'), action: tr('Delete'))) {
                     store.deleteAppointment(a.id);
                   }
                 },
-                child: Text(tr('Delete'), style: T.footnote.copyWith(color: c.red)),
               ),
             ),
         ]),

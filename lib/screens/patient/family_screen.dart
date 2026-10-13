@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -37,13 +36,13 @@ class FamilyScreen extends StatelessWidget {
                 cg == null
                     ? tr('No caregiver is set. A caregiver gets your alerts when you don\'t reply within 10 minutes, and every warning or urgent alert.')
                     : tr('{name} is your caregiver. They get warning and urgent alerts, and any alert you don\'t answer within 10 minutes.', {'name': cg.name}),
-                style: T.footnote.copyWith(color: c.label),
+                style: T.footnote.copyWith(color: c.label, height: 1.35),
               ),
             ),
           ]),
         ),
         SectionHeader(tr('Members')),
-        if (store.family.isEmpty) EmptyState(icon: CupertinoIcons.person_3, color: c.orange, title: tr('No family members'), message: tr('Add the people you look after or who look after you.'), action: tr('Add a member'), onAction: () => _edit(context, null)),
+        if (store.family.isEmpty) EmptyState(icon: CupertinoIcons.person_3, title: tr('No family members'), message: tr('Add the people you look after or who look after you.'), action: tr('Add a member'), onAction: () => _edit(context, null)),
         for (final (i, m) in store.family.indexed)
           FadeIn(
             delay: i * 60,
@@ -66,7 +65,8 @@ class FamilyScreen extends StatelessWidget {
                       ]),
                     ]),
                   ),
-                  Icon(CupertinoIcons.chevron_forward, size: 16, color: c.label3),
+                  const SizedBox(width: 6),
+                  const Chevron(),
                 ]),
               ),
             ),
@@ -89,14 +89,10 @@ class MemberProfile extends StatelessWidget {
     if (m == null) return const SizedBox.shrink();
     final appts = store.upcoming.where((a) => a.forMember == id).toList();
     final recs = store.records.where((r) => r.forMember == id).toList();
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        previousPageTitle: tr('Family'),
-        backgroundColor: c.material,
-        trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => _edit(context, m), child: Text(tr('Edit'))),
-      ),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+    return PlainPage(
+      previousTitle: tr('Family'),
+      trailing: BarButton(tr('Edit'), onTap: () => _edit(context, m)),
+      children: [
         Center(child: Avatar(m.name, size: 88, colors: [c.orange, c.pink])),
         const SizedBox(height: 10),
         Text(m.name, textAlign: TextAlign.center, style: T.title1.copyWith(color: c.label)),
@@ -120,7 +116,7 @@ class MemberProfile extends StatelessWidget {
           IOSCard(child: Text(tr('No records yet.'), style: T.sub.copyWith(color: c.label2)))
         else
           GroupedList(children: [for (final r in recs) IOSRow(icon: CupertinoIcons.doc_text_fill, iconColor: c.teal, title: trData(r.title), subtitle: '${trData(r.category)} · ${DateFormat('d MMM y').format(r.date)}', chevron: false)]),
-      ]),
+      ],
     );
   }
 }
@@ -158,31 +154,27 @@ class _MemberEditorState extends State<MemberEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.ios;
     final store = context.read<PatientStore>();
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(m == null ? tr('Add member') : tr('Edit member')),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            if (_name.text.trim().isEmpty || _rel.text.trim().isEmpty) return toast(context, tr('Add a name and relation'));
-            final mem = FamilyMember(
-              id: m?.id ?? store.newId(), name: _name.text.trim(), relation: _rel.text.trim(), age: int.tryParse(_age.text) ?? 0, bloodGroup: _blood, phone: _phone.text.trim(),
-              conditions: _cond.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(), caregiver: false, emergencyContact: _emergency,
-            );
-            store.upsertMember(mem);
-            _setCaregiver(store, mem, _caregiver);
-            Navigator.pop(context);
-            toast(context, m == null ? tr('{name} added', {'name': mem.name.split(' ').first}) : tr('Saved'));
-          },
-          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+    return PlainPage(
+      title: m == null ? tr('Add member') : tr('Edit member'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(
+        tr('Save'),
+        bold: true,
+        onTap: () {
+          if (_name.text.trim().isEmpty || _rel.text.trim().isEmpty) return toast(context, tr('Add a name and relation'));
+          final mem = FamilyMember(
+            id: m?.id ?? store.newId(), name: _name.text.trim(), relation: _rel.text.trim(), age: int.tryParse(_age.text) ?? 0, bloodGroup: _blood, phone: _phone.text.trim(),
+            conditions: _cond.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(), caregiver: false, emergencyContact: _emergency,
+          );
+          store.upsertMember(mem);
+          _setCaregiver(store, mem, _caregiver);
+          Navigator.pop(context);
+          toast(context, m == null ? tr('{name} added', {'name': mem.name.split(' ').first}) : tr('Saved'));
+        },
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
         FormGroup(header: tr('Person'), children: [
           FormField2(label: tr('Name'), controller: _name, hint: tr('Full name')),
           FormField2(label: tr('Relation'), controller: _rel, hint: tr('e.g. Mother, Son')),
@@ -190,7 +182,7 @@ class _MemberEditorState extends State<MemberEditor> {
           FormField2(label: tr('Phone'), controller: _phone, keyboard: TextInputType.phone, hint: '+91'),
           IOSRow(
             title: tr('Blood group'),
-            trailing: Text(_blood, style: T.sub.copyWith(color: c.label2)),
+            value: _blood,
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -210,8 +202,11 @@ class _MemberEditorState extends State<MemberEditor> {
         ]),
         if (m != null) ...[
           const SizedBox(height: 24),
-          CupertinoButton(
-            onPressed: () async {
+          AppButton(
+            tr('Remove from family'),
+            kind: ButtonKind.plain,
+            destructive: true,
+            onTap: () async {
               if (await confirm(context, title: tr('Remove {name}?', {'name': m!.name}), message: tr('Their upcoming appointments will be cancelled. Records stay in your vault.'), action: tr('Remove'))) {
                 store.deleteMember(m!.id);
                 if (context.mounted) {
@@ -222,10 +217,9 @@ class _MemberEditorState extends State<MemberEditor> {
                 }
               }
             },
-            child: Text(tr('Remove from family'), style: TextStyle(color: c.red)),
           ),
         ],
-      ]),
+      ],
     );
   }
 }

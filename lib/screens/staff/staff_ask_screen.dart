@@ -8,6 +8,7 @@ import '../../services/chat_controller.dart';
 import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/chat/chat_view.dart';
+import '../../widgets/common.dart';
 import 'bed_screen.dart';
 import 'patients_screen.dart';
 import 'staff_shell.dart';
@@ -84,9 +85,9 @@ class _StaffAskScreenState extends State<StaffAskScreen> {
     final focused = widget.focus != null;
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        previousPageTitle: tr('Back'),
-        backgroundColor: c.material,
+      appBar: plainBar(
+        context,
+        previousTitle: tr('Back'),
         middle: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 22, height: 22, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [c.teal, c.indigo])), child: const Icon(CupertinoIcons.sparkles, size: 13, color: Colors.white)),
@@ -104,9 +105,8 @@ class _StaffAskScreenState extends State<StaffAskScreen> {
         onSource: (src) => openStaffSource(context, src),
         header: Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Container(
+          child: IOSCard(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: c.sep)),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Icon(CupertinoIcons.text_bubble_fill, color: c.indigo, size: 22),
               const SizedBox(width: 10),

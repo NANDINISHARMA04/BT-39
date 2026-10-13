@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -81,26 +80,12 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
             Row(children: [
               Text(tr('Seed {n}', {'n': _cfg.seed}), style: T.footnote.copyWith(color: c.label2, fontFeatures: T.num)),
               const Spacer(),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: _running ? null : () => setState(() => _cfg = _cfg.copyWith(seed: DateTime.now().millisecondsSinceEpoch % 100000)),
-                child: Text(tr('New seed')),
-              ),
-              const SizedBox(width: 16),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: _running ? null : () => setState(() => _cfg = const StudyConfig()),
-                child: Text(tr('Defaults')),
-              ),
+              AppButton(tr('New seed'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: _running ? null : () => setState(() => _cfg = _cfg.copyWith(seed: DateTime.now().millisecondsSinceEpoch % 100000))),
+              const SizedBox(width: 8),
+              AppButton(tr('Defaults'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: _running ? null : () => setState(() => _cfg = const StudyConfig())),
             ]),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              child: CupertinoButton.filled(
-                onPressed: _running ? null : _run,
-                child: _running ? const CupertinoActivityIndicator(color: Colors.white) : Text(tr('Run experiment')),
-              ),
-            ),
+            const SizedBox(height: 10),
+            AppButton(tr('Run experiment'), expand: true, busy: _running, onTap: _run),
             if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: T.footnote.copyWith(color: c.red))),
           ]),
         ),
@@ -108,15 +93,15 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
           SectionHeader(tr('Headline results')),
           AnimatedOpacity(
             opacity: _running ? .4 : 1,
-            duration: const Duration(milliseconds: 250),
+            duration: Motion.quick,
             child: Column(children: [
-              Row(children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _Kpi(pct(r.reduction('C')), tr('fewer false alarms than fixed thresholds (last week)'), c.green),
                 const SizedBox(width: 10),
                 _Kpi(pct(r.metrics['C']!.sensitivity), tr('of real events caught by AdaptAlert'), c.blue),
               ]),
               const SizedBox(height: 10),
-              Row(children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _Kpi('${(r.metrics['C']!.ppv / r.metrics['A']!.ppv).toStringAsFixed(0)}×', tr('more alerts are real (PPV {a} vs {b})', {'a': pct(r.metrics['C']!.ppv), 'b': pct(r.metrics['A']!.ppv)}), c.indigo),
                 const SizedBox(width: 10),
                 _Kpi(
@@ -168,12 +153,15 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
             ),
           ],
           const SizedBox(height: 16),
-          CupertinoButton.tinted(
-            onPressed: () async {
+          AppButton(
+            tr('Copy results as Markdown'),
+            kind: ButtonKind.tinted,
+            expand: true,
+            icon: CupertinoIcons.doc_on_clipboard,
+            onTap: () async {
               await Clipboard.setData(ClipboardData(text: _markdown ?? ''));
               if (context.mounted) toast(context, tr('Results copied'), tr('Paste the Markdown tables into your report or paper.'));
             },
-            child: Text(tr('Copy results as Markdown')),
           ),
           SectionHeader(tr('Assumptions')),
           IOSCard(
@@ -214,7 +202,7 @@ class _Contributions extends StatelessWidget {
                 width: 26,
                 height: 26,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: c.indigo.withValues(alpha: .14), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: c.tint(c.indigo), borderRadius: BorderRadius.circular(8)),
                 child: Text('C${i + 1}', style: T.caption.copyWith(color: c.indigo, fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 10),
@@ -261,9 +249,8 @@ class _Kpi extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.ios;
     return Expanded(
-      child: Container(
+      child: IOSCard(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value, style: T.title1.copyWith(color: color, fontFeatures: T.num)),
           const SizedBox(height: 4),

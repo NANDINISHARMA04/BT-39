@@ -35,7 +35,7 @@ class InsuranceScreen extends StatelessWidget {
       ),
       children: [
         if (store.policies.isEmpty)
-          EmptyState(icon: CupertinoIcons.shield, color: c.green, title: tr('No policy yet'), message: tr('Add your health insurance to track cover and claims.'), action: tr('Add a policy'), onAction: () => _editPolicy(context, null)),
+          EmptyState(icon: CupertinoIcons.shield, title: tr('No policy yet'), message: tr('Add your health insurance to track cover and claims.'), action: tr('Add a policy'), onAction: () => _editPolicy(context, null)),
         for (final (i, p) in store.policies.indexed) FadeIn(delay: i * 60, child: _PolicyCard(p: p)),
         if (store.policies.isNotEmpty) ...[
           SectionHeader(tr('Claims'), trailing: tr('New claim'), onTrailing: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => const ClaimEditor()))),
@@ -53,6 +53,7 @@ class InsuranceScreen extends StatelessWidget {
 
 void _editPolicy(BuildContext context, InsurancePolicy? p) => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => PolicyEditor(policy: p)));
 
+/// The policy as a card in a wallet: the one coloured card on this page.
 class _PolicyCard extends StatelessWidget {
   const _PolicyCard({required this.p});
   final InsurancePolicy p;
@@ -65,47 +66,33 @@ class _PolicyCard extends StatelessWidget {
     final daysLeft = p.validTill.difference(DateTime.now()).inDays;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Pressable(
+      child: AccentCard(
+        color: c.green,
+        to: c.teal,
         onTap: () => _editPolicy(context, p),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(colors: [c.green, c.teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            boxShadow: [BoxShadow(color: c.green.withValues(alpha: .3), blurRadius: 24, offset: const Offset(0, 10))],
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(CupertinoIcons.shield_lefthalf_fill, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(child: Text(p.insurer, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17))),
-              if (p.cashless) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(99)), child: Text(tr('Cashless'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
-            ]),
-            Text(p.plan, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-            const SizedBox(height: 18),
-            Text(tr('Cover left'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(rupees(left), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.5, fontFeatures: T.num)),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: p.sumInsured == 0 ? 0 : used / p.sumInsured),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutCubic,
-                builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 8, backgroundColor: Colors.white24, color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(tr('{used} used of {total}', {'used': rupees(used), 'total': rupees(p.sumInsured)}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(child: Text(p.policyNo, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 1, fontFeatures: T.num))),
-              Text(daysLeft >= 0 ? tr('Renews in {n} days', {'n': daysLeft}) : tr('Expired'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ]),
-            const SizedBox(height: 4),
-            Text(tr('Covers {names}', {'names': p.members.map((id) => trData(store.memberName(id))).join(', ')}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(CupertinoIcons.shield_lefthalf_fill, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(p.insurer, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17))),
+            if (p.cashless) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(R.pill)), child: Text(tr('Cashless'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
           ]),
-        ),
+          Text(p.plan, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          const SizedBox(height: 18),
+          Text(tr('Cover left'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(rupees(left), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.5, fontFeatures: T.num)),
+          const SizedBox(height: 8),
+          ProgressBar(value: p.sumInsured == 0 ? 0 : used / p.sumInsured, height: 8, color: Colors.white, track: Colors.white24),
+          const SizedBox(height: 6),
+          Text(tr('{used} used of {total}', {'used': rupees(used), 'total': rupees(p.sumInsured)}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: Text(p.policyNo, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 1, fontFeatures: T.num))),
+            Text(daysLeft >= 0 ? tr('Renews in {n} days', {'n': daysLeft}) : tr('Expired'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ]),
+          const SizedBox(height: 4),
+          Text(tr('Covers {names}', {'names': p.members.map((id) => trData(store.memberName(id))).join(', ')}), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        ]),
       ),
     );
   }
@@ -159,16 +146,17 @@ class _ClaimCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(children: [
             if (cl.status != ClaimStatus.paid && cl.status != ClaimStatus.rejected)
-              Flexible(child: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => store.advanceClaim(cl), child: Text(tr('Simulate insurer update'), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.footnote.copyWith(color: c.blue)))),
+              Flexible(child: AppButton(tr('Simulate insurer update'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => store.advanceClaim(cl))),
             const Spacer(),
-            CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => ClaimEditor(claim: cl))), child: Text(tr('Edit'), style: T.footnote.copyWith(color: c.blue))),
-            const SizedBox(width: 16),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: () async {
+            AppButton(tr('Edit'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => ClaimEditor(claim: cl)))),
+            AppButton(
+              tr('Delete'),
+              kind: ButtonKind.plain,
+              size: ButtonSize.small,
+              destructive: true,
+              onTap: () async {
                 if (await confirm(context, title: tr('Delete claim?'), message: trData(cl.title), action: tr('Delete'))) store.deleteClaim(cl.id);
               },
-              child: Text(tr('Delete'), style: T.footnote.copyWith(color: c.red)),
             ),
           ]),
         ]),
@@ -214,28 +202,25 @@ class _PolicyEditorState extends State<PolicyEditor> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final store = context.read<PatientStore>();
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(p == null ? tr('Add policy') : tr('Edit policy')),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            final sum = int.tryParse(_sum.text.replaceAll(RegExp(r'[^0-9]'), ''));
-            if (_insurer.text.trim().isEmpty || _no.text.trim().isEmpty || sum == null) return toast(context, tr('Fill in insurer, policy number and sum insured'));
-            store.upsertPolicy(InsurancePolicy(
-              id: p?.id ?? store.newId(), insurer: _insurer.text.trim(), plan: _plan.text.trim(), policyNo: _no.text.trim(), sumInsured: sum, validTill: _valid,
-              members: _members.toList(), cashless: _cashless, premium: int.tryParse(_premium.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-            ));
-            Navigator.pop(context);
-            toast(context, p == null ? tr('Policy added') : tr('Policy updated'));
-          },
-          child: Text(tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+    return PlainPage(
+      title: p == null ? tr('Add policy') : tr('Edit policy'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(
+        tr('Save'),
+        bold: true,
+        onTap: () {
+          final sum = int.tryParse(_sum.text.replaceAll(RegExp(r'[^0-9]'), ''));
+          if (_insurer.text.trim().isEmpty || _no.text.trim().isEmpty || sum == null) return toast(context, tr('Fill in insurer, policy number and sum insured'));
+          store.upsertPolicy(InsurancePolicy(
+            id: p?.id ?? store.newId(), insurer: _insurer.text.trim(), plan: _plan.text.trim(), policyNo: _no.text.trim(), sumInsured: sum, validTill: _valid,
+            members: _members.toList(), cashless: _cashless, premium: int.tryParse(_premium.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+          ));
+          Navigator.pop(context);
+          toast(context, p == null ? tr('Policy added') : tr('Policy updated'));
+        },
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
         FormGroup(header: tr('Policy'), children: [
           FormField2(label: tr('Insurer'), controller: _insurer, hint: tr('e.g. Star Health')),
           FormField2(label: tr('Plan'), controller: _plan, hint: tr('Plan name')),
@@ -244,10 +229,11 @@ class _PolicyEditorState extends State<PolicyEditor> {
           FormField2(label: tr('Premium'), controller: _premium, hint: tr('₹ per year'), keyboard: TextInputType.number),
           IOSRow(
             title: tr('Valid till'),
-            trailing: Text(DateFormat('d MMM y').format(_valid), style: T.sub.copyWith(color: c.label2)),
-            onTap: () => showCupertinoModalPopup(
-              context: context,
-              builder: (_) => Container(height: 260, color: c.card, child: CupertinoDatePicker(mode: CupertinoDatePickerMode.date, initialDateTime: _valid, onDateTimeChanged: (d) => setState(() => _valid = d))),
+            value: DateFormat('d MMM y').format(_valid),
+            onTap: () => showPicker(
+              context,
+              title: tr('Valid till'),
+              picker: CupertinoDatePicker(mode: CupertinoDatePickerMode.date, initialDateTime: _valid, onDateTimeChanged: (d) => setState(() => _valid = d)),
             ),
           ),
           IOSRow(title: tr('Cashless network'), trailing: CupertinoSwitch(value: _cashless, onChanged: (v) => setState(() => _cashless = v)), chevron: false),
@@ -263,17 +249,19 @@ class _PolicyEditorState extends State<PolicyEditor> {
         ]),
         if (p != null) ...[
           const SizedBox(height: 24),
-          CupertinoButton(
-            onPressed: () async {
+          AppButton(
+            tr('Delete policy'),
+            kind: ButtonKind.plain,
+            destructive: true,
+            onTap: () async {
               if (await confirm(context, title: tr('Delete policy?'), message: tr('Its claims will be deleted too.'), action: tr('Delete'))) {
                 store.deletePolicy(p!.id);
                 if (context.mounted) Navigator.pop(context);
               }
             },
-            child: Text(tr('Delete policy'), style: TextStyle(color: c.red)),
           ),
         ],
-      ]),
+      ],
     );
   }
 }
@@ -305,39 +293,36 @@ class _ClaimEditorState extends State<ClaimEditor> {
     final c = context.ios;
     final store = context.read<PatientStore>();
     _policy ??= store.policies.firstOrNull?.id;
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(
-        backgroundColor: c.material,
-        leading: CupertinoButton(padding: EdgeInsets.zero, onPressed: () => Navigator.pop(context), child: Text(tr('Cancel'))),
-        middle: Text(cl == null ? tr('New claim') : tr('Edit claim')),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            final amt = int.tryParse(_amount.text.replaceAll(RegExp(r'[^0-9]'), ''));
-            if (_policy == null || _title.text.trim().isEmpty || amt == null) return toast(context, tr('Add a title, amount and policy'));
-            final claim = cl ?? Claim(id: store.newId(), policyId: _policy!, title: '', hospital: '', amount: 0, forMember: _for, timeline: [ClaimEvent(ClaimStatus.submitted, DateTime.now())]);
-            store.upsertClaim(claim
-              ..policyId = _policy!
-              ..title = _title.text.trim()
-              ..hospital = _hospital.text.trim()
-              ..amount = amt
-              ..forMember = _for
-              ..recordIds = _recs.toList());
-            Navigator.pop(context);
-            toast(context, cl == null ? tr('Claim submitted') : tr('Claim updated'), cl == null ? tr('You\'ll see updates from the insurer here.') : null);
-          },
-          child: Text(cl == null ? tr('Submit') : tr('Save'), style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+    return PlainPage(
+      title: cl == null ? tr('New claim') : tr('Edit claim'),
+      leading: BarButton(tr('Cancel'), onTap: () => Navigator.pop(context)),
+      trailing: BarButton(
+        cl == null ? tr('Submit') : tr('Save'),
+        bold: true,
+        onTap: () {
+          final amt = int.tryParse(_amount.text.replaceAll(RegExp(r'[^0-9]'), ''));
+          if (_policy == null || _title.text.trim().isEmpty || amt == null) return toast(context, tr('Add a title, amount and policy'));
+          final claim = cl ?? Claim(id: store.newId(), policyId: _policy!, title: '', hospital: '', amount: 0, forMember: _for, timeline: [ClaimEvent(ClaimStatus.submitted, DateTime.now())]);
+          store.upsertClaim(claim
+            ..policyId = _policy!
+            ..title = _title.text.trim()
+            ..hospital = _hospital.text.trim()
+            ..amount = amt
+            ..forMember = _for
+            ..recordIds = _recs.toList());
+          Navigator.pop(context);
+          toast(context, cl == null ? tr('Claim submitted') : tr('Claim updated'), cl == null ? tr('You\'ll see updates from the insurer here.') : null);
+        },
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
         FormGroup(header: tr('Claim'), children: [
           FormField2(label: tr('For'), controller: _title, hint: tr('e.g. Hospital stay, OPD visit')),
           FormField2(label: tr('Hospital'), controller: _hospital, hint: tr('Hospital or clinic')),
           FormField2(label: tr('Amount'), controller: _amount, hint: '₹', keyboard: TextInputType.number),
           IOSRow(
             title: tr('Policy'),
-            trailing: Text(store.policies.where((p) => p.id == _policy).map((p) => p.insurer).firstOrNull ?? tr('None'), style: T.sub.copyWith(color: c.label2)),
+            value: store.policies.where((p) => p.id == _policy).map((p) => p.insurer).firstOrNull ?? tr('None'),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -351,7 +336,7 @@ class _ClaimEditorState extends State<ClaimEditor> {
           ),
           IOSRow(
             title: tr('Patient'),
-            trailing: Text(trData(store.memberName(_for)), style: T.sub.copyWith(color: c.label2)),
+            value: trData(store.memberName(_for)),
             onTap: () async {
               final v = await showCupertinoModalPopup<String>(
                 context: context,
@@ -375,7 +360,7 @@ class _ClaimEditorState extends State<ClaimEditor> {
               onTap: () => setState(() => _recs.contains(r.id) ? _recs.remove(r.id) : _recs.add(r.id)),
             ),
         ]),
-      ]),
+      ],
     );
   }
 }

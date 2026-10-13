@@ -100,10 +100,11 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: _active ? const Color(0xFF8E0E00) : Colors.black,
       body: SafeArea(
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+        child: ListView(physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
           Row(children: [
             CupertinoButton(
               padding: EdgeInsets.zero,
+              minimumSize: const Size(44, 44),
               onPressed: () {
                 if (_active) {
                   final id = _sosId;
@@ -147,7 +148,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
                           opacity: (1 - ((_pulse.value + i / 3) % 1)).clamp(0, 1) * .5,
                           child: Container(width: 150 + 90 * ((_pulse.value + i / 3) % 1), height: 150 + 90 * ((_pulse.value + i / 3) % 1), decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFFF3B30))),
                         ),
-                      SizedBox(width: 176, height: 176, child: CircularProgressIndicator(value: _active ? 1 : (widget.trigger != null ? 1 - _left / 10 : _hold.value), strokeWidth: 6, color: Colors.white, backgroundColor: Colors.white24)),
+                      SizedBox(width: 176, height: 176, child: CircularProgressIndicator(value: _active ? 1 : (widget.trigger != null ? 1 - _left / 10 : _hold.value), strokeWidth: 6, strokeCap: StrokeCap.round, color: Colors.white, backgroundColor: Colors.white24)),
                       Container(
                         width: 156,
                         height: 156,
@@ -163,12 +164,19 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
           ),
           if (widget.trigger != null && !_active) ...[
             const SizedBox(height: 18),
-            CupertinoButton(color: Colors.white, onPressed: _activate, child: Text(tr('Send SOS now'), style: TextStyle(color: Color(0xFFD70015), fontWeight: FontWeight.w700))),
-            CupertinoButton(onPressed: () => Navigator.pop(context), child: Text(tr('I\'m OK, cancel'), style: const TextStyle(color: Colors.white))),
+            CupertinoButton(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(R.md),
+              minimumSize: const Size(50, 50),
+              onPressed: _activate,
+              child: Text(tr('Send SOS now'), style: const TextStyle(color: Color(0xFFD70015), fontWeight: FontWeight.w700, fontSize: 17)),
+            ),
+            const SizedBox(height: 4),
+            AppButton(tr('I\'m OK, cancel'), kind: ButtonKind.plain, color: Colors.white, onTap: () => Navigator.pop(context)),
           ],
           const SizedBox(height: 22),
           _DarkCard(children: [
-            _DarkRow(icon: CupertinoIcons.phone_fill, title: tr('Call 112'), subtitle: tr('National emergency number'), trailing: CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 14), color: const Color(0xFF34C759), sizeStyle: CupertinoButtonSize.small, onPressed: _call, child: Text(tr('Call')))),
+            _DarkRow(icon: CupertinoIcons.phone_fill, title: tr('Call 112'), subtitle: tr('National emergency number'), trailing: AppButton(tr('Call'), size: ButtonSize.small, color: const Color(0xFF34C759), onTap: _call)),
             _DarkRow(icon: CupertinoIcons.location_fill, title: tr('Location'), subtitle: _active ? tr('Shared · Sector 62, Noida (demo location)') : tr('Shared when SOS starts')),
             if (r != null && r.good) _DarkRow(icon: CupertinoIcons.waveform_path_ecg, title: tr('Live vitals'), subtitle: 'HR ${r.r.hr} · SpO₂ ${r.r.spo2}% · ${r.r.temp.toStringAsFixed(1)} °C'),
           ]),
@@ -191,10 +199,7 @@ class _SosScreenState extends State<SosScreen> with TickerProviderStateMixin {
               ),
           ]),
           const SizedBox(height: 14),
-          CupertinoButton(
-            onPressed: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen())),
-            child: Text(tr('Show Medical ID'), style: const TextStyle(color: Colors.white)),
-          ),
+          AppButton(tr('Show Medical ID'), kind: ButtonKind.plain, color: Colors.white, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const MedicalIdScreen()))),
           Text(tr('Messages to contacts are simulated and recorded by the BT39 service; no text message is sent. The 112 call uses your phone\'s dialer.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: Colors.white38)),
         ]),
       ),
@@ -207,9 +212,10 @@ class _DarkCard extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .1), borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .1), borderRadius: BorderRadius.circular(R.md)),
         child: Column(children: [
-          for (var i = 0; i < children.length; i++) ...[if (i > 0) const Divider(height: .5, color: Colors.white12, indent: 54), children[i]],
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) const Padding(padding: EdgeInsets.only(left: 54), child: SizedBox(height: .5, child: ColoredBox(color: Colors.white12))), children[i]],
         ]),
       );
 }
@@ -247,15 +253,15 @@ class MedicalIdScreen extends StatelessWidget {
     Widget block(String title, String body) => Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title.toUpperCase(), style: T.caption.copyWith(color: c.red, fontWeight: FontWeight.w700, letterSpacing: .5)),
+            Text(title.toUpperCase(), style: T.overline.copyWith(color: c.red)),
             const SizedBox(height: 3),
             Text(body, style: T.body.copyWith(color: c.label)),
           ]),
         );
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: CupertinoNavigationBar(previousPageTitle: tr('Back'), backgroundColor: c.material, middle: Text(tr('Medical ID'))),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+    return PlainPage(
+      title: tr('Medical ID'),
+      previousTitle: tr('Back'),
+      children: [
         IOSCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -278,7 +284,7 @@ class MedicalIdScreen extends StatelessWidget {
             block(tr('Emergency contacts'), store.emergencyContacts.isEmpty ? tr('None') : store.emergencyContacts.map((m) => '${m.name} (${trData(m.relation)}) ${m.phone}').join('\n')),
           ]),
         ),
-      ]),
+      ],
     );
   }
 }
