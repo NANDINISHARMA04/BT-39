@@ -96,6 +96,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 3,
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,

@@ -176,7 +176,7 @@ class Hairline extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.only(left: indent),
-        child: SizedBox(height: 1 / MediaQuery.devicePixelRatioOf(context), child: ColoredBox(color: context.ios.sep)),
+        child: SizedBox(width: double.infinity, height: 1 / MediaQuery.devicePixelRatioOf(context), child: ColoredBox(color: context.ios.sep)),
       );
 }
 
@@ -284,16 +284,19 @@ class GroupedList extends StatelessWidget {
   final List<Widget> children;
   final String? footer;
 
-  /// Hairlines start where the text starts: after the icon, or at the edge of the text when there is none.
-  static double _indent(Widget w) => w is IOSRow && (w.icon != null || w.leading != null) ? 58 : 14;
+  /// Whether a row has an icon or picture at its start, looking through the Semantics that wrap some rows.
+  static bool _leads(Widget w) => w is IOSRow ? (w.icon != null || w.leading != null) : (w is Semantics && w.child != null && _leads(w.child!));
 
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
+    // Hairlines start where the text starts, and all of a group's start in the same place: after the icon when the
+    // group has icons, at the card's edge when it has none.
+    final indent = children.any(_leads) ? 58.0 : 14.0;
     final rows = <Widget>[];
     for (var i = 0; i < children.length; i++) {
       rows.add(children[i]);
-      if (i < children.length - 1) rows.add(Hairline(indent: _indent(children[i])));
+      if (i < children.length - 1) rows.add(Hairline(indent: indent));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
@@ -337,7 +340,14 @@ class IOSRow extends StatelessWidget {
                 if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(subtitle!, style: T.footnote.copyWith(color: c.label2))),
               ]),
             ),
-            if (value != null) ...[const SizedBox(width: 8), Flexible(child: Text(value!, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.body.copyWith(color: c.label2)))],
+            // The title takes what the value leaves; the value hugs the right edge and shortens with "…" when it is long.
+            if (value != null) ...[
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .45),
+                child: Text(value!, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.right, style: T.body.copyWith(color: c.label2)),
+              ),
+            ],
             if (trailing != null) ...[const SizedBox(width: 8), trailing!],
             if (onTap != null && chevron) ...[const SizedBox(width: 6), const Chevron()],
           ]),

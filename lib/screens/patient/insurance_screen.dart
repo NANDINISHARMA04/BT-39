@@ -145,9 +145,14 @@ class _ClaimCard extends StatelessWidget {
           ],
           const SizedBox(height: 10),
           Row(children: [
-            if (cl.status != ClaimStatus.paid && cl.status != ClaimStatus.rejected)
-              Flexible(child: AppButton(tr('Simulate insurer update'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => store.advanceClaim(cl))),
-            const Spacer(),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: cl.status != ClaimStatus.paid && cl.status != ClaimStatus.rejected
+                    ? AppButton(tr('Simulate insurer update'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => store.advanceClaim(cl))
+                    : const SizedBox.shrink(),
+              ),
+            ),
             AppButton(tr('Edit'), kind: ButtonKind.plain, size: ButtonSize.small, onTap: () => Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => ClaimEditor(claim: cl)))),
             AppButton(
               tr('Delete'),

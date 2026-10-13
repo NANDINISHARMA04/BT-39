@@ -252,6 +252,7 @@ class WardScreen extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           GridView.builder(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: beds.length,

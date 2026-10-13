@@ -116,6 +116,7 @@ class _BedScreenState extends State<BedScreen> {
         const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: MediaQuery.of(context).size.width > 700 ? 6 : 3,
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,

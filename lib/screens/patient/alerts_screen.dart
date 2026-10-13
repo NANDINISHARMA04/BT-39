@@ -207,6 +207,7 @@ class AlertActions extends StatelessWidget {
         const SizedBox(height: 8),
         GridView.count(
           crossAxisCount: 2,
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 8,

@@ -86,6 +86,7 @@ class _Kpi extends StatelessWidget {
 Widget _kpiGrid(BuildContext context, List<Widget> tiles) {
   final cols = MediaQuery.sizeOf(context).width >= 700 ? 4 : 2;
   return GridView(
+    padding: EdgeInsets.zero,
     shrinkWrap: true,
     physics: const NeverScrollableScrollPhysics(),
     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: cols, mainAxisSpacing: 10, crossAxisSpacing: 10, mainAxisExtent: 140),

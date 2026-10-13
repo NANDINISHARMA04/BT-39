@@ -215,7 +215,7 @@ class _DarkCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(color: Colors.white.withValues(alpha: .1), borderRadius: BorderRadius.circular(R.md)),
         child: Column(children: [
-          for (var i = 0; i < children.length; i++) ...[if (i > 0) const Padding(padding: EdgeInsets.only(left: 54), child: SizedBox(height: .5, child: ColoredBox(color: Colors.white12))), children[i]],
+          for (var i = 0; i < children.length; i++) ...[if (i > 0) const Padding(padding: EdgeInsets.only(left: 54), child: SizedBox(width: double.infinity, height: .5, child: ColoredBox(color: Colors.white12))), children[i]],
         ]),
       );
 }
