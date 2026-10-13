@@ -8,6 +8,8 @@ import '../../engine/adapt_alert.dart';
 import '../../engine/study.dart';
 import '../../l10n/l10n.dart';
 import '../../services/monitor.dart';
+import '../../services/pulse_api.dart';
+import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/charts.dart';
 import '../../widgets/common.dart';
@@ -30,6 +32,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
   void initState() {
     super.initState();
     insightsVital.addListener(_onVital);
+    _loadStudy();
   }
 
   @override
@@ -41,7 +44,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
   void _onVital() => setState(() {});
 
   int _seed = 7;
-  late StudyResult _study = runStudy(seed: _seed);
+  StudyResult? _study;
+  String? _studyError;
+  bool _studyLoading = false;
+
+  /// The 30-day study runs on the BT39 service, with the same decision code as the live engine.
+  Future<void> _loadStudy() async {
+    _studyLoading = true;
+    _studyError = null;
+    try {
+      final r = await runStudy(context.read<Session>().api, seed: _seed);
+      if (mounted) setState(() => _study = r);
+    } catch (e) {
+      if (mounted) setState(() => _studyError = (e is ApiException ? e.message : null) ?? tr('The service could not be reached. It may be waking up. Try again in a minute.'));
+    }
+    if (mounted) setState(() => _studyLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,32 +185,39 @@ class _InsightsScreenState extends State<InsightsScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(tr('False alarms per patient per day'), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
-            StudyChart(result: _study),
-            const SizedBox(height: 8),
-            Wrap(spacing: 12, children: [_Legend(color: c.gray, label: tr('Fixed threshold')), _Legend(color: c.blue, label: tr('Personal normal only')), _Legend(color: c.green, label: 'AdaptAlert')]),
-            const SizedBox(height: 12),
-            _StudyTable(r: _study),
-            const SizedBox(height: 10),
-            Text(
-              tr('{patients} virtual patients over {days} days, {events} real events. In week 5 AdaptAlert sent {cut}% fewer false alarms than the fixed-threshold monitor and caught {caught} of real events. Simulated data, using the same decision code as the live app.', {
-                'patients': _study.patients,
-                'days': _study.days,
-                'events': _study.realEvents,
-                'cut': (100 * (1 - _study.metrics['C']!.falsePerDayWeek5 / _study.metrics['A']!.falsePerDayWeek5)).round(),
-                'caught': pct(_study.metrics['C']!.sensitivity),
-              }),
-              style: T.footnote.copyWith(color: c.label2),
-            ),
+            if (_study case final study?) ...[
+              StudyChart(result: study),
+              const SizedBox(height: 8),
+              Wrap(spacing: 12, children: [_Legend(color: c.gray, label: tr('Fixed threshold')), _Legend(color: c.blue, label: tr('Personal normal only')), _Legend(color: c.green, label: 'AdaptAlert')]),
+              const SizedBox(height: 12),
+              _StudyTable(r: study),
+              const SizedBox(height: 10),
+              Text(
+                tr('{patients} virtual patients over {days} days, {events} real events. In week 5 AdaptAlert sent {cut}% fewer false alarms than the fixed-threshold monitor and caught {caught} of real events. Simulated data, using the same decision code as the live app.', {
+                  'patients': study.patients,
+                  'days': study.days,
+                  'events': study.realEvents,
+                  'cut': (100 * (1 - study.metrics['C']!.falsePerDayWeek5 / study.metrics['A']!.falsePerDayWeek5)).round(),
+                  'caught': pct(study.metrics['C']!.sensitivity),
+                }),
+                style: T.footnote.copyWith(color: c.label2),
+              ),
+            ] else if (_studyError != null)
+              Text(_studyError!, style: T.footnote.copyWith(color: c.red))
+            else
+              const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CupertinoActivityIndicator())),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: CupertinoButton.tinted(
                 sizeStyle: CupertinoButtonSize.medium,
-                onPressed: () => setState(() {
-                  _seed = Random().nextInt(1 << 20);
-                  _study = runStudy(seed: _seed);
-                }),
-                child: Text(tr('Run again with new patients')),
+                onPressed: _studyLoading
+                    ? null
+                    : () {
+                        setState(() => _seed = Random().nextInt(1 << 20));
+                        _loadStudy();
+                      },
+                child: _studyLoading && _study != null ? const CupertinoActivityIndicator() : Text(tr('Run again with new patients')),
               ),
             ),
           ]),
@@ -289,7 +314,7 @@ class _BucketRow extends StatelessWidget {
     final c = context.ios;
     final b = engine.buckets[k]!;
     final p = engine.bucketP(k);
-    final send = p >= engine.tau;
+    final send = b.send; // the service's decision for this pattern at today's threshold
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

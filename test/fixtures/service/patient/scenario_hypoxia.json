@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "scenario": {
+    "id": "hypoxia",
+    "minutes_left": 10
+  }
+}

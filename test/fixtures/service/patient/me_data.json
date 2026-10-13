@@ -1,0 +1,247 @@
+{
+  "profile": {
+    "name": "Jai",
+    "email": "patient@pulseos.app",
+    "phone": "+91 98100 12345",
+    "age": 24,
+    "sex": "M",
+    "bloodGroup": "B+",
+    "heightCm": 174.0,
+    "weightKg": 66.0,
+    "city": "Noida",
+    "conditions": [
+      "Heart valve repair surgery, day 6 at home",
+      "Mild asthma"
+    ],
+    "allergies": [
+      "Penicillin"
+    ],
+    "medications": [
+      {
+        "name": "Aspirin",
+        "dose": "75 mg",
+        "schedule": "Once daily, after breakfast"
+      },
+      {
+        "name": "Metoprolol",
+        "dose": "25 mg",
+        "schedule": "Twice daily"
+      },
+      {
+        "name": "Pantoprazole",
+        "dose": "40 mg",
+        "schedule": "Before breakfast"
+      },
+      {
+        "name": "Salbutamol inhaler",
+        "dose": "100 mcg",
+        "schedule": "When needed for wheeze"
+      }
+    ]
+  },
+  "family": [
+    {
+      "id": "f1",
+      "name": "Sunita Sharma",
+      "relation": "Mother",
+      "age": 50,
+      "bloodGroup": "B+",
+      "phone": "+91 98111 22334",
+      "conditions": [],
+      "caregiver": true,
+      "emergencyContact": true
+    },
+    {
+      "id": "f2",
+      "name": "Rajesh Sharma",
+      "relation": "Father",
+      "age": 54,
+      "bloodGroup": "O+",
+      "phone": "+91 98111 99887",
+      "conditions": [
+        "High blood pressure"
+      ],
+      "caregiver": false,
+      "emergencyContact": true
+    },
+    {
+      "id": "f3",
+      "name": "Ishaan Sharma",
+      "relation": "Brother",
+      "age": 12,
+      "bloodGroup": "B+",
+      "phone": "",
+      "conditions": [
+        "Asthma (mild)"
+      ],
+      "caregiver": false,
+      "emergencyContact": false
+    }
+  ],
+  "appointments": [
+    {
+      "id": "a1",
+      "doctorId": "d1",
+      "forMember": "self",
+      "at": "2026-10-14T06:00:00.000Z",
+      "mode": "video",
+      "reason": "Post-surgery review, week 1",
+      "notes": "Share AdaptAlert summary before the call.",
+      "status": "upcoming",
+      "fromAlert": null
+    },
+    {
+      "id": "a2",
+      "doctorId": "d7",
+      "forMember": "f3",
+      "at": "2026-10-17T11:30:00.000Z",
+      "mode": "clinic",
+      "reason": "Inhaler check-up",
+      "notes": "",
+      "status": "upcoming",
+      "fromAlert": null
+    },
+    {
+      "id": "a3",
+      "doctorId": "d2",
+      "forMember": "self",
+      "at": "2026-10-04T04:30:00.000Z",
+      "mode": "clinic",
+      "reason": "Fever follow-up",
+      "notes": "",
+      "status": "completed",
+      "fromAlert": null
+    }
+  ],
+  "records": [
+    {
+      "id": "r1",
+      "title": "Discharge summary, Fortis",
+      "category": "Discharge summary",
+      "date": "2026-10-06T18:30:00.000Z",
+      "forMember": "self",
+      "fileName": "discharge_summary.pdf",
+      "sizeBytes": 482113,
+      "notes": "Mitral valve repair. Follow up with cardiology in 1 week.",
+      "shared": true
+    },
+    {
+      "id": "r2",
+      "title": "Blood count and INR",
+      "category": "Lab report",
+      "date": "2026-09-30T18:30:00.000Z",
+      "forMember": "self",
+      "fileName": "lab_report.pdf",
+      "sizeBytes": 210554,
+      "notes": "Haemoglobin 11.8 g/dL. INR 1.1.",
+      "shared": true
+    },
+    {
+      "id": "r3",
+      "title": "Chest X-ray",
+      "category": "Imaging",
+      "date": "2026-10-05T18:30:00.000Z",
+      "forMember": "self",
+      "fileName": "chest_xray.jpg",
+      "sizeBytes": 1830220,
+      "notes": "",
+      "shared": false
+    },
+    {
+      "id": "r4",
+      "title": "Discharge medicines",
+      "category": "Prescription",
+      "date": "2026-10-06T18:30:00.000Z",
+      "forMember": "self",
+      "fileName": "prescription.jpg",
+      "sizeBytes": 642010,
+      "notes": "",
+      "shared": true
+    },
+    {
+      "id": "r5",
+      "title": "Vaccination card",
+      "category": "Vaccination",
+      "date": "2026-03-26T18:30:00.000Z",
+      "forMember": "f3",
+      "fileName": "vaccines.pdf",
+      "sizeBytes": 120044,
+      "notes": "",
+      "shared": false
+    }
+  ],
+  "policies": [
+    {
+      "id": "p1",
+      "insurer": "Star Health",
+      "plan": "Family Health Optima",
+      "policyNo": "SH-4471-2209-88",
+      "sumInsured": 1000000,
+      "validTill": "2027-03-30T18:30:00.000Z",
+      "members": [
+        "self",
+        "f2",
+        "f3"
+      ],
+      "cashless": true,
+      "premium": 28400
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "policyId": "p1",
+      "title": "Heart valve repair surgery",
+      "hospital": "Fortis Heart Institute",
+      "amount": 420000,
+      "approved": 395000,
+      "forMember": "self",
+      "recordIds": [
+        "r1"
+      ],
+      "timeline": [
+        {
+          "status": "submitted",
+          "at": "2026-10-07T03:30:00.000Z",
+          "note": ""
+        },
+        {
+          "status": "underReview",
+          "at": "2026-10-08T08:30:00.000Z",
+          "note": "Documents received"
+        },
+        {
+          "status": "approved",
+          "at": "2026-10-10T10:30:00.000Z",
+          "note": "₹25,000 not covered: room upgrade"
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "policyId": "p1",
+      "title": "Pediatric OPD and nebuliser",
+      "hospital": "Rainbow Children's Hospital",
+      "amount": 6800,
+      "approved": null,
+      "forMember": "f3",
+      "recordIds": [],
+      "timeline": [
+        {
+          "status": "submitted",
+          "at": "2026-10-12T12:30:00.000Z",
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "prefs": {
+    "theme": "system",
+    "fahrenheit": false,
+    "notifications": true,
+    "autoSos": true,
+    "shareWithCareTeam": true,
+    "caregiverEscalation": true,
+    "language": "English"
+  }
+}

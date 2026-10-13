@@ -33,11 +33,11 @@ void openPatient(BuildContext context, String id) => Navigator.of(context).push(
       _ => ('Stable', c.green),
     };
   }
-  if (p.source == PatientSource.account && p.store == null) return ('New', c.blue);
+  if (p.source == PatientSource.account && !p.hasStore) return ('New', c.blue);
   return p.status == 'Watching' ? ('Watching', c.orange) : ('Stable', c.green);
 }
 
-String _ageSex(CarePatient p) => [if (p.age > 0) '${p.age}', if (p.sex.isNotEmpty) p.sex, if (p.store != null || p.source == PatientSource.example) p.bloodGroup].join(' · ');
+String _ageSex(CarePatient p) => [if (p.age > 0) '${p.age}', if (p.sex.isNotEmpty) p.sex, if (p.hasStore || p.source == PatientSource.example) p.bloodGroup].join(' · ');
 
 class PatientsScreen extends StatefulWidget {
   const PatientsScreen({super.key});
@@ -52,7 +52,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
   @override
   void initState() {
     super.initState();
-    // Picks up patients who signed up on this device since the list was built.
+    // Picks up patients who signed up since the list was built.
     WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? context.read<ClinicalStore>().refreshPatients() : null);
   }
 
@@ -110,7 +110,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
               }),
           ]),
         const SizedBox(height: 10),
-        Text(tr('Patients who sign up on this device appear here automatically. Example patients are fictional.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
+        Text(tr('Patients who sign up appear here automatically. Example patients are fictional.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label3)),
       ],
     );
   }
@@ -132,7 +132,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     final cs = context.watch<ClinicalStore>();
     final s = context.watch<Session>();
     final p = cs.byId(widget.id);
-    if (p == null) return LargeTitlePage(title: tr('Patient'), children: [EmptyState(icon: CupertinoIcons.person, title: tr('Patient not found'), message: tr('They may have been removed from this device.'))]);
+    if (p == null) return LargeTitlePage(title: tr('Patient'), children: [EmptyState(icon: CupertinoIcons.person, title: tr('Patient not found'), message: tr('They may have been removed.'))]);
     final doctor = s.role == Role.doctor;
     final (st, col) = patientStatus(context, p);
     return LargeTitlePage(
@@ -302,12 +302,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
   List<Widget> _records(BuildContext context, CarePatient p) {
     final c = context.ios;
-    final recs = p.records.isNotEmpty || p.source != PatientSource.example
-        ? p.records
-        : [
-            MedicalRecord(id: 'x1', title: 'Last clinic letter', category: 'Discharge summary', date: DateTime.now().subtract(const Duration(days: 20)), forMember: 'self', fileName: 'clinic_letter.pdf', sizeBytes: 182220, notes: p.condition),
-            MedicalRecord(id: 'x2', title: 'Blood tests', category: 'Lab report', date: DateTime.now().subtract(const Duration(days: 9)), forMember: 'self', fileName: 'labs.pdf', sizeBytes: 96410, notes: 'Within the expected range for this patient.'),
-          ];
+    // Shared records come from the service; example patients come with two of their own.
+    final recs = p.records;
     if (recs.isEmpty) return [const SizedBox(height: 12), EmptyState(icon: CupertinoIcons.doc, title: tr('No shared records'), message: tr('Records the patient shares with their care team appear here.'))];
     return [
       SectionHeader(tr('Shared with the care team'), trailing: '${recs.length}'),
@@ -471,9 +467,10 @@ Future<void> showPrescribeSheet(BuildContext context, CarePatient p) {
               if (name.text.trim().isEmpty || dose.text.trim().isEmpty) return;
               final allergic = p.allergies.any((a) => name.text.toLowerCase().contains(a.toLowerCase().split(' ').first));
               if (allergic && !await confirm(ctx, title: tr('Allergy warning'), message: tr('{name} is allergic to {list}. Prescribe anyway?', {'name': p.name, 'list': p.allergies.map(trData).join(', ')}), action: tr('Prescribe'))) return;
-              await cs.prescribe(p, Medication(name: name.text.trim(), dose: dose.text.trim(), schedule: sched.text.trim().isEmpty ? 'As directed' : sched.text.trim()), days: days.text.trim());
+              // The service saves the prescription and, for a patient with an account, adds it to their own medicine list.
+              final added = await cs.prescribe(p, Medication(name: name.text.trim(), dose: dose.text.trim(), schedule: sched.text.trim().isEmpty ? 'As directed' : sched.text.trim()), days: days.text.trim());
               if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) toast(context, tr('Prescription saved'), p.store != null && p.source != PatientSource.example ? tr('Added to {name}\'s medicine list too.', {'name': p.name.split(' ').first}) : null);
+              if (context.mounted) toast(context, tr('Prescription saved'), added ? tr('Added to {name}\'s medicine list too.', {'name': p.name.split(' ').first}) : null);
             },
             child: Text(tr('Save prescription')),
           ),

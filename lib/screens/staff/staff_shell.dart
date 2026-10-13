@@ -266,10 +266,10 @@ class WardScreen extends StatelessWidget {
     final cols = width > 1100 ? 4 : width > 760 ? 3 : 2;
     return LargeTitlePage(
       title: tr('Ward A'),
-      subtitle: '${s.name} · ${s.role == Role.doctor ? tr('Doctor') : tr('Nurse')}${s.onDevice ? ' · ${tr('Demo ward')}' : ''}',
+      subtitle: '${s.name} · ${s.role == Role.doctor ? tr('Doctor') : tr('Nurse')}${s.demo ? ' · ${tr('Demo ward')}' : ''}',
       trailing: StatusPill(status: sc.status),
       children: [
-        if (sc.status == 'connecting' && !s.onDevice)
+        if (sc.status == 'connecting')
           IOSCard(child: Text(tr('Connecting to the BT39 service. On the free plan it can take about a minute to wake up.'), style: T.footnote.copyWith(color: c.label2))),
         if (sc.beds.isNotEmpty) ...[
           Row(children: [
@@ -319,7 +319,7 @@ class BedTile extends StatelessWidget {
     final col = bandColor(context, b.band);
     final emergency = b.band == 'high' && b.openAlerts.any((a) => !a.acknowledged);
     Widget v(String label, String? value, String vital, num? x) {
-      final pts = news2Points(vital, x, onOxygen: b.onOxygen ?? false) ?? 0;
+      final pts = b.points[vital] ?? 0; // NEWS2 points, scored by the service
       final vc = pts >= 3 ? c.red : pts == 2 ? c.orange : pts == 1 ? c.yellow : c.label;
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: T.caption.copyWith(color: c.label2, fontSize: 10.5)),
@@ -627,7 +627,7 @@ class StaffMeScreen extends StatelessWidget {
                 Text(s.name, style: T.title2.copyWith(color: c.label)),
                 Text(s.email, style: T.footnote.copyWith(color: c.label2)),
                 const SizedBox(height: 6),
-                Wrap(spacing: 6, children: [Pill(s.role == Role.doctor ? tr('Doctor') : tr('Nurse'), color: c.blue), Pill(s.onDevice ? tr('Demo ward') : tr('Ward A'), color: s.onDevice ? c.orange : c.green)]),
+                Wrap(spacing: 6, children: [Pill(s.role == Role.doctor ? tr('Doctor') : tr('Nurse'), color: c.blue), Pill(s.demo ? tr('Demo ward') : tr('Ward A'), color: s.demo ? c.orange : c.green)]),
               ]),
             ),
           ]),
@@ -646,7 +646,7 @@ class StaffMeScreen extends StatelessWidget {
         ]),
         FormGroup(header: tr('Connection'), children: [
           IOSRow(icon: CupertinoIcons.antenna_radiowaves_left_right, iconColor: c.green, title: tr('Live stream'), trailing: StatusPill(status: sc.status), chevron: false),
-          IOSRow(icon: CupertinoIcons.cloud_fill, iconColor: c.blue, title: tr('Source'), subtitle: s.onDevice ? tr('On-device demo ward (12 beds, NEWS2 every second)') : tr('BT39 monitor service + Supabase'), chevron: false),
+          IOSRow(icon: CupertinoIcons.cloud_fill, iconColor: c.blue, title: tr('Source'), subtitle: s.demo ? tr('BT39 service demo ward (12 beds, NEWS2 every second)') : tr('BT39 monitor service + Supabase'), chevron: false),
         ]),
         const SizedBox(height: 20),
         GroupedList(children: [

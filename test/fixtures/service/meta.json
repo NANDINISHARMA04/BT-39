@@ -1,0 +1,38 @@
+{
+  "recorded_on": "2026-10-13",
+  "tz_offset": 330,
+  "api": "http://localhost:8000/v1/pulse",
+  "beds": [
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B08",
+    "B09",
+    "B10",
+    "B11",
+    "B12"
+  ],
+  "questions": [
+    "How am I doing today?",
+    "Why did I get my last alert?",
+    "What has AdaptAlert learned about me?",
+    "When is my next appointment?",
+    "What medicines do I take?",
+    "Is my insurance claim approved?",
+    "I have chest pain",
+    "Where are my reports?",
+    "Where are my medicines?",
+    "How do I book an appointment?",
+    "How do I change the language?",
+    "I feel unwell",
+    "Where are my family contacts?",
+    "Where is my insurance?",
+    "Call my family",
+    "How do I make the text bigger?",
+    "What can you help with?",
+    "How do I change my appointment?"
+  ]
+}

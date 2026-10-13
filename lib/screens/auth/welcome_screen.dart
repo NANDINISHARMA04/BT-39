@@ -24,6 +24,9 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 14))..repeat();
 
+  /// Whether the demo now starting is the guided one (for the spinner).
+  bool _tour = false;
+
   @override
   void dispose() {
     _a.dispose();
@@ -42,7 +45,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         s.pendingAuth = null;
         _auth(p.role, signUp: p.signUp);
       }
+      final gone = s.expiredMessage;
+      if (gone != null) {
+        s.expiredMessage = null;
+        toast(context, tr('Demo ended'), gone);
+      }
     });
+  }
+
+  /// Demo Mode runs on the service now: start a fresh visit there, and say why
+  /// when it can't (the service may be waking up, or offline).
+  Future<void> _start(Role r, {bool tour = false}) async {
+    setState(() => _tour = tour);
+    final err = await context.read<Session>().startDemo(r, tour: tour);
+    if (err != null && mounted) toast(context, tr('The demo could not start.'), err);
   }
 
   void _auth(Role r, {bool signUp = false}) => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => RoleAuthScreen(role: r, signUp: signUp)));
@@ -50,7 +66,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
-    final s = context.read<Session>();
+    final s = context.watch<Session>();
     final wide = MediaQuery.sizeOf(context).width >= 900;
 
     final hero = Column(crossAxisAlignment: wide ? CrossAxisAlignment.start : CrossAxisAlignment.center, children: [
@@ -88,10 +104,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           _CtaButton(
             label: tr('Watch the demo with voice'),
             icon: CupertinoIcons.play_fill,
+            busy: s.starting == Role.patient && _tour,
             onTap: () {
+              if (s.starting != null) return;
               // Browsers allow speech only from a tap, so start the voice here.
               Narrator.instance.unlock();
-              s.startDemo(Role.patient, tour: true);
+              _start(Role.patient, tour: true);
             },
           ),
           _CtaButton(label: tr('Research Lab'), icon: CupertinoIcons.lab_flask_solid, tinted: true, onTap: () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const ResearchLabScreen()))),
@@ -120,8 +138,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       const SizedBox(height: 8),
       Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
         Text(tr('Just looking? Try without an account:'), style: T.footnote.copyWith(color: c.label2)),
-        for (final r in Role.values) CupertinoButton(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(30, 30), onPressed: () => s.startDemo(r), child: Text(tr(roleLabel[r]!), style: const TextStyle(fontSize: 14))),
+        for (final r in Role.values)
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(30, 30),
+            onPressed: s.starting != null ? null : () => _start(r),
+            child: s.starting == r && !_tour ? const CupertinoActivityIndicator(radius: 8) : Text(tr(roleLabel[r]!), style: const TextStyle(fontSize: 14)),
+          ),
       ]),
+      if (s.starting != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(tr('Waking up the server. This can take up to a minute.'), textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label2)),
+        ),
     ]);
 
     return Scaffold(
@@ -272,11 +301,11 @@ class _AppIcon extends StatelessWidget {
 }
 
 class _CtaButton extends StatelessWidget {
-  const _CtaButton({required this.label, required this.icon, required this.onTap, this.tinted = false});
+  const _CtaButton({required this.label, required this.icon, required this.onTap, this.tinted = false, this.busy = false});
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-  final bool tinted;
+  final bool tinted, busy;
   @override
   Widget build(BuildContext context) {
     final c = context.ios;
@@ -287,7 +316,7 @@ class _CtaButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(color: tinted ? c.blue.withValues(alpha: .14) : c.blue, borderRadius: BorderRadius.circular(16)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 18, color: tinted ? c.blue : Colors.white),
+          if (busy) CupertinoActivityIndicator(radius: 9, color: tinted ? c.blue : Colors.white) else Icon(icon, size: 18, color: tinted ? c.blue : Colors.white),
           const SizedBox(width: 8),
           Text(label, style: T.headline.copyWith(color: tinted ? c.blue : Colors.white)),
         ]),

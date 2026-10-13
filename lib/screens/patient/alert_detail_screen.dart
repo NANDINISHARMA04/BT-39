@@ -207,9 +207,8 @@ class _Decision extends StatelessWidget {
         ]),
       );
     }
-    final ci = personalInterval(Bucket()
-      ..r = (a.pu * (a.n + 2) - 1).clamp(0, a.n)
-      ..f = a.n - (a.pu * (a.n + 2) - 1).clamp(0, a.n));
+    // The 90% interval of the personal estimate, worked out by the service from this alert's own numbers.
+    final ci = a.explain?.ci ?? (lo: 0.0, hi: 1.0);
     Widget box(String title, String value, String sub, Color col) => Expanded(
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -288,29 +287,22 @@ class _Counterfactual extends StatelessWidget {
         ));
       }
       final parts = a.key.split('|');
-      if (parts[1] == 'multi' && r != null) {
-        final single = globalTree(Features(act: parts[0], primary: primary, zHR: r.z['hr']!, zSpO2: r.z['spo2']!, zTemp: r.z['temp']!, numAbn: 1, night: parts[3] == 'night'));
-        lines.add((CupertinoIcons.square_stack_3d_up, c.purple, tr('If only {vital} had changed, the model would rate it {p} instead of {pg}. Two vitals moving together is what made it more serious.', {'vital': tr(_label[primary]!).toLowerCase(), 'p': pct(single.p), 'pg': pct(a.pg)})));
+      final ex = a.explain;
+      final singleP = ex?.singleP;
+      if (parts[1] == 'multi' && r != null && singleP != null) {
+        lines.add((CupertinoIcons.square_stack_3d_up, c.purple, tr('If only {vital} had changed, the model would rate it {p} instead of {pg}. Two vitals moving together is what made it more serious.', {'vital': tr(_label[primary]!).toLowerCase(), 'p': pct(singleP), 'pg': pct(a.pg)})));
       }
       if (parts[0] != 'rest') {
         lines.add((CupertinoIcons.person_crop_circle_badge_checkmark, c.green, tr('The movement sensor showed activity, so a higher heart rate was expected and weighed less.')));
       }
-      // What the next similar pattern would score after each kind of feedback.
-      final b = engine.buckets[a.key];
-      Bucket plus({double r = 0, double f = 0}) => Bucket()
-        ..r = (b?.r ?? 0) + r
-        ..f = (b?.f ?? 0) + f;
-      double score(Bucket x) {
-        final q = personal(x);
-        return (1 - q.w) * a.pg + q.w * q.pu;
+      // What the next similar pattern would score after each kind of feedback, as the service works it out from what
+      // it has learned so far (it sends these again whenever the learning changes).
+      if (ex != null) {
+        lines.add((CupertinoIcons.xmark_circle, c.green, ex.ifFalseSends
+                ? tr('If a clinician marks it a false alarm, the next similar pattern scores {p} against τ {tau}: still sent.', {'p': pct(ex.ifFalse), 'tau': pct(ex.tauFalse)})
+                : tr('If a clinician marks it a false alarm, the next similar pattern scores {p} against τ {tau}: held back.', {'p': pct(ex.ifFalse), 'tau': pct(ex.tauFalse)})));
+        lines.add((CupertinoIcons.checkmark_circle, c.red, tr('If it is confirmed real, the next one scores {p} against τ {tau}: sent, and sooner.', {'p': pct(ex.ifReal), 'tau': pct(ex.tauReal)})));
       }
-
-      final ifFalse = score(plus(f: 1)), tauFalse = nudgedTau(engine.tau, engine.weekStartTau, .03);
-      final ifReal = score(plus(r: 1)), tauReal = nudgedTau(engine.tau, engine.weekStartTau, -.05);
-      lines.add((CupertinoIcons.xmark_circle, c.green, ifFalse >= tauFalse
-              ? tr('If a clinician marks it a false alarm, the next similar pattern scores {p} against τ {tau}: still sent.', {'p': pct(ifFalse), 'tau': pct(tauFalse)})
-              : tr('If a clinician marks it a false alarm, the next similar pattern scores {p} against τ {tau}: held back.', {'p': pct(ifFalse), 'tau': pct(tauFalse)})));
-      lines.add((CupertinoIcons.checkmark_circle, c.red, tr('If it is confirmed real, the next one scores {p} against τ {tau}: sent, and sooner.', {'p': pct(ifReal), 'tau': pct(tauReal)})));
     }
     return IOSCard(
       child: Column(children: [

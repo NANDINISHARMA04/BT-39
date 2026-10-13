@@ -1,16 +1,19 @@
-import 'dart:convert';
-import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../l10n/l10n.dart';
+import '../l10n/msg.dart';
 import '../models/patient_models.dart';
-import 'patient_store.dart';
+import 'pulse_api.dart';
 import 'session.dart';
 
 /// Where a patient in the doctor's and nurse's list comes from.
 enum PatientSource { live, account, example }
+
+double _d(Object? v) => (v as num?)?.toDouble() ?? 0;
+int _i(Object? v) => (v as num?)?.round() ?? 0;
+Map<String, dynamic> _obj(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+DateTime _at(Object? v) => DateTime.tryParse('$v')?.toLocal() ?? DateTime.now();
 
 /// One patient as the care team sees them.
 class CarePatient {
@@ -31,7 +34,7 @@ class CarePatient {
     this.vitals,
     this.status = 'Stable',
     this.learned,
-    this.store,
+    this.hasStore = false,
   });
   final String id, name, sex, condition, bloodGroup, phone, status;
   final int age;
@@ -46,18 +49,42 @@ class CarePatient {
   /// Last vitals for patients without a live band: heart rate, SpO₂, temperature.
   final ({int hr, int spo2, double temp})? vitals;
 
-  /// The patient's own saved data, when they have an account on this device.
-  final PatientStore? store;
+  /// True when the patient has an account with saved data (their own medicine
+  /// list, records and appointments), as opposed to a new or example patient.
+  final bool hasStore;
 
   bool get live => source == PatientSource.live;
+
+  factory CarePatient.fromJson(Map<String, dynamic> j) {
+    final v = j['vitals'];
+    return CarePatient(
+      id: '${j['id']}',
+      name: '${j['name'] ?? ''}',
+      age: _i(j['age']),
+      sex: '${j['sex'] ?? ''}',
+      condition: '${j['condition'] ?? ''}',
+      source: PatientSource.values.asNameMap()['${j['source']}'] ?? PatientSource.example,
+      bloodGroup: '${j['bloodGroup'] ?? 'O+'}',
+      phone: '${j['phone'] ?? ''}',
+      email: j['email'] as String?,
+      conditions: [for (final c in (j['conditions'] as List? ?? const [])) '$c'],
+      allergies: [for (final c in (j['allergies'] as List? ?? const [])) '$c'],
+      medications: [for (final m in (j['medications'] as List? ?? const [])) Medication.fromJson(_obj(m))],
+      records: [for (final r in (j['records'] as List? ?? const [])) MedicalRecord.fromJson(_obj(r))],
+      vitals: v is Map ? (hr: _i(v['hr']), spo2: _i(v['spo2']), temp: _d(v['temp'])) : null,
+      status: '${j['status'] ?? 'Stable'}',
+      learned: j['learned'] as String?,
+      hasStore: j['hasStore'] == true,
+    );
+  }
 }
 
 class ClinicalNote {
   ClinicalNote({required this.id, required this.patientId, required this.at, required this.kind, required this.text, required this.by});
   final String id, patientId, kind, text, by; // kind: note | prescription | consult | nursing
   final DateTime at;
-  Map<String, dynamic> toJson() => {'id': id, 'patientId': patientId, 'at': at.toIso8601String(), 'kind': kind, 'text': text, 'by': by};
-  factory ClinicalNote.fromJson(Map<String, dynamic> j) => ClinicalNote(id: j['id'], patientId: j['patientId'], at: DateTime.parse(j['at']), kind: j['kind'], text: j['text'], by: j['by'] ?? '');
+  Map<String, dynamic> toJson() => {'id': id, 'patientId': patientId, 'at': at.toUtc().toIso8601String(), 'kind': kind, 'text': text, 'by': by};
+  factory ClinicalNote.fromJson(Map<String, dynamic> j) => ClinicalNote(id: '${j['id']}', patientId: '${j['patientId']}', at: _at(j['at']), kind: '${j['kind'] ?? 'note'}', text: '${j['text'] ?? ''}', by: '${j['by'] ?? ''}');
 }
 
 enum VisitStatus { upcoming, completed, cancelled, noShow }
@@ -71,232 +98,187 @@ class Visit {
   final DateTime at;
   final bool video, bookedByPatient;
   VisitStatus status;
-  Map<String, dynamic> toJson() => {'id': id, 'patientId': patientId, 'patientName': patientName, 'at': at.toIso8601String(), 'reason': reason, 'video': video, 'status': status.name};
-  factory Visit.fromJson(Map<String, dynamic> j) => Visit(
-        id: j['id'], patientId: j['patientId'], patientName: j['patientName'], at: DateTime.parse(j['at']), reason: j['reason'] ?? '', video: j['video'] ?? false, status: VisitStatus.values.byName(j['status'] ?? 'upcoming'),
-      );
+  Map<String, dynamic> toJson() => {'id': id, 'patientId': patientId, 'patientName': patientName, 'at': at.toUtc().toIso8601String(), 'reason': reason, 'video': video, 'status': status.name, 'bookedByPatient': bookedByPatient};
+  factory Visit.fromJson(Map<String, dynamic> j) {
+    // The service writes `noShow`; `no_show` and `noshow` are read the same.
+    final s = '${j['status'] ?? 'upcoming'}'.replaceAll('_', '').toLowerCase();
+    return Visit(
+      id: '${j['id']}',
+      patientId: '${j['patientId']}',
+      patientName: '${j['patientName'] ?? ''}',
+      at: _at(j['at']),
+      reason: '${j['reason'] ?? ''}',
+      video: j['video'] == true,
+      status: VisitStatus.values.where((v) => v.name.toLowerCase() == s).firstOrNull ?? VisitStatus.upcoming,
+      bookedByPatient: j['bookedByPatient'] == true,
+    );
+  }
 }
 
-/// A nursing task for one shift.
+/// A nursing task for one shift. The service writes the title and detail as
+/// messages, so they follow the app's language.
 class NurseTask {
-  const NurseTask(this.id, this.hour, this.title, this.detail, this.kind);
-  final String id, title, detail, kind; // kind: vitals | meds | check | care | handover
+  const NurseTask(this.id, this.hour, Object? title, Object? detail, this.kind)
+      : _title = title,
+        _detail = detail;
+  final String id, kind; // kind: vitals | meds | check | care | handover
   final int hour;
+  final Object? _title, _detail;
+  String get title => msg(_title);
+  String get detail => msg(_detail);
+
+  factory NurseTask.fromJson(Map<String, dynamic> j) => NurseTask('${j['id']}', _i(j['hour']), j['title'], j['detail'], '${j['kind'] ?? 'check'}');
 }
 
 class Handover {
   Handover(this.at, this.by, this.text);
   final DateTime at;
   final String by, text;
-  Map<String, dynamic> toJson() => {'at': at.toIso8601String(), 'by': by, 'text': text};
-  factory Handover.fromJson(Map<String, dynamic> j) => Handover(DateTime.parse(j['at']), j['by'] ?? '', j['text'] ?? '');
+  Map<String, dynamic> toJson() => {'at': at.toUtc().toIso8601String(), 'by': by, 'text': text};
+  factory Handover.fromJson(Map<String, dynamic> j) => Handover(_at(j['at']), '${j['by'] ?? ''}', '${j['text'] ?? ''}');
 }
 
 /// The live home patient: the demo patient account, monitored by a band.
 const livePatientId = 'live';
 
-final _examples = [
-  CarePatient(
-    id: 'ex-sunita', name: 'Sunita Verma', age: 64, sex: 'F', bloodGroup: 'O+', phone: '+91 98110 44120', source: PatientSource.example,
-    condition: 'COPD, home oxygen at night', conditions: ['COPD (moderate)', 'High blood pressure'], allergies: [],
-    medications: [Medication(name: 'Tiotropium inhaler', dose: '18 mcg', schedule: 'Once daily'), Medication(name: 'Amlodipine', dose: '5 mg', schedule: 'Once daily')],
-    vitals: (hr: 82, spo2: 93, temp: 36.8), learned: 'Night oxygen dips to 91–92% are normal for her',
-  ),
-  CarePatient(
-    id: 'ex-farhan', name: 'Farhan Ali', age: 71, sex: 'M', bloodGroup: 'A+', phone: '+91 98990 31207', source: PatientSource.example, status: 'Watching',
-    condition: 'Heart failure, weight up 1.2 kg in 3 days', conditions: ['Heart failure (EF 35%)', 'Type 2 diabetes'], allergies: ['Sulfa drugs'],
-    medications: [Medication(name: 'Furosemide', dose: '40 mg', schedule: 'Morning'), Medication(name: 'Ramipril', dose: '5 mg', schedule: 'Once daily'), Medication(name: 'Bisoprolol', dose: '2.5 mg', schedule: 'Once daily')],
-    vitals: (hr: 91, spo2: 94, temp: 36.9),
-  ),
-  CarePatient(
-    id: 'ex-rahul', name: 'Rahul Iyer', age: 47, sex: 'M', bloodGroup: 'B-', phone: '+91 99580 77215', source: PatientSource.example,
-    condition: 'After appendix surgery, day 4', conditions: ['Laparoscopic appendectomy'], allergies: [],
-    medications: [Medication(name: 'Paracetamol', dose: '650 mg', schedule: 'Every 6 hours if needed'), Medication(name: 'Cefuroxime', dose: '500 mg', schedule: 'Twice daily for 5 days')],
-    vitals: (hr: 76, spo2: 98, temp: 37.1),
-  ),
-  CarePatient(
-    id: 'ex-pooja', name: 'Pooja Desai', age: 35, sex: 'F', bloodGroup: 'AB+', phone: '+91 98201 66453', source: PatientSource.example,
-    condition: 'Pregnancy, 30 weeks, high blood pressure', conditions: ['Pregnancy (30 weeks)', 'Gestational hypertension'], allergies: ['Penicillin'],
-    medications: [Medication(name: 'Labetalol', dose: '100 mg', schedule: 'Twice daily'), Medication(name: 'Iron and folic acid', dose: '1 tablet', schedule: 'Once daily')],
-    vitals: (hr: 90, spo2: 99, temp: 36.7),
-  ),
-];
-
-/// Today's example visits: (hour, minute, patient id, reason, video).
-const _visitPlan = [
-  (9, 30, 'ex-sunita', 'COPD review and inhaler check', false),
-  (11, 0, 'ex-farhan', 'Weight gain and breathlessness', true),
-  (14, 30, 'ex-rahul', 'Wound check after surgery', false),
-  (16, 0, 'ex-pooja', 'Blood pressure review', true),
-];
-
-/// What the doctor and nurse apps keep: patients, notes, prescriptions,
-/// visits, nursing tasks and handovers. Stored on this device and shared by
-/// every staff account on it, so a doctor's note is there for the nurse.
+/// What the doctor and nurse apps show: patients, notes, prescriptions,
+/// visits, nursing tasks and handovers.
+///
+/// All of it lives on the PulseOS service and is shared by every staff account
+/// (`GET /care/state`), so a doctor's note is there for the nurse. Each change
+/// is sent to the service, which answers with the whole state again.
 class ClinicalStore extends ChangeNotifier {
   ClinicalStore(this.session);
   final Session session;
 
-  List<CarePatient> patients = [];
-  final List<ClinicalNote> _notes = [];
-  final List<Visit> _visits = [];
-  final Map<String, String> _visitStatus = {}; // example or patient-booked visit id -> status
-  final Map<String, String> _done = {}; // 'yyyy-mm-dd|task' -> 'by · h:mm'
-  final List<Handover> handovers = [];
+  PulseApi get _api => session.api;
+
   bool loaded = false;
 
-  static const _key = 'bt39.clinical';
-  final _rnd = Random();
-  String _id() => '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${_rnd.nextInt(1 << 16).toRadixString(36)}';
+  /// The sentence for the last request that failed, until one succeeds.
+  String? error;
 
-  String get me => session.name;
+  List<CarePatient> _patients = [];
+  List<ClinicalNote> _notes = [];
+  Map<String, List<Visit>> _visits = {};
+  Map<String, List<DateTime>> _slots = {};
+  List<String> _beds = [];
+  List<NurseTask> _tasks = [];
+  Map<String, String> _done = {};
+  List<Handover> _handovers = [];
+  bool _disposed = false;
 
-  /// This doctor's entry in the doctor catalogue, if any, so visits that
-  /// patients booked in the patient app show up here.
-  String? get _myDoctorId => doctorCatalog.where((d) => d.name == me).firstOrNull?.id;
+  List<CarePatient> get patients => _patients;
+  List<Handover> get handovers => _handovers;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  // ---------------------------------------------------------------- state
+
+  /// The bed names the tasks were last asked for.
+  List<String> _asked = [];
+
+  Future<void> _tail = Future.value();
+
+  /// Runs requests one at a time, in the order they were made, so an old
+  /// answer can never replace a newer one.
+  Future<T> _inOrder<T>(Future<T> Function() job) async {
+    final before = _tail;
+    final turn = Completer<void>();
+    _tail = turn.future;
+    await before;
+    try {
+      return await job();
+    } finally {
+      turn.complete();
+    }
+  }
 
   Future<void> load() async {
-    try {
-      final sp = await SharedPreferences.getInstance();
-      final raw = sp.getString(_key);
-      if (raw != null) {
-        final j = jsonDecode(raw) as Map<String, dynamic>;
-        _notes.addAll(((j['notes'] as List?) ?? []).map((e) => ClinicalNote.fromJson(Map<String, dynamic>.from(e))));
-        _visits.addAll(((j['visits'] as List?) ?? []).map((e) => Visit.fromJson(Map<String, dynamic>.from(e))));
-        _visitStatus.addAll(Map<String, String>.from((j['visitStatus'] as Map?) ?? {}));
-        _done.addAll(Map<String, String>.from((j['done'] as Map?) ?? {}));
-        handovers.addAll(((j['handovers'] as List?) ?? []).map((e) => Handover.fromJson(Map<String, dynamic>.from(e))));
-      }
-    } catch (_) {}
-    await refreshPatients();
-    loaded = true;
-    notifyListeners();
+    loaded = await _fetch();
+    _notify();
   }
 
-  /// Rebuilds the patient list, picking up patients who signed up since.
+  /// Reads the state again, picking up patients who signed up since.
   Future<void> refreshPatients() async {
-    final demoMail = demoAccounts[Role.patient]!.$1;
-    final demoName = demoAccounts[Role.patient]!.$3;
-    final liveStore = await PatientStore.peek('local-$demoMail') ?? PatientStore.example(demoName, demoMail);
-    final out = <CarePatient>[_fromStore(livePatientId, liveStore, PatientSource.live, demoMail)];
-    for (final a in await session.patientAccounts()) {
-      if (a.email == demoMail) continue;
-      final st = await PatientStore.peek('local-${a.email}');
-      if (st != null) {
-        out.add(_fromStore('acct-${a.email}', st, PatientSource.account, a.email));
-      } else {
-        out.add(CarePatient(
-          id: 'acct-${a.email}', name: a.name, email: a.email, source: PatientSource.account, condition: 'New patient, no readings yet',
-          age: int.tryParse(a.details['age'] ?? '') ?? 0, sex: a.details['sex'] ?? '', phone: a.details['phone'] ?? '',
-        ));
-      }
+    await _fetch();
+    _notify();
+  }
+
+  Future<bool> _fetch() => _inOrder(() async {
+        final beds = _asked.isEmpty ? '' : '?beds=${Uri.encodeQueryComponent(_asked.join(','))}';
+        final r = await _api.get('/care/state$beds');
+        return !_disposed && _take(r);
+      });
+
+  /// Sends one change; the answer is the whole state, which replaces ours.
+  /// A change is not sent with the ward's beds, so when the tasks were built for
+  /// a list of beds the answer's tasks (built for no beds) are not taken.
+  Future<bool> _send(Future<ApiResult> Function(PulseApi api) call) async {
+    final ok = await _inOrder(() async {
+      final r = await call(_api);
+      return !_disposed && _take(r, tasks: _asked.isEmpty);
+    });
+    _notify();
+    return ok;
+  }
+
+  bool _take(ApiResult r, {bool tasks = true}) {
+    if (!r.ok) {
+      error = r.message;
+      return false;
     }
-    out.addAll(_examples);
-    patients = out;
-    notifyListeners();
+    error = null;
+    final j = r.map;
+    if (j['patients'] is List) _patients = [for (final p in j['patients'] as List) CarePatient.fromJson(_obj(p))];
+    if (j['notes'] is List) _notes = [for (final n in j['notes'] as List) ClinicalNote.fromJson(_obj(n))];
+    if (j['visits'] is Map) {
+      _visits = {
+        for (final e in _obj(j['visits']).entries) e.key: [for (final v in (e.value as List? ?? const [])) Visit.fromJson(_obj(v))],
+      };
+    }
+    if (j['slots'] is Map) {
+      _slots = {
+        for (final e in _obj(j['slots']).entries) e.key: [for (final s in (e.value as List? ?? const [])) _at(s)],
+      };
+    }
+    if (tasks && j['beds'] is List) _beds = [for (final b in j['beds'] as List) '$b'];
+    if (tasks && j['tasks'] is List) _tasks = [for (final t in j['tasks'] as List) NurseTask.fromJson(_obj(t))];
+    if (j['done'] is Map) _done = {for (final e in _obj(j['done']).entries) e.key: '${e.value}'};
+    if (j['handovers'] is List) _handovers = [for (final h in j['handovers'] as List) Handover.fromJson(_obj(h))];
+    return true;
   }
 
-  CarePatient _fromStore(String id, PatientStore st, PatientSource src, String email) {
-    final p = st.profile;
-    return CarePatient(
-      id: id, name: p.name, age: p.age, sex: p.sex, bloodGroup: p.bloodGroup, phone: p.phone, email: email, source: src, store: st,
-      condition: p.conditions.isEmpty ? 'No conditions recorded' : p.conditions.first,
-      conditions: p.conditions, allergies: p.allergies, medications: p.medications,
-      records: st.records.where((r) => r.shared && r.forMember == 'self').toList(),
-    );
-  }
-
-  CarePatient? byId(String id) => patients.where((p) => p.id == id).firstOrNull;
-
-  Future<void> _save() async {
-    notifyListeners();
-    try {
-      final sp = await SharedPreferences.getInstance();
-      await sp.setString(_key, jsonEncode({
-        'notes': _notes.map((e) => e.toJson()).toList(),
-        'visits': _visits.map((e) => e.toJson()).toList(),
-        'visitStatus': _visitStatus,
-        'done': _done,
-        'handovers': handovers.map((e) => e.toJson()).toList(),
-      }));
-    } catch (_) {}
-  }
+  CarePatient? byId(String id) => _patients.where((p) => p.id == id).firstOrNull;
 
   // ---------------------------------------------------------------- notes
 
-  List<ClinicalNote> notesFor(String patientId) {
-    final now = DateTime.now();
-    final seeded = <ClinicalNote>[
-      if (patientId == livePatientId) ...[
-        ClinicalNote(id: 's1', patientId: patientId, at: now.subtract(const Duration(days: 6, hours: 3)), kind: 'consult', by: 'Dr. Kavya Rao', text: 'Discharged after mitral valve repair. Wrist band fitted; AdaptAlert monitoring at home. Review in one week.'),
-        ClinicalNote(id: 's2', patientId: patientId, at: now.subtract(const Duration(days: 2, hours: 5)), kind: 'nursing', by: 'Nurse Anjali Singh', text: 'Video check: wound clean and dry, band fits well, no breathlessness.'),
-      ],
-      if (patientId == 'ex-farhan') ClinicalNote(id: 's3', patientId: patientId, at: now.subtract(const Duration(days: 1, hours: 2)), kind: 'note', by: 'Dr. Kavya Rao', text: 'Weight up 1.2 kg in 3 days, ankles a little swollen. Consider raising furosemide if it continues.'),
-      if (patientId == 'ex-sunita') ClinicalNote(id: 's4', patientId: patientId, at: now.subtract(const Duration(days: 3)), kind: 'consult', by: 'Dr. Kavya Rao', text: 'Stable. Night SpO₂ 91–92% is her usual; AdaptAlert has learned this and no longer alerts on it.'),
-    ];
-    return [..._notes.where((n) => n.patientId == patientId), ...seeded]..sort((a, b) => b.at.compareTo(a.at));
-  }
+  List<ClinicalNote> notesFor(String patientId) => _notes.where((n) => n.patientId == patientId).toList()..sort((a, b) => b.at.compareTo(a.at));
 
-  Future<void> addNote(String patientId, String kind, String text) async {
-    _notes.add(ClinicalNote(id: _id(), patientId: patientId, at: DateTime.now(), kind: kind, text: text.trim(), by: me));
-    await _save();
-  }
+  Future<void> addNote(String patientId, String kind, String text) => _send((a) => a.post('/care/notes', {'patient_id': patientId, 'kind': kind, 'text': text.trim()}));
 
-  /// Saves a prescription as a note and, when the patient has an account on
-  /// this device, adds the medicine to their own medicine list.
-  Future<void> prescribe(CarePatient p, Medication m, {String days = ''}) async {
-    await addNote(p.id, 'prescription', '${m.name} ${m.dose}, ${m.schedule}${days.isEmpty ? '' : ' for $days days'}');
-    final st = p.store;
-    if (st != null && p.source != PatientSource.example) {
-      st.profile.medications.add(m);
-      await st.save();
-      await refreshPatients();
-    }
+  /// Saves a prescription as a note and, when the patient has an account, adds
+  /// the medicine to their own medicine list. Returns true when it was added to
+  /// the patient's own list.
+  Future<bool> prescribe(CarePatient p, Medication m, {String days = ''}) async {
+    final ok = await _send((a) => a.post('/care/prescribe', {'patient_id': p.id, 'medication': m.toJson(), 'days': days.trim()}));
+    return ok && p.hasStore && p.source != PatientSource.example;
   }
 
   // ---------------------------------------------------------------- visits
 
-  static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
-
-  /// All visits on [day]: example visits, visits the doctor booked, and
-  /// visits patients on this device booked with this doctor.
-  List<Visit> visitsOn(DateTime day) {
-    final d = _day(day);
-    final today = _day(DateTime.now());
-    final out = <Visit>[];
-    final offset = d.difference(today).inDays;
-    if (d.weekday != DateTime.sunday && offset.abs() <= 14) {
-      for (var i = 0; i < _visitPlan.length; i++) {
-        // Some days are lighter: a stable pattern per date.
-        if ((d.day + i) % 3 == 0 && offset != 0) continue;
-        final (h, m, pid, reason, video) = _visitPlan[i];
-        final p = byId(pid);
-        if (p == null) continue;
-        final id = 'ex-${d.year}${d.month}${d.day}-$i';
-        final at = DateTime(d.year, d.month, d.day, h, m);
-        final status = _visitStatus[id] != null ? VisitStatus.values.byName(_visitStatus[id]!) : (d.isBefore(today) ? VisitStatus.completed : VisitStatus.upcoming);
-        out.add(Visit(id: id, patientId: pid, patientName: p.name, at: at, reason: reason, video: video, status: status));
-      }
-    }
-    out.addAll(_visits.where((v) => _day(v.at) == d));
-    final myId = _myDoctorId;
-    if (myId != null) {
-      for (final p in patients.where((p) => p.store != null)) {
-        for (final a in p.store!.appointments.where((a) => a.doctorId == myId && _day(a.at) == d && a.status != ApptStatus.cancelled)) {
-          final id = 'pt-${p.id}-${a.id}';
-          final status = _visitStatus[id] != null
-              ? VisitStatus.values.byName(_visitStatus[id]!)
-              : a.status == ApptStatus.completed
-                  ? VisitStatus.completed
-                  : VisitStatus.upcoming;
-          final who = a.forMember == 'self' ? p.name : '${p.store!.memberName(a.forMember)} (${p.name})';
-          out.add(Visit(id: id, patientId: p.id, patientName: who, at: a.at, reason: a.reason, video: a.mode == ApptMode.video, status: status, bookedByPatient: true));
-        }
-      }
-    }
-    out.sort((a, b) => a.at.compareTo(b.at));
-    return out;
-  }
+  /// All visits on [day] from the loaded window (yesterday to two weeks ahead):
+  /// example visits, visits the doctor booked, and visits patients booked.
+  List<Visit> visitsOn(DateTime day) => [...?_visits[dayKey(day)]]..sort((a, b) => a.at.compareTo(b.at));
 
   List<Visit> upcomingFor(String patientId) {
     final now = DateTime.now();
@@ -304,74 +286,78 @@ class ClinicalStore extends ChangeNotifier {
   }
 
   Future<void> setVisitStatus(Visit v, VisitStatus s, {String note = ''}) async {
+    final was = v.status;
     v.status = s;
-    final own = _visits.where((x) => x.id == v.id).firstOrNull;
-    if (own != null) {
-      own.status = s;
-    } else {
-      _visitStatus[v.id] = s.name;
+    _notify();
+    final ok = await _send((a) => a.post('/care/visits/${Uri.encodeComponent(v.id)}/status', {'status': s.name, 'note': note.trim()}));
+    if (!ok && v.status == s) {
+      v.status = was;
+      _notify();
     }
-    // Tell the patient's own app when they booked it there.
-    if (v.bookedByPatient) {
-      final p = byId(v.patientId);
-      final apptId = v.id.split('-').last;
-      final a = p?.store?.appointments.where((a) => a.id == apptId).firstOrNull;
-      if (a != null && p?.source != PatientSource.live) {
-        a.status = s == VisitStatus.completed ? ApptStatus.completed : s == VisitStatus.cancelled ? ApptStatus.cancelled : a.status;
-        await p!.store!.save();
-      }
-    }
-    if (note.trim().isNotEmpty) await addNote(v.patientId, 'consult', note);
-    await _save();
   }
 
-  Future<void> book(CarePatient p, DateTime at, String reason, {required bool video}) async {
-    _visits.add(Visit(id: _id(), patientId: p.id, patientName: p.name, at: at, reason: reason.trim().isEmpty ? 'Follow-up' : reason.trim(), video: video));
-    // Patients with an account see it in their own Care tab.
-    final myId = _myDoctorId;
-    if (myId != null && p.store != null && p.source == PatientSource.account) {
-      p.store!.appointments.add(Appointment(id: _id(), doctorId: myId, forMember: 'self', at: at, mode: video ? ApptMode.video : ApptMode.clinic, reason: reason.trim().isEmpty ? 'Follow-up' : reason.trim(), notes: 'Booked by $me'));
-      await p.store!.save();
+  Future<void> book(CarePatient p, DateTime at, String reason, {required bool video}) =>
+      _send((a) => a.post('/care/visits', {'patient_id': p.id, 'at': at.toUtc().toIso8601String(), 'reason': reason.trim().isEmpty ? 'Follow-up' : reason.trim(), 'video': video}));
+
+  /// The days the booking sheet offers (the next week, without Sundays), as
+  /// calendar days in the phone's time zone.
+  List<DateTime> bookingDays() {
+    final out = <DateTime>[];
+    for (final k in _slots.keys) {
+      final d = _parseDay(k);
+      if (d != null) out.add(d);
     }
-    await _save();
+    return out..sort();
+  }
+
+  /// Free times on [day] for a new visit, sorted. Times that have since come
+  /// within 15 minutes of now are left out, as the service does when it answers.
+  List<DateTime> bookingSlots(DateTime day) {
+    final soonest = DateTime.now().add(const Duration(minutes: 15));
+    return [
+      for (final s in _slots[dayKey(day)] ?? const <DateTime>[])
+        if (s.isAfter(soonest)) s,
+    ]..sort();
+  }
+
+  static DateTime? _parseDay(String k) {
+    final p = k.split('-');
+    if (p.length != 3) return null;
+    final y = int.tryParse(p[0]), m = int.tryParse(p[1]), d = int.tryParse(p[2]);
+    return y == null || m == null || d == null ? null : DateTime(y, m, d);
   }
 
   // ---------------------------------------------------------------- nursing
 
   static String dayKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// The shift's tasks, built from the ward's beds and the home patient.
+  Timer? _debounce;
+  List<String>? _waiting;
+
+  /// The shift's tasks, built by the service from the ward's beds. When
+  /// [bedNames] is not the list the tasks were built for, the state is read
+  /// again (after a short pause, since this is called while building the page)
+  /// and the tasks we have are returned meanwhile.
   List<NurseTask> tasksFor(List<String> bedNames) {
-    String bed(int i) => bedNames.isEmpty ? tr('Bed A{n}', {'n': i + 1}) : bedNames[i % bedNames.length];
-    final live = byId(livePatientId)?.name ?? tr('home patient');
-    return [
-      NurseTask('v08', 8, tr('Vitals round'), tr('All occupied beds: NEWS2 for each'), 'vitals'),
-      NurseTask('m09', 9, tr('Morning medicines'), tr('{a}: metoprolol 25 mg · {b}: insulin before breakfast', {'a': bed(0), 'b': bed(1)}), 'meds'),
-      NurseTask('h10', 10, tr('Home check by video'), tr('{name}: band fit, wound and how he feels', {'name': live}), 'check'),
-      NurseTask('v12', 12, tr('Vitals round'), tr('All occupied beds'), 'vitals'),
-      NurseTask('c13', 13, tr('Fluid balance chart'), bed(2), 'care'),
-      NurseTask('m14', 14, tr('Afternoon medicines'), tr('{a}: antibiotics IV · {b}: aspirin', {'a': bed(3), 'b': bed(0)}), 'meds'),
-      NurseTask('v16', 16, tr('Vitals round'), tr('All occupied beds'), 'vitals'),
-      NurseTask('c18', 18, tr('Wound dressing'), bed(4), 'care'),
-      NurseTask('h20', 20, tr('Handover to the next shift'), tr('Write the handover note below'), 'handover'),
-    ];
-  }
-
-  String? doneBy(String taskId, [DateTime? day]) => _done['${dayKey(day ?? DateTime.now())}|$taskId'];
-
-  Future<void> toggleTask(String taskId) async {
-    final k = '${dayKey(DateTime.now())}|$taskId';
-    if (_done.containsKey(k)) {
-      _done.remove(k);
-    } else {
-      final t = DateTime.now();
-      _done[k] = '$me · ${t.hour % 12 == 0 ? 12 : t.hour % 12}:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'AM' : 'PM'}';
+    if (listEquals(bedNames, _asked) || listEquals(bedNames, _beds)) {
+      _debounce?.cancel();
+      _waiting = null;
+    } else if (!listEquals(bedNames, _waiting)) {
+      _debounce?.cancel();
+      _waiting = List.of(bedNames);
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        if (_disposed) return;
+        _asked = _waiting ?? bedNames;
+        _waiting = null;
+        refreshPatients();
+      });
     }
-    await _save();
+    return _tasks;
   }
 
-  Future<void> addHandover(String text) async {
-    handovers.insert(0, Handover(DateTime.now(), me, text.trim()));
-    await _save();
-  }
+  String? doneBy(String taskId, [DateTime? day]) => day != null && dayKey(day) != dayKey(DateTime.now()) ? null : _done[taskId];
+
+  Future<void> toggleTask(String taskId) => _send((a) => a.post('/care/tasks/${Uri.encodeComponent(taskId)}/toggle'));
+
+  Future<void> addHandover(String text) => _send((a) => a.post('/care/handovers', {'text': text.trim()}));
 }

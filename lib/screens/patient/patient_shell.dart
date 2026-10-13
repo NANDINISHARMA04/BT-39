@@ -261,8 +261,8 @@ class _PatientShellState extends State<PatientShell> {
     if (a11y.speakAlerts && !touring) {
       Speech.instance.speak(tr('Alert: {title}. {reason}', {'title': a.title, 'reason': a.reasons.isEmpty ? '' : a.reasons.first}));
     }
-    final store = context.read<PatientStore>();
-    if (a.level >= 4 && store.prefs.autoSos && !context.read<TourController>().running) {
+    // The service marks a critical alert for auto-SOS when the patient's "Auto-SOS" setting is on.
+    if (a.autoSos && !context.read<TourController>().running) {
       Navigator.of(context).push(CupertinoPageRoute(fullscreenDialog: true, builder: (_) => SosScreen(trigger: a)));
     }
   }

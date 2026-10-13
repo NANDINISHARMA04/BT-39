@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -72,9 +74,9 @@ class RootGate extends StatelessWidget {
       child = MultiProvider(
         key: ValueKey('staff-${s.accountId}'),
         providers: [
-          ChangeNotifierProvider(create: (_) => StaffController(demo: s.onDevice, token: s.accessToken, wardId: s.wardId, myName: s.name)..start()),
-          // A patient at home on AdaptAlert, whose alerts staff review.
-          ChangeNotifierProvider(create: (_) => MonitorController()..start()),
+          ChangeNotifierProvider(create: (_) => StaffController(demo: s.demo, token: s.accessToken, wardId: s.wardId, myName: s.name, api: s.api)..start()),
+          // A patient at home on AdaptAlert, whose alerts staff review. The band runs on the service.
+          ChangeNotifierProvider(create: (_) => MonitorController(api: s.api)..start()),
           ChangeNotifierProvider(create: (_) => ClinicalStore(s)..load()),
         ],
         child: const StaffRoot(),
@@ -97,7 +99,7 @@ class _PatientRoot extends StatefulWidget {
 
 class _PatientRootState extends State<_PatientRoot> {
   final _nav = GlobalKey<NavigatorState>();
-  late final MonitorController _monitor = MonitorController()..start();
+  late final MonitorController _monitor = MonitorController(api: context.read<Session>().api)..start();
   late final TourController _tour = TourController(_monitor, _select);
 
   @override
@@ -112,7 +114,7 @@ class _PatientRootState extends State<_PatientRoot> {
     super.initState();
     patientTab.value = PatientTab.today;
     final s = context.read<Session>();
-    context.read<PatientStore>().load(s.accountId, name: s.name, email: s.email, details: s.details);
+    context.read<PatientStore>().load(s.api, s.accountId, name: s.name, email: s.email, details: s.details);
   }
 
   /// Sidebar tap: close any open page, then show the tab.
@@ -124,7 +126,19 @@ class _PatientRootState extends State<_PatientRoot> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<PatientStore>();
-    if (!store.loaded) return const _Splash();
+    // Every screen reads the band, so wait for the service's first snapshot as well as the records.
+    if (!store.loaded || !_monitor.ready) {
+      return ListenableBuilder(
+        listenable: _monitor,
+        builder: (context, _) => !store.loaded || !_monitor.ready
+            ? _Waking(error: store.error, onRetry: store.error == null ? null : store.reload)
+            : _app(context),
+      );
+    }
+    return _app(context);
+  }
+
+  Widget _app(BuildContext context) {
     // Pages pushed from the patient app need the monitor too, so they get a
     // navigator that lives under its provider.
     final navigator = ShellNavigator(navKey: _nav, tab: patientTab, homeTab: PatientTab.today, home: const PatientShell(), labelOf: (t) => tr(const ['Today', 'Alerts', 'Insights', 'Care', 'Me'][t]));
@@ -159,4 +173,57 @@ class _Splash extends StatelessWidget {
         backgroundColor: context.ios.bg,
         body: const Center(child: CupertinoActivityIndicator(radius: 14)),
       );
+}
+
+/// While the patient app waits for the service. On the free plan the service
+/// sleeps when nobody uses it, so after a few seconds this says it is waking up;
+/// if loading failed it shows why, with a button to try again.
+class _Waking extends StatefulWidget {
+  const _Waking({this.error, this.onRetry});
+  final String? error;
+  final VoidCallback? onRetry;
+  @override
+  State<_Waking> createState() => _WakingState();
+}
+
+class _WakingState extends State<_Waking> {
+  bool _slow = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(seconds: 4), () => mounted ? setState(() => _slow = true) : null);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    final err = widget.error;
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (err == null) const CupertinoActivityIndicator(radius: 14) else Icon(CupertinoIcons.wifi_exclamationmark, size: 40, color: c.orange),
+            if (err != null || _slow) ...[
+              const SizedBox(height: 16),
+              Text(err ?? tr('Waking up the server. This can take up to a minute.'), textAlign: TextAlign.center, style: T.sub.copyWith(color: c.label2)),
+            ],
+            if (err != null && widget.onRetry != null) ...[
+              const SizedBox(height: 12),
+              CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.medium, onPressed: widget.onRetry, child: Text(tr('Try again'))),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
 }

@@ -10,6 +10,7 @@ import '../../l10n/l10n.dart';
 import '../../services/assistant.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
+import '../../services/session.dart';
 import '../../services/speech.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
@@ -116,37 +117,38 @@ class _AssistantScreenState extends State<AssistantScreen> {
   /// Text for the speech engine: bullets and arrows read as pauses.
   static String _spoken(String s) => s.replaceAll('•', '').replaceAll('→', ',').replaceAll('₹', '₹ ');
 
-  void _send(String q) {
+  Future<void> _send(String q) async {
     q = q.trim();
     if (q.isEmpty || _typing) return;
     _input.clear();
     Speech.instance.stopSpeaking();
-    final reply = HealthAssistant(context.read<MonitorController>(), context.read<PatientStore>()).reply(q);
+    // The assistant runs on the BT39 service. Ask it while 'typing' shows, for at least as long as before.
+    final asking = HealthAssistant(context.read<Session>().api).reply(q);
     setState(() {
       _msgs.add(_Msg(true, q)..done = true);
       _typing = true;
     });
     _toEnd();
-    // 'Typing', then stream the answer word by word.
-    _t = Timer(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      final m = _Msg(false, '', reply: reply);
-      final words = reply.text.split(' ');
-      var i = 0;
-      setState(() => _msgs.add(m));
-      if (_readAloud) Speech.instance.speak(_spoken(reply.text));
-      _t = Timer.periodic(const Duration(milliseconds: 28), (t) {
-        if (!mounted) return t.cancel();
-        setState(() {
-          m.text = words.sublist(0, ++i).join(' ');
-          if (i >= words.length) {
-            t.cancel();
-            m.done = true;
-            _typing = false;
-          }
-        });
-        _toEnd();
+    final got = await Future.wait<Object?>([asking, Future<void>.delayed(const Duration(milliseconds: 700))]);
+    if (!mounted) return;
+    final reply = got.first! as AssistantReply;
+    // Then stream the answer word by word.
+    final m = _Msg(false, '', reply: reply);
+    final words = reply.text.split(' ');
+    var i = 0;
+    setState(() => _msgs.add(m));
+    if (_readAloud) Speech.instance.speak(_spoken(reply.text));
+    _t = Timer.periodic(const Duration(milliseconds: 28), (t) {
+      if (!mounted) return t.cancel();
+      setState(() {
+        m.text = words.sublist(0, ++i).join(' ');
+        if (i >= words.length) {
+          t.cancel();
+          m.done = true;
+          _typing = false;
+        }
       });
+      _toEnd();
     });
   }
 

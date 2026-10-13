@@ -1,0 +1,889 @@
+{
+  "How am I doing today?": {
+    "text": {
+      "c": [
+        {
+          "t": "Everything is inside your personal normal range."
+        },
+        "\n\n• ",
+        {
+          "t": "Heart rate {hr} bpm, {word} (usual {usual} when resting).",
+          "a": {
+            "hr": 66,
+            "word": {
+              "t": "normal for you"
+            },
+            "usual": 67
+          }
+        },
+        "\n• ",
+        {
+          "t": "Oxygen {spo2}%, {word} (usual {usual}%).",
+          "a": {
+            "spo2": 97,
+            "word": {
+              "t": "normal for you"
+            },
+            "usual": 97
+          }
+        },
+        "\n• ",
+        {
+          "t": "Temperature {temp} °C, {word} (usual {usual} °C).",
+          "a": {
+            "temp": "36.6",
+            "word": {
+              "t": "normal for you"
+            },
+            "usual": "36.5"
+          }
+        },
+        "\n\n",
+        {
+          "t": "Today: {sent} alert sent, {held} held back. A fixed-threshold monitor would have alarmed {fixed} times.",
+          "a": {
+            "sent": 1,
+            "held": 0,
+            "fixed": 2
+          }
+        },
+        ""
+      ]
+    },
+    "action": null,
+    "action_label": null,
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "Why did I get my last alert?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your last alert was \"{title}\" at {time} ({level}).",
+          "a": {
+            "title": {
+              "t": "Heart rate above your normal"
+            },
+            "time": "8:19",
+            "level": {
+              "t": "Check-in"
+            }
+          }
+        },
+        "\n\n",
+        {
+          "t": "Why it was sent:"
+        },
+        "\n",
+        {
+          "c": [
+            {
+              "c": [
+                "• ",
+                {
+                  "c": [
+                    {
+                      "t": "Heart rate {hr} bpm, {pc}% above your usual resting {mu} bpm",
+                      "a": {
+                        "hr": 82,
+                        "pc": 24,
+                        "mu": 66
+                      }
+                    },
+                    {
+                      "t": " for {n} min",
+                      "a": {
+                        "n": 3
+                      }
+                    },
+                    {
+                      "t": ", while you were still"
+                    },
+                    "."
+                  ]
+                }
+              ]
+            },
+            "\n",
+            {
+              "c": [
+                "• ",
+                {
+                  "t": "Signal quality good ({q}), so this isn't a loose sensor.",
+                  "a": {
+                    "q": "0.97"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "\n\n",
+        {
+          "t": "The AI rated it {p} likely to be real. It sends alerts when it is at least {tau} sure.",
+          "a": {
+            "p": "58%",
+            "tau": "50%"
+          }
+        },
+        " ",
+        {
+          "t": "Dr. Rao marked it as a false alarm, so similar patterns will be held back for you."
+        },
+        "\n\n",
+        {
+          "t": "To see this for any alert: open Alerts, tap the alert, then tap \"See how AdaptAlert decided\"."
+        }
+      ]
+    },
+    "action": "alertDetail",
+    "action_label": {
+      "t": "See how AdaptAlert decided"
+    },
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "What has AdaptAlert learned about me?": {
+    "text": {
+      "c": [
+        {
+          "t": "From {n} feedback answers, AdaptAlert has learned:",
+          "a": {
+            "n": 2
+          }
+        },
+        "\n",
+        {
+          "c": [
+            {
+              "c": [
+                "• ",
+                {
+                  "c": [
+                    {
+                      "t": "Resting"
+                    },
+                    " · ",
+                    {
+                      "t": "heart rate up a little"
+                    },
+                    " · ",
+                    {
+                      "t": "day"
+                    }
+                  ]
+                },
+                ": ",
+                {
+                  "t": "now {p} likely real, so it still alerts.",
+                  "a": {
+                    "p": "53%"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "\n\n",
+        {
+          "t": "Your alert threshold is {tau}. It can only move between 30% and 75%, at most 10 points a week.",
+          "a": {
+            "tau": "53%"
+          }
+        },
+        " ",
+        "",
+        {
+          "t": "Safety limits like oxygen at or below 91% always alert."
+        }
+      ]
+    },
+    "action": "insights",
+    "action_label": {
+      "t": "Open AI Engine"
+    },
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "When is my next appointment?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your next appointment is with {doctor} ({specialty}) on {date}, {where}, for you.",
+          "a": {
+            "doctor": "Dr. Kavya Rao",
+            "specialty": {
+              "d": "Cardiologist"
+            },
+            "date": {
+              "dt": "2026-10-14T06:00:00Z",
+              "f": "EEE d MMM, h:mm a"
+            },
+            "where": {
+              "t": "by video"
+            },
+            "who": "You"
+          }
+        },
+        "\n",
+        {
+          "t": "Reason: {reason}.",
+          "a": {
+            "reason": {
+              "d": "Post-surgery review, week 1"
+            }
+          }
+        },
+        {
+          "c": [
+            "\n\n",
+            {
+              "t": "You have {n} more coming up.",
+              "a": {
+                "n": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "action": "book",
+    "action_label": {
+      "t": "Manage appointments"
+    },
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "What medicines do I take?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your medicines:"
+        },
+        "\n",
+        {
+          "c": [
+            {
+              "c": [
+                "• ",
+                "Aspirin",
+                " ",
+                "75 mg",
+                ": ",
+                {
+                  "d": "Once daily, after breakfast"
+                }
+              ]
+            },
+            "\n",
+            {
+              "c": [
+                "• ",
+                "Metoprolol",
+                " ",
+                "25 mg",
+                ": ",
+                {
+                  "d": "Twice daily"
+                }
+              ]
+            },
+            "\n",
+            {
+              "c": [
+                "• ",
+                "Pantoprazole",
+                " ",
+                "40 mg",
+                ": ",
+                {
+                  "d": "Before breakfast"
+                }
+              ]
+            },
+            "\n",
+            {
+              "c": [
+                "• ",
+                "Salbutamol inhaler",
+                " ",
+                "100 mcg",
+                ": ",
+                {
+                  "d": "When needed for wheeze"
+                }
+              ]
+            }
+          ]
+        },
+        "\n\n",
+        {
+          "t": "I can explain what's on your list, but please ask Dr. Rao before changing any dose."
+        },
+        {
+          "c": [
+            "\n",
+            {
+              "t": "Allergies on file: {list}.",
+              "a": {
+                "list": {
+                  "c": [
+                    {
+                      "d": "Penicillin"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "action": "healthProfile",
+    "action_label": {
+      "t": "Open health profile"
+    },
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "Is my insurance claim approved?": {
+    "text": {
+      "c": [
+        "Star Health",
+        " ",
+        "Family Health Optima",
+        ": ",
+        {
+          "t": "₹{left} left of ₹{total}, valid till {date}.",
+          "a": {
+            "left": {
+              "num": 605000,
+              "f": "en_IN"
+            },
+            "total": {
+              "num": 1000000,
+              "f": "en_IN"
+            },
+            "date": {
+              "dt": "2027-03-30T18:30:00Z",
+              "f": "d MMM y"
+            }
+          }
+        },
+        "\n\n",
+        {
+          "c": [
+            {
+              "c": [
+                "• ",
+                {
+                  "d": "Heart valve repair surgery"
+                },
+                ": ",
+                {
+                  "d": "Approved"
+                },
+                {
+                  "c": [
+                    " (",
+                    {
+                      "t": "₹{amount} approved",
+                      "a": {
+                        "amount": {
+                          "num": 395000,
+                          "f": "en_IN"
+                        }
+                      }
+                    },
+                    ")"
+                  ]
+                }
+              ]
+            },
+            "\n",
+            {
+              "c": [
+                "• ",
+                {
+                  "d": "Pediatric OPD and nebuliser"
+                },
+                ": ",
+                {
+                  "d": "Submitted"
+                },
+                ""
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "action": "insurance",
+    "action_label": {
+      "t": "Open insurance"
+    },
+    "urgent": false,
+    "topic": null,
+    "suggestions": []
+  },
+  "I have chest pain": {
+    "text": {
+      "c": [
+        {
+          "t": "This could be an emergency. Please don't wait for an alert."
+        },
+        "\n\n",
+        "• ",
+        {
+          "t": "Call 112 now, or press SOS to call and alert {names}.",
+          "a": {
+            "names": {
+              "c": [
+                "Sunita",
+                {
+                  "t": " and "
+                },
+                "Rajesh"
+              ]
+            }
+          }
+        },
+        "\n",
+        "• ",
+        {
+          "t": "Sit upright and rest. Don't drive yourself."
+        },
+        "\n",
+        "• ",
+        {
+          "t": "If a doctor has told you to take a medicine for chest pain, follow that plan."
+        },
+        "\n\n",
+        {
+          "t": "Your band will keep sending your vitals to Dr. Rao."
+        }
+      ]
+    },
+    "action": "sos",
+    "action_label": {
+      "t": "Open SOS"
+    },
+    "urgent": true,
+    "topic": null,
+    "suggestions": []
+  },
+  "Where are my reports?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your reports and medical records are kept in Me → Medical records."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Me at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Tap Medical records."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "To add a report, tap + at the top and choose a photo or PDF."
+        }
+      ]
+    },
+    "action": "records",
+    "action_label": {
+      "t": "Open medical records"
+    },
+    "urgent": false,
+    "topic": "records",
+    "suggestions": []
+  },
+  "Where are my medicines?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your medicines, conditions and allergies are in Me → Health profile."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Me at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Tap Health profile."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "Add or change a medicine, then tap Save."
+        },
+        "\n\n",
+        {
+          "t": "You have {n} medicines saved.",
+          "a": {
+            "n": 4
+          }
+        }
+      ]
+    },
+    "action": "healthProfile",
+    "action_label": {
+      "t": "Open health profile"
+    },
+    "urgent": false,
+    "topic": "healthProfile",
+    "suggestions": []
+  },
+  "How do I book an appointment?": {
+    "text": {
+      "c": [
+        {
+          "t": "Appointments are in the Care tab."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Care at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "To book: tap the search bar, pick a doctor, then pick a time."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "To change one: find your appointment, then tap Reschedule or Cancel."
+        }
+      ]
+    },
+    "action": "book",
+    "action_label": {
+      "t": "Open Care"
+    },
+    "urgent": false,
+    "topic": "appointment",
+    "suggestions": []
+  },
+  "How do I change the language?": {
+    "text": {
+      "c": [
+        {
+          "t": "You can switch between English and Hindi at any time."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Me at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Under Preferences, find Language and choose English or हिन्दी."
+        },
+        "\n\n",
+        {
+          "t": "Or tap the button below to switch now."
+        }
+      ]
+    },
+    "action": "language",
+    "action_label": {
+      "t": "Switch to English"
+    },
+    "urgent": false,
+    "topic": "language",
+    "suggestions": []
+  },
+  "I feel unwell": {
+    "text": {
+      "c": [
+        {
+          "t": "I'm sorry you're not feeling well."
+        },
+        "\n\n",
+        "• ",
+        {
+          "t": "If you have chest pain, trouble breathing, or feel faint, call 112 or press SOS now."
+        },
+        "\n",
+        "• ",
+        {
+          "t": "Otherwise, sit down, rest, and drink some water."
+        },
+        "\n",
+        "• ",
+        {
+          "t": "You can talk to a doctor by video."
+        },
+        {
+          "c": [
+            "\n\n",
+            {
+              "t": "Your band right now:"
+            },
+            "\n• ",
+            {
+              "t": "Heart rate {hr} bpm, {word} (usual {usual} when resting).",
+              "a": {
+                "hr": 66,
+                "word": {
+                  "t": "normal for you"
+                },
+                "usual": 67
+              }
+            },
+            "\n• ",
+            {
+              "t": "Oxygen {spo2}%, {word} (usual {usual}%).",
+              "a": {
+                "spo2": 97,
+                "word": {
+                  "t": "normal for you"
+                },
+                "usual": 97
+              }
+            },
+            "\n• ",
+            {
+              "t": "Temperature {temp} °C, {word} (usual {usual} °C).",
+              "a": {
+                "temp": "36.6",
+                "word": {
+                  "t": "normal for you"
+                },
+                "usual": "36.5"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "action": "findDoctor",
+    "action_label": {
+      "t": "Talk to a doctor"
+    },
+    "urgent": false,
+    "topic": "unwell",
+    "suggestions": [
+      "I have chest pain",
+      "Call my family",
+      "How am I doing today?"
+    ]
+  },
+  "Where are my family contacts?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your family, emergency contacts and caregiver are in Me → Family."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Me at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Tap Family."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "Tap a person to call them, or to make them your caregiver or emergency contact."
+        },
+        "\n\n",
+        {
+          "c": [
+            {
+              "t": "{name} ({relation}) is your caregiver and gets an alert if you don't reply to one within 10 minutes.",
+              "a": {
+                "name": "Sunita Sharma",
+                "relation": {
+                  "d": "Mother"
+                }
+              }
+            },
+            "\n",
+            {
+              "t": "Emergency contacts: {names}.",
+              "a": {
+                "names": "Sunita Sharma, Rajesh Sharma"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "action": "family",
+    "action_label": {
+      "t": "Open family"
+    },
+    "urgent": false,
+    "topic": "family",
+    "suggestions": []
+  },
+  "Where is my insurance?": {
+    "text": {
+      "c": [
+        {
+          "t": "Your insurance policies and claims are in Me → Insurance & claims."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Me at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Tap Insurance & claims."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "Tap a claim to see its status, or tap + to add a policy or claim."
+        }
+      ]
+    },
+    "action": "insurance",
+    "action_label": {
+      "t": "Open insurance"
+    },
+    "urgent": false,
+    "topic": "insurance",
+    "suggestions": []
+  },
+  "Call my family": {
+    "text": {
+      "c": [
+        {
+          "t": "{name} ({relation}) can be called on {phone}.",
+          "a": {
+            "name": "Sunita Sharma",
+            "relation": {
+              "d": "Mother"
+            },
+            "phone": "+91 98111 22334"
+          }
+        },
+        "\n\n",
+        {
+          "t": "Tap the button below to call. In an emergency, call 112 first."
+        }
+      ]
+    },
+    "action": "callFamily",
+    "action_label": {
+      "t": "Call {name}",
+      "a": {
+        "name": "Sunita"
+      }
+    },
+    "urgent": false,
+    "topic": "callFamily",
+    "suggestions": [
+      "Where is the SOS button?",
+      "I feel unwell"
+    ]
+  },
+  "How do I make the text bigger?": {
+    "text": {
+      "c": [
+        {
+          "t": "You can make the text bigger, use an easier home screen, and have alerts read aloud."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap the button below, or open Me → Accessibility."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "Choose a text size and turn on the options you like."
+        },
+        "\n\n",
+        {
+          "t": "In this chat, tap the speaker at the top to hear answers read aloud."
+        }
+      ]
+    },
+    "action": "accessibility",
+    "action_label": {
+      "t": "Open text size & easy mode"
+    },
+    "urgent": false,
+    "topic": "accessibility",
+    "suggestions": []
+  },
+  "What can you help with?": {
+    "text": {
+      "c": [
+        "",
+        {
+          "t": "I can tell you where things are in the app, explain your health readings and alerts, and help in an emergency."
+        },
+        "\n\n",
+        {
+          "t": "Tap a question below, or ask in your own words, like \"Where are my reports?\""
+        }
+      ]
+    },
+    "action": null,
+    "action_label": null,
+    "urgent": false,
+    "topic": "menu",
+    "suggestions": [
+      "Where are my reports?",
+      "Where are my medicines?",
+      "How do I book an appointment?",
+      "How am I doing today?",
+      "How do I change the language?",
+      "I feel unwell"
+    ]
+  },
+  "How do I change my appointment?": {
+    "text": {
+      "c": [
+        {
+          "t": "Appointments are in the Care tab."
+        },
+        "\n\n",
+        "1. ",
+        {
+          "t": "Tap Care at the bottom of the screen."
+        },
+        "\n",
+        "2. ",
+        {
+          "t": "To book: tap the search bar, pick a doctor, then pick a time."
+        },
+        "\n",
+        "3. ",
+        {
+          "t": "To change one: find your appointment, then tap Reschedule or Cancel."
+        }
+      ]
+    },
+    "action": "book",
+    "action_label": {
+      "t": "Open Care"
+    },
+    "urgent": false,
+    "topic": "appointment",
+    "suggestions": []
+  }
+}

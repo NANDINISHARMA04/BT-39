@@ -5,16 +5,23 @@ import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../l10n/l10n.dart';
+import 'pulse_api.dart';
+
+export 'pulse_api.dart' show ApiResult;
 
 /// One bed in a live frame of `GET /v1/live`. Patient fields are null for an empty bed.
 class LiveBed {
-  LiveBed({required this.bed, this.patientId, this.name, this.age, this.sex, this.hr, this.spo2, this.rr, this.sbp, this.dbp, this.temp, this.news2, this.band, this.onOxygen, this.consciousness, this.staleS, this.nibpAgeS, this.openAlerts = const []});
+  LiveBed({required this.bed, this.patientId, this.name, this.age, this.sex, this.hr, this.spo2, this.rr, this.sbp, this.dbp, this.temp, this.news2, this.band, this.onOxygen, this.consciousness, this.staleS, this.nibpAgeS, this.openAlerts = const [], this.points = const {}});
   final String bed;
   final String? patientId, name, sex, band, consciousness;
   final int? age, hr, spo2, rr, sbp, dbp, news2, staleS, nibpAgeS;
   final double? temp;
   final bool? onOxygen;
   final List<LiveAlert> openAlerts;
+
+  /// NEWS2 points the service scored for each vital (`hr`, `spo2`, `rr`, `sbp`,
+  /// `temp`); null for a vital that has no reading. Empty on frames that carry none.
+  final Map<String, int?> points;
 
   bool get empty => patientId == null;
   bool get stale => (staleS ?? 0) > 5 || (hr == null && spo2 == null && !empty);
@@ -26,6 +33,7 @@ class LiveBed {
         news2: j['news2'], band: j['band'], onOxygen: j['on_oxygen'], consciousness: j['consciousness'],
         staleS: (j['stale_s'] as num?)?.round(), nibpAgeS: (j['nibp_age_s'] as num?)?.round(),
         openAlerts: ((j['open_alerts'] as List?) ?? []).map((a) => LiveAlert.fromJson(Map<String, dynamic>.from(a))).toList(),
+        points: {for (final e in ((j['points'] as Map?) ?? const {}).entries) '${e.key}': (e.value as num?)?.round()},
       );
 }
 
@@ -34,15 +42,6 @@ class LiveAlert {
   final String id, kind, severity;
   final bool acknowledged;
   factory LiveAlert.fromJson(Map<String, dynamic> j) => LiveAlert(j['id'], j['kind'], j['severity'], j['acknowledged'] ?? false);
-}
-
-class ApiResult {
-  ApiResult.ok([this.data]) : ok = true, status = 200, error = null, message = null;
-  ApiResult.fail(this.status, this.error, this.message) : ok = false, data = null;
-  final bool ok;
-  final int status;
-  final String? error, message;
-  final Object? data;
 }
 
 sealed class ChatEvent {}

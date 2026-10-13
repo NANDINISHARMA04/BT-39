@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../engine/adapt_alert.dart';
 import '../../engine/study.dart';
 import '../../l10n/l10n.dart';
+import '../../services/pulse_api.dart';
+import '../../services/session.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/charts.dart';
 import '../../widgets/common.dart';
@@ -20,6 +23,7 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
   StudyConfig _cfg = const StudyConfig();
   ExperimentResult? _r;
   List<NoisePoint>? _noise;
+  String? _markdown, _error;
   bool _running = false;
 
   @override
@@ -31,17 +35,27 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
   void _set(StudyConfig c) => setState(() => _cfg = c);
 
   Future<void> _run() async {
-    setState(() => _running = true);
-    // Let the spinner paint before the (synchronous) simulation runs.
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    final r = runExperiment(_cfg);
-    final noise = noiseSweep(_cfg.copyWith(patients: (_cfg.patients * .6).round().clamp(10, 60)), seeds: 3);
-    if (!mounted) return;
     setState(() {
-      _r = r;
-      _noise = noise;
-      _running = false;
+      _running = true;
+      _error = null;
     });
+    // The experiments run on the BT39 service, with the same decision code as the live engine. No account is needed.
+    try {
+      final run = await runStudyRemote(context.read<Session>().api, _cfg, noise: (patients: (_cfg.patients * .6).round().clamp(10, 60), seeds: 3), markdown: true);
+      if (!mounted) return;
+      setState(() {
+        _r = run.result;
+        _noise = run.noise;
+        _markdown = run.markdown;
+        _running = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _running = false;
+        _error = (e is ApiException ? e.message : null) ?? tr('The service could not be reached. It may be waking up. Try again in a minute.');
+      });
+    }
   }
 
   @override
@@ -87,6 +101,7 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
                 child: _running ? const CupertinoActivityIndicator(color: Colors.white) : Text(tr('Run experiment')),
               ),
             ),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: T.footnote.copyWith(color: c.red))),
           ]),
         ),
         if (r != null) ...[
@@ -155,7 +170,7 @@ class _ResearchLabScreenState extends State<ResearchLabScreen> {
           const SizedBox(height: 16),
           CupertinoButton.tinted(
             onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: resultsMarkdown(r, noise: _noise)));
+              await Clipboard.setData(ClipboardData(text: _markdown ?? ''));
               if (context.mounted) toast(context, tr('Results copied'), tr('Paste the Markdown tables into your report or paper.'));
             },
             child: Text(tr('Copy results as Markdown')),

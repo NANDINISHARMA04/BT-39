@@ -42,7 +42,10 @@ class _BedScreenState extends State<BedScreen> {
       _asking = true;
     });
     if (sc.demo) {
-      final words = sc.demoAnswer(b, q).split(' ');
+      // The demo answer is built by the service from this bed's data, then shown word by word as before.
+      final answer = await sc.demoAnswer(b, q);
+      if (!mounted) return;
+      final words = answer.split(' ');
       for (var i = 1; i <= words.length; i++) {
         await Future.delayed(const Duration(milliseconds: 22));
         if (!mounted) return;
@@ -75,7 +78,7 @@ class _BedScreenState extends State<BedScreen> {
     final alerts = sc.sortedAlerts.where((a) => a.bed == b.bed).toList();
     final col = bandColor(context, b.band);
     Widget vital(String label, String unit, String vital, num? x, {String? sub}) {
-      final pts = vital == 'dbp' ? null : news2Points(vital, x, onOxygen: b.onOxygen ?? false);
+      final pts = vital == 'dbp' ? null : b.points[vital]; // NEWS2 points, scored by the service
       final vc = (pts ?? 0) >= 3 ? c.red : pts == 2 ? c.orange : pts == 1 ? c.yellow : c.label;
       return IOSCard(
         padding: const EdgeInsets.all(12),
@@ -157,7 +160,7 @@ class _BedScreenState extends State<BedScreen> {
           SectionHeader(tr('Ask about this patient')),
           IOSCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_chat.isEmpty) Text(sc.demo ? tr('Ask anything about this bed. Demo answers are built on the device from the live data.') : tr('Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.'), style: T.footnote.copyWith(color: c.label2)),
+              if (_chat.isEmpty) Text(sc.demo ? tr('Ask anything about this bed. Demo answers are built by the BT39 service from the live data.') : tr('Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.'), style: T.footnote.copyWith(color: c.label2)),
               for (final (mine, text) in _chat)
                 Align(
                   alignment: mine ? Alignment.centerRight : Alignment.centerLeft,

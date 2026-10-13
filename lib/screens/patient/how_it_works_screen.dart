@@ -172,10 +172,10 @@ class HowItWorksScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Row(children: [
-                        Icon(e.bucketP(k) >= e.tau ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash_fill, color: e.bucketP(k) >= e.tau ? c.red : c.indigo, size: 18),
+                        Icon(e.buckets[k]!.send ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash_fill, color: e.buckets[k]!.send ? c.red : c.indigo, size: 18),
                         const SizedBox(width: 10),
                         Expanded(child: Text(bucketLabel(k), style: T.footnote.copyWith(color: c.label))),
-                        Text('${pct(e.bucketP(k))} → ${tr(e.bucketP(k) >= e.tau ? 'alerts' : 'held')}', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
+                        Text('${pct(e.bucketP(k))} → ${tr(e.buckets[k]!.send ? 'alerts' : 'held')}', style: T.footnote.copyWith(color: c.label2, fontWeight: FontWeight.w600)),
                       ]),
                     ),
                 ]),

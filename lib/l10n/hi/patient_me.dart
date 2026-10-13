@@ -216,4 +216,10 @@ const hiPatientMe = <String, String>{
   'Approved': 'मंज़ूर',
   'Paid': 'भुगतान हुआ',
   'Rejected': 'नामंज़ूर',
+  // Moved to the BT39 service (2026-10)
+  'Demo Mode: your data is kept on the BT39 service for this visit only': 'डेमो मोड: आपका डेटा सिर्फ़ इस विज़िट के लिए BT39 सर्विस पर रहता है',
+  'Signed in. Your health data is saved to your account on the BT39 service.': 'लॉग इन है। आपका सेहत का डेटा BT39 सर्विस पर आपके अकाउंट में सेव है।',
+  "This demo's data will be deleted.": 'इस डेमो का डेटा मिटा दिया जाएगा।',
+  'Your data stays in your account for next time.': 'आपका डेटा अगली बार के लिए आपके अकाउंट में रहेगा।',
+  "Messages to contacts are simulated and recorded by the BT39 service; no text message is sent. The 112 call uses your phone's dialer.": 'संपर्कों को संदेश सिम्युलेट किए जाते हैं और BT39 सर्विस पर दर्ज होते हैं; कोई SMS नहीं भेजा जाता। 112 कॉल आपके फ़ोन के डायलर से होती है।',
 };

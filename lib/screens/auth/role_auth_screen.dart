@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config.dart';
 import '../../l10n/l10n.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
@@ -66,26 +65,22 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
       _error = null;
     });
     final s = context.read<Session>();
-    String? err;
-    if (AppConfig.supabaseEnabled) {
-      err = _signUp ? await s.signUp(_name.text, _email.text, _pw.text) : await s.signIn(_email.text, _pw.text);
-      if (err == 'CHECK_EMAIL') err = tr('Check your email to confirm your account, then log in.');
-    } else if (_signUp) {
-      final name = role == Role.doctor && !_name.text.trim().toLowerCase().startsWith('dr') ? 'Dr. ${_name.text.trim()}' : _name.text.trim();
-      err = await s.localSignUp(
-        role: role,
-        name: name,
-        email: _email.text,
-        password: _pw.text,
-        details: switch (role) {
-          Role.patient => {'age': _age.text.trim(), 'sex': _sex, 'phone': _phone.text.trim()},
-          Role.doctor => {'registration': _reg.text.trim(), 'specialty': _specialty, 'hospital': _hospital.text.trim()},
-          Role.nurse => {'registration': _reg.text.trim(), 'ward': _ward, 'shift': _shift},
-        },
-      );
-    } else {
-      err = await s.localSignIn(_email.text, _pw.text, as: role);
-    }
+    // Accounts live on the BT39 service, so every role signs up and logs in the same way. The service adds "Dr." to a
+    // doctor's name and keeps these details with the account.
+    final err = _signUp
+        ? await s.signUp(
+            role: role,
+            name: _name.text,
+            email: _email.text,
+            password: _pw.text,
+            consent: _consent,
+            details: switch (role) {
+              Role.patient => {'age': _age.text.trim(), 'sex': _sex, 'phone': _phone.text.trim()},
+              Role.doctor => {'registration': _reg.text.trim(), 'specialty': _specialty, 'hospital': _hospital.text.trim()},
+              Role.nurse => {'registration': _reg.text.trim(), 'ward': _ward, 'shift': _shift},
+            },
+          )
+        : await s.signIn(_email.text, _pw.text, as: role);
     if (!mounted) return;
     setState(() => _busy = false);
     if (err != null) {
@@ -239,16 +234,12 @@ class _RoleAuthScreenState extends State<RoleAuthScreen> {
                 onPressed: _busy ? null : _submit,
                 child: _busy ? const CupertinoActivityIndicator(color: Colors.white) : Text(_signUp ? tr('Create {role} account', {'role': label}) : tr('Log in as {role}', {'role': label}), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               ),
-              if (!AppConfig.supabaseEnabled) ...[
-                const SizedBox(height: 10),
-                CupertinoButton(onPressed: _fillDemo, child: Text(tr('Use the demo {role} account', {'role': label}))),
-                Text('${tr('Demo')}: ${demoAccounts[role]!.$1} · ${demoAccounts[role]!.$2}', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label2)),
-              ],
+              const SizedBox(height: 10),
+              CupertinoButton(onPressed: _fillDemo, child: Text(tr('Use the demo {role} account', {'role': label}))),
+              Text('${tr('Demo')}: ${demoAccounts[role]!.$1} · ${demoAccounts[role]!.$2}', textAlign: TextAlign.center, style: T.caption.copyWith(color: c.label2)),
               const SizedBox(height: 16),
               Text(
-                AppConfig.supabaseEnabled
-                    ? (role == Role.patient ? tr('Accounts use Supabase sign-in.') : tr('Staff accounts also need a ward assignment from the BT39 admin.'))
-                    : tr('Accounts are stored on this device. Passwords are never stored, only a salted SHA-256 hash.'),
+                role == Role.patient ? tr('Accounts use Supabase sign-in.') : tr('Staff accounts open the ward at once. This is a demo: use made-up data only.'),
                 textAlign: TextAlign.center,
                 style: T.caption.copyWith(color: c.label3),
               ),

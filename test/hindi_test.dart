@@ -1,10 +1,14 @@
-import 'package:bt39_care/app.dart';
 import 'package:bt39_care/l10n/l10n.dart';
+import 'package:bt39_care/services/assistant.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Opens the app in Hindi on a small phone. Any text without a Hindi
+import 'support/recorded_service.dart';
+
+/// Opens the app in Hindi on a small phone, with the replies the service recorded. The service sends its words as
+/// English messages (alert titles and reasons, assistant answers, nurse tasks, ward alerts, bed chat) and the app
+/// turns them into Hindi with `tr`, so a message with no Hindi in the table shows up here. Any text without a Hindi
 /// translation, or any layout overflow from longer Hindi text, fails.
 Future<void> settle(WidgetTester t, [int n = 6]) async {
   for (var i = 0; i < n; i++) {
@@ -34,6 +38,21 @@ Future<void> tab(WidgetTester t, String en) async {
   await settle(t);
 }
 
+/// Scrolls the open page down by [n] screens, so that everything on it is built once.
+Future<void> scrollDown(WidgetTester t, [int n = 4]) async {
+  for (var i = 0; i < n; i++) {
+    await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, -900));
+    await settle(t, 2);
+  }
+}
+
+/// Asks the assistant a question the way its buttons do: the Hindi text of the English question.
+Future<void> ask(WidgetTester t, String en) async {
+  await t.enterText(find.byType(CupertinoTextField), tr(en));
+  await t.testTextInput.receiveAction(TextInputAction.send);
+  await settle(t, 25); // the answer is typed out word by word
+}
+
 void main() {
   setUp(() {
     SharedPreferences.resetStatic();
@@ -43,15 +62,16 @@ void main() {
   });
   tearDown(() => appLang.value = 'en');
 
-  Future<void> start(WidgetTester t, String role) async {
-    t.view.physicalSize = const Size(1080, 1920);
-    t.view.devicePixelRatio = 3;
+  Future<RecordedService> start(WidgetTester t, String role, {Size size = const Size(1080, 1920), double ratio = 3}) async {
+    t.view.physicalSize = size;
+    t.view.devicePixelRatio = ratio;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    final svc = await openApp(t);
     await settle(t, 3);
     expect(find.text('हिन्दी'), findsOneWidget);
     await tapScrolled(t, find.widgetWithText(CupertinoButton, tr(role)));
     await settle(t, 10);
+    return svc;
   }
 
   void expectAllHindi() => expect(missingHindi, isEmpty, reason: 'No Hindi for:\n${missingHindi.join('\n')}');
@@ -60,7 +80,7 @@ void main() {
     t.view.physicalSize = const Size(1080, 1920);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
-    await t.pumpWidget(const BT39App());
+    final svc = await openApp(t);
     await settle(t, 3);
     for (var i = 0; i < 3; i++) {
       await t.scrollUntilVisible(find.text(tr('Sign up')).at(i), 200, scrollable: find.byType(Scrollable).first);
@@ -73,21 +93,27 @@ void main() {
       t.state<NavigatorState>(find.byType(Navigator).last).pop();
       await settle(t);
     }
+    // The Research Lab runs its study on the service and shows the results, with no account.
+    await tapScrolled(t, find.text(tr('Research Lab')));
+    await settle(t);
+    await scrollDown(t, 8);
+    expect(svc.to('POST /study'), hasLength(1));
+    expect(svc.to('POST /study').single.headers.containsKey('Authorization'), isFalse);
+    t.state<NavigatorState>(find.byType(Navigator).last).pop();
+    await settle(t);
     expectAllHindi();
   });
 
   testWidgets('patient app in Hindi', (t) async {
-    await start(t, 'Patient');
+    final svc = await start(t, 'Patient');
     await tab(t, 'Alerts');
     await openAndBack(t, find.text(tr('See how AdaptAlert works')));
     await t.tap(find.text(tr('All')).first);
     await settle(t);
     await openAndBack(t, find.text(tr('See how AdaptAlert decided')));
     await tab(t, 'Insights');
-    for (var i = 0; i < 4; i++) {
-      await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, -900));
-      await settle(t, 2);
-    }
+    await scrollDown(t);
+    await openAndBack(t, find.text(tr('Open the Research Lab')));
     await tab(t, 'Care');
     await openAndBack(t, find.text(tr('Search doctors, specialities, hospitals')));
     await tab(t, 'Me');
@@ -95,13 +121,34 @@ void main() {
       await openAndBack(t, find.text(tr(page)));
     }
     await tab(t, 'Today');
-    await openAndBack(t, find.text(tr('AI Health Assistant')));
     await openAndBack(t, find.text('SOS'));
+
+    // The assistant, asked every question its buttons send. The service answers with English messages; the replies it
+    // recorded with X-Lang: hi are shown in Hindi.
+    await tapScrolled(t, find.text(tr('AI Health Assistant')));
+    await settle(t);
+    final questions = <String>{
+      ...HealthAssistant.suggestions,
+      ...HealthAssistant.helpSuggestions,
+      'Where are my family contacts?',
+      'Where is my insurance?',
+      'Call my family',
+      'How do I make the text bigger?',
+      'What can you help with?',
+    };
+    for (final q in questions) {
+      await ask(t, q);
+    }
+    final asked = svc.to('POST /assistant');
+    expect({for (final a in asked) a.headers['X-Lang']}, {'hi'});
+    expect(asked.length, questions.length, reason: 'every question was sent');
+    t.state<NavigatorState>(find.byType(Navigator).last).pop();
+    await settle(t);
     expectAllHindi();
   });
 
   testWidgets('doctor app in Hindi', (t) async {
-    await start(t, 'Doctor');
+    final svc = await start(t, 'Doctor');
     for (var i = 0; i < 3; i++) {
       await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, -700));
       await settle(t, 2);
@@ -118,7 +165,20 @@ void main() {
     await openAndBack(t, find.text('Farhan Ali'));
     await tab(t, 'Schedule');
     await tab(t, 'Ward');
-    await openAndBack(t, find.text('Sunita Deshmukh'));
+    // A bed: its values, a demo scenario, and a question to the demo assistant (answered from the bed's own data).
+    await tapScrolled(t, find.text('Sunita Deshmukh'));
+    await settle(t);
+    await tapScrolled(t, find.text(tr('Sepsis')));
+    await settle(t, 10);
+    await tapScrolled(t, find.byType(CupertinoTextField));
+    await t.enterText(find.byType(CupertinoTextField), 'Is this sepsis?');
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await settle(t, 60); // the answer is typed out word by word
+    expect(svc.to('POST /ward/scenario').single.map, {'bed': 'B02', 'scenario': 'sepsis'});
+    expect(svc.to('POST /ward/chat').single.map, {'bed': 'B02', 'q': 'Is this sepsis?'});
+    expect(svc.to('POST /ward/chat').single.headers['X-Lang'], 'hi');
+    t.state<NavigatorState>(find.byType(Navigator).last).pop();
+    await settle(t);
     await tab(t, 'Alerts');
     await tab(t, 'Today');
     await t.drag(find.byType(Scrollable).hitTestable().first, const Offset(0, 2000));
@@ -142,4 +202,20 @@ void main() {
     await tab(t, 'Alerts');
     expectAllHindi();
   });
+
+  // The sections a phone keeps behind other pages (AdaptAlert review, Ward rules, Me) are all in the laptop sidebar.
+  for (final (role, sections) in [
+    ('Doctor', ['Patients', 'Schedule', 'Ward', 'Alerts', 'AdaptAlert review', 'Ward rules', 'Me']),
+    ('Nurse', ['Ward', 'Patients', 'Alerts', 'Home band', 'Ward rules', 'Me']),
+  ]) {
+    testWidgets('${role.toLowerCase()} sections on a laptop in Hindi', (t) async {
+      await start(t, role, size: const Size(1440, 900), ratio: 1);
+      for (final s in sections) {
+        await t.tap(find.text(tr(s)).first);
+        await settle(t, 4);
+        await scrollDown(t, 2);
+      }
+      expectAllHindi();
+    });
+  }
 }

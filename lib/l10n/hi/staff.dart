@@ -355,7 +355,7 @@ const hiStaff = <String, String>{
   'There are no open alerts. ': 'कोई खुला अलर्ट नहीं है। ',
   'Open alerts: {list}. ': 'खुले अलर्ट: {list}। ',
   'The pattern of fever, fast heart rate and fast breathing fits the sepsis screening criteria; consider the sepsis pathway. ': 'बुखार, तेज़ धड़कन और तेज़ साँस का यह पैटर्न सेप्सिस स्क्रीनिंग से मेल खाता है; सेप्सिस पाथवे पर विचार करें। ',
-  "Demo Mode answer, built on the device from this bed's data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports.": 'डेमो मोड का जवाब, इस बेड के डेटा से फ़ोन पर बना। लॉग इन किए डॉक्टरों को BT39 असिस्टेंट मिलता है, जो अपलोड किए नोट्स और रिपोर्ट भी पढ़ता है।',
+  "Demo Mode answer, built by the BT39 service from this bed's data. Signed-in doctors get the BT39 assistant, which also reads uploaded notes and reports.": 'डेमो मोड का जवाब, इस बेड के डेटा से BT39 सर्विस पर बना। लॉग इन किए डॉक्टरों को BT39 असिस्टेंट मिलता है, जो अपलोड किए नोट्स और रिपोर्ट भी पढ़ता है।',
 
   // BT39 service messages
   'Please sign in.': 'कृपया साइन इन करें।',
@@ -403,4 +403,10 @@ const hiStaff = <String, String>{
   'Imaging': 'स्कैन / एक्स-रे',
   'Vaccination': 'टीकाकरण',
   'Other': 'अन्य',
+  // Moved to the BT39 service (2026-10)
+  'Ask anything about this bed. Demo answers are built by the BT39 service from the live data.': 'इस बेड के बारे में कुछ भी पूछें। डेमो जवाब BT39 सर्विस पर लाइव डेटा से बनते हैं।',
+  'BT39 service demo ward (12 beds, NEWS2 every second)': 'BT39 सर्विस पर डेमो वार्ड (12 बेड, हर सेकंड NEWS2)',
+  'Patients who sign up appear here automatically. Example patients are fictional.': 'साइन अप करने वाले मरीज़ अपने आप यहाँ दिखते हैं। उदाहरण वाले मरीज़ काल्पनिक हैं।',
+  'They may have been removed.': 'हो सकता है उन्हें हटा दिया गया हो।',
+  'The schedule has not loaded yet. Try again in a moment.': 'शेड्यूल अभी लोड नहीं हुआ है। थोड़ी देर में फिर कोशिश करें।',
 };

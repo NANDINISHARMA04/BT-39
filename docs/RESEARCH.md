@@ -1,6 +1,6 @@
 # AdaptAlert: research notes
 
-AdaptAlert is the alert engine inside the **PulseOS** app. Material for the project report and a research paper. Numbers here come from `dart run tool/run_study.dart` (the same code as the in-app **Research Lab**), so they can be regenerated exactly.
+AdaptAlert is the alert engine inside the **PulseOS** app. Material for the project report and a research paper. Numbers here come from `dart run tool/run_study.dart` (the same code as the in-app **Research Lab**; since October 2026 the study runs on the BT39 service, `api/bt39api/pulse/study.py`, a line-for-line port of the original `lib/engine/study.dart` checked against it on recorded runs), so they can be regenerated exactly.
 
 ## 1. Problem
 
@@ -10,12 +10,12 @@ Remote vital-sign monitors usually alert on fixed thresholds or fixed early-warn
 
 | Gap in existing remote-monitoring systems | How AdaptAlert addresses it | Where in the code |
 |---|---|---|
-| G1. One threshold for everyone | Personal normal ranges per vital and activity state (rest, light, active, cooling down) | `lib/engine/adapt_alert.dart`, stage C |
+| G1. One threshold for everyone | Personal normal ranges per vital and activity state (rest, light, active, cooling down) | `engine.py` on the BT39 service (originally `lib/engine/adapt_alert.dart`), stage C |
 | G2. Systems never learn after deployment | Patient context answers and clinician labels update per-pattern estimates and a personal threshold τ | stage F, `patientFeedback`, `doctorLabel` |
 | G3. Learning from feedback can learn to ignore real emergencies | Guarded learning: safety floor that skips the model, τ bounded to 30–75%, at most 10 points a week, "I feel unwell" and "Not sure" never reduce sensitivity | stage D, `nudgedTau` |
 | G4. Black-box alerts that clinicians don't trust | Plain-language reasons, decision path, a counterfactual ("no alert below 84 bpm") and a 90% credible interval for every alert | stage G, alert detail screen |
 | G5. Bad sensor data causes false alarms | Signal-quality index; unreliable windows never alert or update the baseline | stage A |
-| G6. Personal models start cold | Federated prior: new patients start from label statistics pooled across earlier patients, no raw vitals shared | `lib/engine/study.dart`, system E |
+| G6. Personal models start cold | Federated prior: new patients start from label statistics pooled across earlier patients, no raw vitals shared | `study.py` on the BT39 service (originally `lib/engine/study.dart`), system E |
 | G7. Results reported without uncertainty or ablations | Five-system comparison on identical events, 95% bootstrap CIs, alarm-fatigue sweep, ablation of the safeguards | Research Lab |
 
 ## 3. Method
