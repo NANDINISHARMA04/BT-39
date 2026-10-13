@@ -124,12 +124,13 @@ class PulseApi {
   }
 
   /// One connection to a newline-delimited JSON stream (`/wearer/live`,
-  /// `/ward/live`). Lines that are not JSON objects are skipped. Throws an
+  /// `/ward/live`, or a POST such as `/chat` with [method] and [body]).
+  /// Lines that are not JSON objects are skipped. Throws an
   /// [ApiException] when the service does not answer 200, and a
   /// [TimeoutException] when nothing arrives for [idle]. The caller closes [c]
   /// to stop and reconnects with a back-off.
-  Stream<Map<String, dynamic>> lines(String path, http.Client c, {Duration idle = idleTimeout}) async* {
-    final req = await _request('GET', path, null);
+  Stream<Map<String, dynamic>> lines(String path, http.Client c, {Duration idle = idleTimeout, String method = 'GET', Object? body}) async* {
+    final req = await _request(method, path, body);
     final res = await c.send(req).timeout(timeout);
     if (res.statusCode != 200) {
       final r = _failure(res.statusCode, await res.stream.bytesToString());

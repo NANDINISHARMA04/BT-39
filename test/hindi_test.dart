@@ -139,7 +139,7 @@ void main() {
     for (final q in questions) {
       await ask(t, q);
     }
-    final asked = svc.to('POST /assistant');
+    final asked = svc.to('POST /chat');
     expect({for (final a in asked) a.headers['X-Lang']}, {'hi'});
     expect(asked.length, questions.length, reason: 'every question was sent');
     t.state<NavigatorState>(find.byType(Navigator).last).pop();
@@ -165,19 +165,21 @@ void main() {
     await openAndBack(t, find.text('Farhan Ali'));
     await tab(t, 'Schedule');
     await tab(t, 'Ward');
-    // A bed: its values, a demo scenario, and a question to the demo assistant (answered from the bed's own data).
+    // A bed: its values, a demo scenario, and a question about it in the chat (answered from the bed's own data).
     await tapScrolled(t, find.text('Sunita Deshmukh'));
     await settle(t);
     await tapScrolled(t, find.text(tr('Sepsis')));
     await settle(t, 10);
-    await tapScrolled(t, find.byType(CupertinoTextField));
-    await t.enterText(find.byType(CupertinoTextField), 'Is this sepsis?');
-    await t.testTextInput.receiveAction(TextInputAction.done);
-    await settle(t, 60); // the answer is typed out word by word
+    await tapScrolled(t, find.text(tr('Is this sepsis?')));
+    await settle(t, 20); // the chat opens, sends the question and the answer types itself in
     expect(svc.to('POST /ward/scenario').single.map, {'bed': 'B02', 'scenario': 'sepsis'});
-    expect(svc.to('POST /ward/chat').single.map, {'bed': 'B02', 'q': 'Is this sepsis?'});
-    expect(svc.to('POST /ward/chat').single.headers['X-Lang'], 'hi');
-    t.state<NavigatorState>(find.byType(Navigator).last).pop();
+    expect(svc.to('POST /chat').single.map, {'q': tr('Is this sepsis?'), 'focus': 'B02'});
+    expect(svc.to('POST /chat').single.headers['X-Lang'], 'hi');
+    expect(find.textContaining('Here is what the records say about Bed B02'), findsOneWidget);
+    expect(find.text(tr('Open alerts')), findsWidgets);
+    t.state<NavigatorState>(find.byType(Navigator).last).pop(); // the chat
+    await settle(t);
+    t.state<NavigatorState>(find.byType(Navigator).last).pop(); // the bed
     await settle(t);
     await tab(t, 'Alerts');
     await tab(t, 'Today');

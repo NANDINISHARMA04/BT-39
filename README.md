@@ -176,7 +176,7 @@ flutter run \
 
 - **The wearable band.** The service's band simulator stands in for an ESP32 band (MAX30102 for HR and SpO₂, MLX90614 for temperature, MPU6050 for motion). A real band would post its readings to the service, which feeds the same engine.
 - **Patient-side data** (profile, appointments, records, insurance, family) is saved on the service for each account. Record files are not uploaded, only their details.
-- **The AI Health Assistant** runs on the service and answers only from your data, with the same rules as before. It never diagnoses or gives doses.
+- **The AI Health Assistant** is a chat on the service (`POST /v1/pulse/chat`). It finds the few facts in your own records that answer the question, and a small language model writes the answer from them, citing each fact; the service's rules still spot emergencies first and answer for free when the model is not available. It never diagnoses or gives doses. Doctors and nurses have the same chat (**Ask**, on Today and on every patient and demo bed), answering from the patients they can see.
 - **SOS messages** to contacts and the location are simulated and recorded on the service (there is no SMS provider). *Call 112* opens the real phone dialer.
 - **Doctors, clinics and insurer updates** are example data.
 
@@ -186,10 +186,10 @@ flutter run \
 lib/
   engine/      adapt_alert.dart (the engine's state as the service sends it), simulator.dart (scenario names and icons), study.dart (study results), news2.dart (labels)
   l10n/        l10n.dart (tr, language switch), msg.dart (shows the service's messages in your language), hi/ (Hindi strings)
-  services/    pulse_api.dart (calls to the service), session.dart (auth, Demo Mode), tour.dart (guided demo), narrator.dart (voice-over), monitor.dart (the band, live), patient_store.dart, clinical_store.dart, assistant.dart, bt39_client.dart, staff_controller.dart
+  services/    pulse_api.dart (calls to the service), session.dart (auth, Demo Mode), tour.dart (guided demo), narrator.dart (voice-over), monitor.dart (the band, live), patient_store.dart, clinical_store.dart, assistant.dart, chat.dart (the chat stream), chat_controller.dart (one conversation), bt39_client.dart, staff_controller.dart
   models/      patient_models.dart
-  screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/
-  widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart
+  screens/     auth/ (welcome, role_auth), research/ (Research Lab), patient/ (alert_detail, how_it_works, today, alerts, insights, care, doctors, appointment_editor, records, insurance, family, me, assistant, sos), staff/ (… staff_ask: the doctors' and nurses' chat)
+  widgets/     common.dart (iOS components), vitals.dart (waveform, rings, gauge), charts.dart, chat/ (iMessage-style bubbles, typing dots, the chat view)
   theme/       ios_theme.dart (iOS colours, light and dark)
 test/          client/ (service calls, mirror, stores), every screen and every screen in Hindi against a fake service, live/ (guided demo against a real service)
 ```

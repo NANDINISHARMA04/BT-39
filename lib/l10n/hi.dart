@@ -1,5 +1,6 @@
 import 'hi/access.dart';
 import 'hi/auth.dart';
+import 'hi/chat.dart';
 import 'hi/patient_alerts.dart';
 import 'hi/patient_care.dart';
 import 'hi/patient_home.dart';
@@ -17,4 +18,5 @@ final Map<String, String> hiStrings = {
   ...hiStaff,
   ...hiHelp,
   ...hiAccess,
+  ...hiChat,
 };

@@ -15,6 +15,7 @@ import '../../widgets/vitals.dart';
 import '../patient/alert_detail_screen.dart';
 import '../patient/alerts_screen.dart';
 import 'schedule_screen.dart';
+import 'staff_ask_screen.dart';
 import 'staff_shell.dart';
 
 void openPatient(BuildContext context, String id) => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => PatientDetailScreen(id: id)));
@@ -164,6 +165,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 _Action(CupertinoIcons.capsule_fill, tr('Prescribe'), c.teal, () => showPrescribeSheet(context, p)),
                 _Action(CupertinoIcons.calendar_badge_plus, tr('Book'), c.blue, () => showBookSheet(context, p)),
               ],
+              _Action(CupertinoIcons.chat_bubble_2_fill, tr('Ask'), c.indigo, () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => StaffAskScreen(focus: p.id, title: p.name)))),
             ]),
           ]),
         ),

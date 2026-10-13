@@ -14,6 +14,10 @@ http.Response jsonReply(Object? body, [int status = 200]) =>
 /// The service's error shape.
 http.Response errorReply(int status, String code, String message) => jsonReply({'error': code, 'message': message}, status);
 
+/// A newline-delimited JSON reply, as the chat streams it.
+http.Response ndjsonReply(List<Map<String, dynamic>> lines) =>
+    http.Response.bytes(utf8.encode(lines.map((l) => '${jsonEncode(l)}\n').join()), 200, headers: {'content-type': 'application/x-ndjson'});
+
 /// One request the fake service received.
 class Seen {
   Seen(this.method, this.url, this.headers, this.body);

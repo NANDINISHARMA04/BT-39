@@ -8,7 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/recorded_service.dart';
 
-// The assistant's routing is tested on the server (bt39-monitor-service/api/tests/pulse/test_assistant.py); these tests are the screen, with the replies the service recorded.
+// The chat's answers are tested on the server (bt39-monitor-service/api/tests/pulse/test_pulse_chat.py); these tests are
+// the screen, with the rule replies the service recorded played back as chat streams.
 
 Future<void> settle(WidgetTester t, [int n = 6]) async {
   for (var i = 0; i < n; i++) {
@@ -57,7 +58,8 @@ void main() {
 
     await t.tap(find.text('Reports').hitTestable().first);
     await settle(t, 15);
-    expect(svc.to('POST /assistant').single.map, {'q': 'Where are my reports?'});
+    expect(svc.to('POST /chat').single.map, {'q': 'Where are my reports?'});
+    expect(svc.to('POST /chat/prepare'), hasLength(1)); // the chat warms the service up when it opens
     expect(find.textContaining('Me → Medical records'), findsOneWidget);
     await tapScrolled(t, find.text('Open medical records'));
     await settle(t);
@@ -87,7 +89,12 @@ void main() {
       await t.tap(find.text(q).hitTestable().first);
       await settle(t, 30); // the answer is typed out word by word
     }
-    expect([for (final s in svc.to('POST /assistant')) s.map['q']], HealthAssistant.suggestions);
+    expect([for (final s in svc.to('POST /chat')) s.map['q']], HealthAssistant.suggestions);
+    // From the second question on, the turns before it go along, so a follow-up knows what it refers to.
+    expect(svc.to('POST /chat')[1].map['history'], [
+      {'role': 'user', 'text': HealthAssistant.suggestions[0]},
+      isA<Map>().having((m) => m['role'], 'role', 'assistant'),
+    ]);
     // The last one, "I have chest pain", is urgent: its answer says 112 and offers the SOS screen.
     expect(find.textContaining('112'), findsWidgets);
     await tapScrolled(t, find.text('Open SOS'));

@@ -484,6 +484,53 @@ class RecordedService extends FakeService {
       }
       return jsonReply(reply);
     });
+    // -- the chat. The real one asks a language model; this one answers the way the service does when the model may
+    // not be asked: a patient gets the recorded rule reply, a doctor or nurse a short cited answer about the focus.
+    // Every answer is a stream of meta, the answer, then done (docs/pulseos.md, section 10).
+    http.Response stream(List<Json> lines) =>
+        http.Response.bytes(utf8.encode(lines.map((l) => '${jsonEncode(l)}\n').join()), 200, headers: {'content-type': 'application/x-ndjson'});
+    routes['POST /chat/prepare'] = _anyone((s) => jsonReply({'ready': true, 'facts': 40, 'embedded': 0, 'from_db': 40, 'from_memory': 0}));
+    routes['POST /chat'] = _anyone((s) {
+      final q = '${s.map['q'] ?? ''}'.trim();
+      if (q.isEmpty) return errorReply(422, 'invalid', 'Ask a question first.');
+      final role = roleOf(s)!;
+      final focus = s.map['focus'] as String?;
+      if (role == 'patient') {
+        if (focus != null) return errorReply(422, 'invalid', 'Only doctors and nurses can focus the chat on a patient.');
+        final lang = s.headers['X-Lang'] == 'hi' ? 'hi' : 'en';
+        final reply = _assistant[lang]![lang == 'hi' ? (_english[q] ?? q) : q];
+        if (reply == null) {
+          misses.add('POST /chat ($lang): $q');
+          return errorReply(404, 'not_recorded', 'No recorded reply for: $q');
+        }
+        final urgent = reply['urgent'] == true;
+        return stream([
+          {'type': 'meta', 'urgent': urgent, 'action': reply['action'], 'action_label': reply['action_label'], 'suggestions': reply['suggestions'] ?? [], 'intent': urgent ? 'emergency' : 'data'},
+          {'type': 'answer', 'msg': reply['text']},
+          {'type': 'done', 'sources': [], 'cached': null, 'fallback': 'no_key', 'tokens': 0, 'cost': 0, 'ms': 4, 'action': reply['action'], 'action_label': reply['action_label'], 'intent': 'data'},
+        ]);
+      }
+      final patients = (_careOf(role)['patients'] as List).cast<Json>();
+      final bed = focus != null && RegExp(r'^B\d\d$').hasMatch(focus);
+      final who = focus == null || bed ? null : patients.where((p) => p['id'] == focus).firstOrNull;
+      if (focus != null && !bed && who == null) return errorReply(404, 'not_found', 'That patient was not found.');
+      final subject = (who ?? patients.first)['name'] as String;
+      final ref = focus ?? patients.first['id'] as String;
+      final title = bed ? 'Bed $focus' : subject;
+      return stream([
+        {'type': 'meta', 'urgent': false, 'action': null, 'action_label': null, 'suggestions': <String>[], 'intent': focus == null ? 'records' : 'focus'},
+        {'type': 'delta', 'text': 'Here is what the records say about $title '},
+        {'type': 'delta', 'text': '[1].'},
+        {
+          'type': 'done',
+          'sources': [
+            {'n': 1, 'id': bed ? 'ward:$focus' : 'patient:$ref', 'kind': bed ? 'ward_alert' : 'patient', 'title': title, 'snippet': '', 'action': bed ? 'staff:alerts' : 'staff:patients', 'ref': ref},
+          ],
+          'cached': null, 'fallback': null, 'tokens': 120, 'cost': 0.00004, 'ms': 900,
+          'action': bed ? 'staff:alerts' : 'staff:patients', 'action_label': {'t': bed ? 'Open alerts' : 'Open patient record'}, 'intent': 'focus',
+        },
+      ]);
+    });
     routes['POST /sos'] = _patient((s) => jsonReply({...obj('patient/sos.json'), 'id': ++_sos}));
     _pattern('POST /sos/\\d+/end', _patient((s) => jsonReply(json('patient/sos_end.json'))));
 

@@ -23,6 +23,7 @@ import 'bed_screen.dart';
 import 'home_patients_screen.dart';
 import 'patients_screen.dart';
 import 'schedule_screen.dart';
+import 'staff_ask_screen.dart';
 import 'staff_today_screen.dart';
 
 Color bandColor(BuildContext context, String? band) {
@@ -37,14 +38,14 @@ Color severityColor(BuildContext context, String s) {
 
 /// The doctor and nurse app's sections. Phones show five of them in a tab
 /// bar and open the rest as pages; laptops list them all in a sidebar.
-enum StaffSec { today, patients, schedule, ward, alerts, review, rules, me }
+enum StaffSec { today, ask, patients, schedule, ward, alerts, review, rules, me }
 
 final staffSec = ValueNotifier<int>(0);
 final staffNavKey = GlobalKey<NavigatorState>();
 
 List<StaffSec> staffSections(Role? r) => r == Role.nurse
-    ? const [StaffSec.today, StaffSec.ward, StaffSec.patients, StaffSec.alerts, StaffSec.review, StaffSec.rules, StaffSec.me]
-    : const [StaffSec.today, StaffSec.patients, StaffSec.schedule, StaffSec.ward, StaffSec.alerts, StaffSec.review, StaffSec.rules, StaffSec.me];
+    ? const [StaffSec.today, StaffSec.ask, StaffSec.ward, StaffSec.patients, StaffSec.alerts, StaffSec.review, StaffSec.rules, StaffSec.me]
+    : const [StaffSec.today, StaffSec.ask, StaffSec.patients, StaffSec.schedule, StaffSec.ward, StaffSec.alerts, StaffSec.review, StaffSec.rules, StaffSec.me];
 
 List<StaffSec> _tabSections(Role? r) => r == Role.nurse
     ? const [StaffSec.today, StaffSec.ward, StaffSec.patients, StaffSec.alerts, StaffSec.review]
@@ -52,6 +53,7 @@ List<StaffSec> _tabSections(Role? r) => r == Role.nurse
 
 (IconData, IconData, String) _secItem(StaffSec s, Role? r) => switch (s) {
       StaffSec.today => r == Role.nurse ? (CupertinoIcons.checkmark_square, CupertinoIcons.checkmark_square_fill, tr('Shift')) : (CupertinoIcons.sun_max, CupertinoIcons.sun_max_fill, tr('Today')),
+      StaffSec.ask => (CupertinoIcons.chat_bubble_2, CupertinoIcons.chat_bubble_2_fill, tr('Ask')),
       StaffSec.patients => (CupertinoIcons.person_2, CupertinoIcons.person_2_fill, tr('Patients')),
       StaffSec.schedule => (CupertinoIcons.calendar, CupertinoIcons.calendar_today, tr('Schedule')),
       StaffSec.ward => (CupertinoIcons.square_grid_2x2, CupertinoIcons.square_grid_2x2_fill, tr('Ward')),
@@ -63,6 +65,7 @@ List<StaffSec> _tabSections(Role? r) => r == Role.nurse
 
 Widget _secPage(StaffSec s) => switch (s) {
       StaffSec.today => const StaffTodayScreen(),
+      StaffSec.ask => const StaffAskScreen(),
       StaffSec.patients => const PatientsScreen(),
       StaffSec.schedule => const ScheduleScreen(),
       StaffSec.ward => const WardScreen(),
@@ -72,10 +75,13 @@ Widget _secPage(StaffSec s) => switch (s) {
       StaffSec.me => const StaffMeScreen(),
     };
 
-/// Opens a section: as a tab when it has one (or on a laptop), else as a page.
+/// Opens a section: as a tab when it has one (or on a laptop), else as a page. The chat is always a page of its own,
+/// so its conversation starts when it opens and ends when it closes.
 void openStaffSection(BuildContext context, StaffSec s) {
   final role = context.read<Session>().role;
-  if (isWide(context) || _tabSections(role).contains(s)) {
+  if (s == StaffSec.ask) {
+    Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const StaffAskScreen()));
+  } else if (isWide(context) || _tabSections(role).contains(s)) {
     staffNavKey.currentState?.popUntil((r) => r.isFirst);
     staffSec.value = s.index;
   } else {
@@ -212,7 +218,7 @@ class StaffShell extends StatelessWidget {
         final idx = all.indexWhere((x) => x.index == cur);
         return Scaffold(
           backgroundColor: c.bg,
-          body: IndexedStack(index: idx < 0 ? 0 : idx, children: [for (final sec in all) _secPage(sec)]),
+          body: IndexedStack(index: idx < 0 ? 0 : idx, children: [for (final sec in all) sec == StaffSec.ask ? const SizedBox.shrink() : _secPage(sec)]),
           bottomNavigationBar: wide
               ? null
               : CupertinoTabBar(

@@ -10,6 +10,7 @@ import '../../services/staff_controller.dart';
 import '../../theme/ios_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/vitals.dart';
+import 'staff_ask_screen.dart';
 import 'staff_shell.dart';
 
 /// One bed: live values with NEWS2 points, alerts, and (for doctors) the patient chat.
@@ -41,27 +42,16 @@ class _BedScreenState extends State<BedScreen> {
       _chat.add((false, ''));
       _asking = true;
     });
-    if (sc.demo) {
-      // The demo answer is built by the service from this bed's data, then shown word by word as before.
-      final answer = await sc.demoAnswer(b, q);
+    // The signed-in ward: the doctor chat of the BT39 monitor (/v1/chat). Demo beds open the PulseOS chat instead.
+    await for (final ev in sc.client.chat(b.patientId!, q)) {
       if (!mounted) return;
-      final words = answer.split(' ');
-      for (var i = 1; i <= words.length; i++) {
-        await Future.delayed(const Duration(milliseconds: 22));
-        if (!mounted) return;
-        setState(() => _chat[_chat.length - 1] = (false, words.sublist(0, i).join(' ')));
-      }
-    } else {
-      await for (final ev in sc.client.chat(b.patientId!, q)) {
-        if (!mounted) return;
-        final sofar = _chat.last.$2;
-        final next = switch (ev) {
-          ChatDelta d => sofar + d.text,
-          ChatError e => '$sofar\n\n⚠️ ${e.message}',
-          ChatDone d => d.sources.isEmpty ? sofar : '$sofar\n\n${tr('Sources: {list}', {'list': d.sources.join(', ')})}',
-        };
-        setState(() => _chat[_chat.length - 1] = (false, next));
-      }
+      final sofar = _chat.last.$2;
+      final next = switch (ev) {
+        ChatDelta d => sofar + d.text,
+        ChatError e => '$sofar\n\n⚠️ ${e.message}',
+        ChatDone d => d.sources.isEmpty ? sofar : '$sofar\n\n${tr('Sources: {list}', {'list': d.sources.join(', ')})}',
+      };
+      setState(() => _chat[_chat.length - 1] = (false, next));
     }
     if (mounted) setState(() => _asking = false);
   }
@@ -156,11 +146,14 @@ class _BedScreenState extends State<BedScreen> {
         SectionHeader(tr('Alerts'), trailing: tr('{n} open', {'n': alerts.where((a) => a.open).length})),
         if (alerts.isEmpty) IOSCard(child: Text(tr('No alerts for this patient.'), style: T.sub.copyWith(color: c.label2))),
         for (final a in alerts) StaffAlertCard(a: a, showPatient: false),
-        if (s.role == Role.doctor) ...[
+        if (sc.demo) ...[
+          SectionHeader(tr('Ask about this patient')),
+          _AskCard(bed: b.bed, title: '${b.bed} · ${b.name ?? ''}'),
+        ] else if (s.role == Role.doctor) ...[
           SectionHeader(tr('Ask about this patient')),
           IOSCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_chat.isEmpty) Text(sc.demo ? tr('Ask anything about this bed. Demo answers are built by the BT39 service from the live data.') : tr('Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.'), style: T.footnote.copyWith(color: c.label2)),
+              if (_chat.isEmpty) Text(tr('Answers come from the BT39 assistant, which reads this patient\'s vitals, alerts and uploaded notes. It never gives doses or orders.'), style: T.footnote.copyWith(color: c.label2)),
               for (final (mine, text) in _chat)
                 Align(
                   alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -180,6 +173,51 @@ class _BedScreenState extends State<BedScreen> {
             ]),
           ),
         ],
+      ]),
+    );
+  }
+}
+
+/// A demo bed's way into the chat: three questions to tap and a box that opens the conversation about this bed.
+class _AskCard extends StatelessWidget {
+  const _AskCard({required this.bed, required this.title});
+  final String bed, title;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ios;
+    void open([String? q]) => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => StaffAskScreen(focus: bed, title: title, first: q)));
+    return IOSCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(tr('Answers come from this bed\'s live values and alerts, and show where each fact is written. They never give orders or doses.'), style: T.footnote.copyWith(color: c.label2)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final q in const ['Is this sepsis?', 'What changed in the last hour?', 'Which alerts are open?'])
+            Pressable(
+              onTap: () => open(tr(q)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: c.blue.withValues(alpha: .1), borderRadius: BorderRadius.circular(99)),
+                child: Text(tr(q), style: T.footnote.copyWith(color: c.blue, fontWeight: FontWeight.w600)),
+              ),
+            ),
+        ]),
+        const SizedBox(height: 10),
+        Semantics(
+          button: true,
+          label: tr('Ask about this patient'),
+          child: Pressable(
+            onTap: open,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+              decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.sep)),
+              child: Row(children: [
+                Expanded(child: Text(tr('Ask about this patient'), style: T.callout.copyWith(color: c.label3))),
+                Icon(CupertinoIcons.arrow_up_circle_fill, size: 28, color: c.blue),
+              ]),
+            ),
+          ),
+        ),
       ]),
     );
   }

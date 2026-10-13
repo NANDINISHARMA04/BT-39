@@ -8,11 +8,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/assistant.dart';
+import '../../services/chat.dart';
+import '../../services/chat_controller.dart';
 import '../../services/monitor.dart';
 import '../../services/patient_store.dart';
 import '../../services/session.dart';
 import '../../services/speech.dart';
 import '../../theme/ios_theme.dart';
+import '../../widgets/chat/bubble.dart';
+import '../../widgets/chat/chat_view.dart';
 import '../../widgets/common.dart';
 import '../research/research_lab_screen.dart';
 import 'accessibility_screen.dart';
@@ -25,14 +29,6 @@ import 'me_screen.dart';
 import 'patient_shell.dart';
 import 'records_screen.dart';
 import 'sos_screen.dart';
-
-class _Msg {
-  _Msg(this.mine, this.text, {this.reply});
-  final bool mine;
-  String text;
-  final AssistantReply? reply;
-  bool done = false;
-}
 
 /// A help topic button: an icon, a short label, and the question it asks
 /// (English keys, shown and sent with tr()). A null question opens SOS.
@@ -68,19 +64,14 @@ class AssistantScreen extends StatefulWidget {
 class _AssistantScreenState extends State<AssistantScreen> {
   static const _readAloudKey = 'bt39.readAloud';
 
-  final _input = TextEditingController();
-  final _scroll = ScrollController();
-  final List<_Msg> _msgs = [];
-  bool _typing = false;
-  bool _listening = false;
+  late final ChatController _chat = ChatController(PulseChat(context.read<Session>().api));
   bool _readAloud = false;
-  Timer? _t;
 
   @override
   void initState() {
     super.initState();
-    _msgs.add(_Msg(false, tr('Hi {name}. I can explain your vitals and alerts, and help with appointments, medicines, records and insurance. I don\'t diagnose or change doses.', {'name': context.read<PatientStore>().profile.name.split(' ').first}))..done = true);
-    if (widget.initial != null) WidgetsBinding.instance.addPostFrameCallback((_) => _send(widget.initial!));
+    _chat.prepare();
+    if (widget.initial != null) WidgetsBinding.instance.addPostFrameCallback((_) => _chat.send(widget.initial!));
     _loadReadAloud();
   }
 
@@ -102,91 +93,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   @override
   void dispose() {
-    _t?.cancel();
-    if (_listening) Speech.instance.stopListening();
     Speech.instance.stopSpeaking();
-    _input.dispose();
-    _scroll.dispose();
+    _chat.dispose();
     super.dispose();
   }
 
-  void _toEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 350), curve: Curves.easeOutCubic);
-      });
+  /// Text for the speech engine: citations dropped, bullets and arrows read as pauses.
+  static String _spoken(String s) => plainChatText(s).replaceAll('•', '').replaceAll('→', ',').replaceAll('₹', '₹ ');
 
-  /// Text for the speech engine: bullets and arrows read as pauses.
-  static String _spoken(String s) => s.replaceAll('•', '').replaceAll('→', ',').replaceAll('₹', '₹ ');
-
-  Future<void> _send(String q) async {
-    q = q.trim();
-    if (q.isEmpty || _typing) return;
-    _input.clear();
-    Speech.instance.stopSpeaking();
-    // The assistant runs on the BT39 service. Ask it while 'typing' shows, for at least as long as before.
-    final asking = HealthAssistant(context.read<Session>().api).reply(q);
-    setState(() {
-      _msgs.add(_Msg(true, q)..done = true);
-      _typing = true;
-    });
-    _toEnd();
-    final got = await Future.wait<Object?>([asking, Future<void>.delayed(const Duration(milliseconds: 700))]);
-    if (!mounted) return;
-    final reply = got.first! as AssistantReply;
-    // Then stream the answer word by word.
-    final m = _Msg(false, '', reply: reply);
-    final words = reply.text.split(' ');
-    var i = 0;
-    setState(() => _msgs.add(m));
-    if (_readAloud) Speech.instance.speak(_spoken(reply.text));
-    _t = Timer.periodic(const Duration(milliseconds: 28), (t) {
-      if (!mounted) return t.cancel();
-      setState(() {
-        m.text = words.sublist(0, ++i).join(' ');
-        if (i >= words.length) {
-          t.cancel();
-          m.done = true;
-          _typing = false;
-        }
-      });
-      _toEnd();
-    });
-  }
-
-  /// Microphone: shows the words in the field as they come, and sends them
-  /// when the person stops talking. Tapping again stops listening.
-  void _listen() {
-    if (_listening) {
-      Speech.instance.stopListening();
-      return;
-    }
-    Speech.instance.stopSpeaking();
-    setState(() {
-      _listening = true;
-      _input.clear();
-    });
-    var sent = false;
-    void finish(String text) {
-      if (sent) return;
-      sent = true;
-      if (mounted) setState(() => _listening = false);
-      if (mounted && text.trim().isNotEmpty) _send(text);
-    }
-
-    Speech.instance.listen(
-      onText: (text, done) {
-        if (!mounted) return;
-        setState(() => _input.text = text);
-        if (done) finish(text);
-      },
-      onEnd: () {
-        if (!mounted) return;
-        if (!sent) {
-          finish(_input.text);
-        } else {
-          setState(() => _listening = false);
-        }
-      },
-    );
+  void _answered(ChatMessage reply) {
+    if (_readAloud && reply.shown.isNotEmpty) Speech.instance.speak(_spoken(reply.shown));
   }
 
   Future<void> _callFamily() async {
@@ -263,7 +179,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     if (q == null) {
       _act('sos');
     } else {
-      _send(tr(q));
+      _chat.send(tr(q));
     }
   }
 
@@ -271,7 +187,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Widget build(BuildContext context) {
     final c = context.ios;
     final speech = Speech.instance;
-    final bubbleWidth = MediaQuery.sizeOf(context).width * .86;
     return Scaffold(
       backgroundColor: c.bg,
       appBar: CupertinoNavigationBar(
@@ -299,148 +214,33 @@ class _AssistantScreenState extends State<AssistantScreen> {
               )
             : null,
       ),
-      body: Column(children: [
-        Expanded(
-          child: ListView.builder(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-            // The greeting, then the help topics, then the conversation.
-            itemCount: _msgs.length + 1 + (_typing && (_msgs.isEmpty || _msgs.last.mine) ? 1 : 0),
-            itemBuilder: (_, i) {
-              if (i == 1) return _HelpTopics(onTap: _topic);
-              final k = i == 0 ? 0 : i - 1;
-              if (k >= _msgs.length) return const _TypingBubble();
-              final m = _msgs[k];
-              final reply = m.reply;
-              final urgent = reply?.urgent == true;
-              return FadeIn(
-                dy: 10,
-                child: Align(
-                  alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: bubbleWidth),
-                    child: Column(crossAxisAlignment: m.mine ? CrossAxisAlignment.end : CrossAxisAlignment.start, children: [
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: m.mine ? c.blue : (urgent ? c.red.withValues(alpha: .14) : c.card),
-                          border: m.mine ? null : Border.all(color: urgent ? c.red : c.sep, width: urgent ? 1.5 : 1),
-                          borderRadius: BorderRadius.only(topLeft: const Radius.circular(20), topRight: const Radius.circular(20), bottomLeft: Radius.circular(m.mine ? 20 : 6), bottomRight: Radius.circular(m.mine ? 6 : 20)),
-                        ),
-                        child: Text(m.text, style: TextStyle(fontSize: 18, height: 1.4, color: m.mine ? Colors.white : c.label)),
-                      ),
-                      if (m.done && reply?.action != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: CupertinoButton(
-                            color: urgent ? c.red : c.blue,
-                            minimumSize: const Size(48, 52),
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                            borderRadius: BorderRadius.circular(14),
-                            onPressed: () => _act(reply.action!),
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Flexible(child: Text(reply!.actionLabel ?? tr('Open'), style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600))),
-                              const SizedBox(width: 8),
-                              const Icon(CupertinoIcons.arrow_right_circle_fill, color: Colors.white, size: 22),
-                            ]),
-                          ),
-                        ),
-                      if (m.done && reply != null && reply.suggestions.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Wrap(spacing: 8, runSpacing: 8, children: [
-                            for (final s in reply.suggestions) _Chip(label: tr(s), color: c.blue, onTap: () => _send(tr(s))),
-                          ]),
-                        ),
-                    ]),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        SizedBox(
-          height: 58,
-          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: [
-            for (final s in HealthAssistant.suggestions)
-              Padding(
-                padding: const EdgeInsets.only(right: 8, bottom: 8, top: 2),
-                child: Pressable(
-                  onTap: () => _send(tr(s)),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(99), border: Border.all(color: c.sep)),
-                    child: Text(tr(s), style: T.sub.copyWith(color: c.label, fontWeight: FontWeight.w500)),
-                  ),
-                ),
+      body: ChatView(
+        controller: _chat,
+        large: true,
+        voice: true,
+        placeholder: tr('Ask about your health'),
+        starters: HealthAssistant.suggestions,
+        onAction: _act,
+        onSource: (s) {
+          if (s.action != null) _act(s.action!);
+        },
+        onAnswered: _answered,
+        header: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .82),
+            child: Bubble(
+              color: incomingBubble(c),
+              mine: false,
+              child: Text(
+                tr('Hi {name}. I can explain your vitals and alerts, and help with appointments, medicines, records and insurance. I don\'t diagnose or change doses.', {'name': context.read<PatientStore>().profile.name.split(' ').first}),
+                style: TextStyle(fontSize: 18, height: 1.36, letterSpacing: -.3, color: c.label),
               ),
-          ]),
-        ),
-        Glass(
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (_listening)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Semantics(
-                      liveRegion: true,
-                      child: Row(children: [
-                        const _Pulse(),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(tr('Listening… speak now'), style: T.headline.copyWith(color: c.red))),
-                      ]),
-                    ),
-                  ),
-                Row(children: [
-                  if (speech.canListen) ...[
-                    Semantics(
-                      label: _listening ? tr('Stop listening') : tr('Speak your question'),
-                      button: true,
-                      child: Pressable(
-                        onTap: _listen,
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: _listening ? c.red : c.blue),
-                          child: Icon(_listening ? CupertinoIcons.stop_fill : CupertinoIcons.mic_fill, color: Colors.white, size: 26),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: CupertinoTextField(
-                      controller: _input,
-                      placeholder: _listening ? tr('Listening…') : tr('Ask about your health'),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: _listening ? c.red : c.sep, width: _listening ? 2 : 1)),
-                      style: TextStyle(fontSize: 18, color: c.label),
-                      placeholderStyle: TextStyle(fontSize: 18, color: c.label2),
-                      onSubmitted: _send,
-                      textInputAction: TextInputAction.send,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Semantics(
-                    label: tr('Send'),
-                    button: true,
-                    child: Pressable(
-                      onTap: () => _send(_input.text),
-                      child: SizedBox(width: 48, height: 52, child: Icon(CupertinoIcons.arrow_up_circle_fill, size: 42, color: c.blue)),
-                    ),
-                  ),
-                ]),
-              ]),
             ),
           ),
-        ),
-      ]),
+          const SizedBox(height: 10),
+          _HelpTopics(onTap: _topic),
+        ]),
+      ),
     );
   }
 }
@@ -505,74 +305,6 @@ class _Chip extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[Icon(icon, size: 22, color: strong ? Colors.white : color), const SizedBox(width: 8)],
             Flexible(child: Text(label, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: strong ? Colors.white : c.label))),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-/// A pulsing red dot while the microphone is on.
-class _Pulse extends StatefulWidget {
-  const _Pulse();
-  @override
-  State<_Pulse> createState() => _PulseState();
-}
-
-class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
-  @override
-  void dispose() {
-    _a.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return AnimatedBuilder(
-      animation: _a,
-      builder: (_, _) => Container(
-        width: 18,
-        height: 18,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: c.red, boxShadow: [BoxShadow(color: c.red.withValues(alpha: .5), blurRadius: 4 + 8 * _a.value, spreadRadius: 2 * _a.value)]),
-      ),
-    );
-  }
-}
-
-class _TypingBubble extends StatefulWidget {
-  const _TypingBubble();
-  @override
-  State<_TypingBubble> createState() => _TypingBubbleState();
-}
-
-class _TypingBubbleState extends State<_TypingBubble> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
-  @override
-  void dispose() {
-    _a.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ios;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.sep)),
-        child: AnimatedBuilder(
-          animation: _a,
-          builder: (_, _) => Row(mainAxisSize: MainAxisSize.min, children: [
-            for (var i = 0; i < 3; i++)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: c.label2.withValues(alpha: .3 + .7 * (((_a.value * 3 - i) % 3) < 1 ? 1 : 0))),
-              ),
           ]),
         ),
       ),
