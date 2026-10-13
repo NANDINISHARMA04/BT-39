@@ -110,7 +110,7 @@
           "id": "x1",
           "title": "Last clinic letter",
           "category": "Discharge summary",
-          "date": "2026-09-23T10:40:01.099Z",
+          "date": "2026-09-23T11:41:37.565Z",
           "forMember": "self",
           "fileName": "clinic_letter.pdf",
           "sizeBytes": 182220,
@@ -121,7 +121,7 @@
           "id": "x2",
           "title": "Blood tests",
           "category": "Lab report",
-          "date": "2026-10-04T10:40:01.099Z",
+          "date": "2026-10-04T11:41:37.565Z",
           "forMember": "self",
           "fileName": "labs.pdf",
           "sizeBytes": 96410,
@@ -177,7 +177,7 @@
           "id": "x1",
           "title": "Last clinic letter",
           "category": "Discharge summary",
-          "date": "2026-09-23T10:40:01.099Z",
+          "date": "2026-09-23T11:41:37.565Z",
           "forMember": "self",
           "fileName": "clinic_letter.pdf",
           "sizeBytes": 182220,
@@ -188,7 +188,7 @@
           "id": "x2",
           "title": "Blood tests",
           "category": "Lab report",
-          "date": "2026-10-04T10:40:01.099Z",
+          "date": "2026-10-04T11:41:37.565Z",
           "forMember": "self",
           "fileName": "labs.pdf",
           "sizeBytes": 96410,
@@ -236,7 +236,7 @@
           "id": "x1",
           "title": "Last clinic letter",
           "category": "Discharge summary",
-          "date": "2026-09-23T10:40:01.099Z",
+          "date": "2026-09-23T11:41:37.565Z",
           "forMember": "self",
           "fileName": "clinic_letter.pdf",
           "sizeBytes": 182220,
@@ -247,7 +247,7 @@
           "id": "x2",
           "title": "Blood tests",
           "category": "Lab report",
-          "date": "2026-10-04T10:40:01.099Z",
+          "date": "2026-10-04T11:41:37.565Z",
           "forMember": "self",
           "fileName": "labs.pdf",
           "sizeBytes": 96410,
@@ -298,7 +298,7 @@
           "id": "x1",
           "title": "Last clinic letter",
           "category": "Discharge summary",
-          "date": "2026-09-23T10:40:01.099Z",
+          "date": "2026-09-23T11:41:37.565Z",
           "forMember": "self",
           "fileName": "clinic_letter.pdf",
           "sizeBytes": 182220,
@@ -309,7 +309,7 @@
           "id": "x2",
           "title": "Blood tests",
           "category": "Lab report",
-          "date": "2026-10-04T10:40:01.099Z",
+          "date": "2026-10-04T11:41:37.565Z",
           "forMember": "self",
           "fileName": "labs.pdf",
           "sizeBytes": 96410,
@@ -332,7 +332,7 @@
     {
       "id": "s3",
       "patientId": "ex-farhan",
-      "at": "2026-10-12T08:40:01.099Z",
+      "at": "2026-10-12T09:41:37.565Z",
       "kind": "note",
       "text": "Weight up 1.2 kg in 3 days, ankles a little swollen. Consider raising furosemide if it continues.",
       "by": "Dr. Kavya Rao"
@@ -340,7 +340,7 @@
     {
       "id": "s2",
       "patientId": "live",
-      "at": "2026-10-11T05:40:01.099Z",
+      "at": "2026-10-11T06:41:37.565Z",
       "kind": "nursing",
       "text": "Video check: wound clean and dry, band fits well, no breathlessness.",
       "by": "Nurse Anjali Singh"
@@ -348,7 +348,7 @@
     {
       "id": "s4",
       "patientId": "ex-sunita",
-      "at": "2026-10-10T10:40:01.099Z",
+      "at": "2026-10-10T11:41:37.565Z",
       "kind": "consult",
       "text": "Stable. Night SpO₂ 91–92% is her usual; AdaptAlert has learned this and no longer alerts on it.",
       "by": "Dr. Kavya Rao"
@@ -356,7 +356,7 @@
     {
       "id": "s1",
       "patientId": "live",
-      "at": "2026-10-07T07:40:01.099Z",
+      "at": "2026-10-07T08:41:37.565Z",
       "kind": "consult",
       "text": "Discharged after mitral valve repair. Wrist band fitted; AdaptAlert monitoring at home. Review in one week.",
       "by": "Dr. Kavya Rao"
@@ -776,8 +776,6 @@
   },
   "slots": {
     "2026-10-13": [
-      "2026-10-13T11:00:00.000Z",
-      "2026-10-13T11:30:00.000Z",
       "2026-10-13T12:00:00.000Z"
     ],
     "2026-10-14": [

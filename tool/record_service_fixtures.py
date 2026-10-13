@@ -18,8 +18,8 @@ What is saved (test/fixtures/service/):
   demo_end.json                      POST /demo/end
   patient/                           demo_start (token replaced), me, me_data, doctors, slots_d1, wearer_live.ndjson (the
                                      first 4 lines), assistant_en / assistant_hi (question -> reply), sos, sos_end,
-                                     scenario_hypoxia, fast_on, wearer_live_hypoxia (a snapshot with a level-4 safety
-                                     alert), wearer_update_hypoxia (the update line that carried that alert)
+                                     wearer_live_hypoxia (a snapshot with a level-4 safety alert after the oxygen
+                                     scenario in fast mode), wearer_update_hypoxia (the update line that carried it)
   doctor/ and nurse/                 demo_start (token replaced), me, care_state, labels, ward_live.ndjson (the first 3
                                      lines), wearer_live.ndjson (the first line), ward_chat
 
@@ -250,8 +250,8 @@ def hypoxia(visit, files):
     watcher.start()
     if not up.wait(30) or "error" in found:
         raise Failed("the wearer stream did not open: %s" % found.get("error"))
-    files.json("patient/fast_on.json", visit.post("/wearer/fast", {"fast": True}))
-    files.json("patient/scenario_hypoxia.json", visit.post("/wearer/scenario", {"id": "hypoxia"}))
+    visit.post("/wearer/fast", {"fast": True})
+    visit.post("/wearer/scenario", {"id": "hypoxia"})
     watcher.join(90)
     stop.set()
     if "alert" not in found:
