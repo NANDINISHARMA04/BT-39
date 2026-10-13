@@ -46,3 +46,18 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Secrets: never commit these (this repository is public). Keys go in the host's settings or --dart-define.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.p8
+*.mobileprovision
+**/*.keystore
+**/*.jks
+key.properties
+secrets*.json
+service-account*.json
