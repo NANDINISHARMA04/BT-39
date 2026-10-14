@@ -22,18 +22,18 @@ Everything here runs in **Demo Mode**, which needs no account. On the welcome pa
 
 <table>
 <tr>
-<td align="center" valign="top"><a href="docs/screenshots/01-today.webp"><img src="docs/screenshots/01-today.webp" width="132" alt="Today: live vitals from the band"></a><br><sub>Today: live vitals from the band</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/02-alert.webp"><img src="docs/screenshots/02-alert.webp" width="132" alt="An alert in plain words, and a way to answer"></a><br><sub>An alert in plain words, and a way to answer</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/03-why-alert.webp"><img src="docs/screenshots/03-why-alert.webp" width="132" alt="Why this alert: how AdaptAlert decided"></a><br><sub>Why this alert: how AdaptAlert decided</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/04-assistant.webp"><img src="docs/screenshots/04-assistant.webp" width="132" alt="The assistant cites your own records"></a><br><sub>The assistant cites your own records</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/05-sos.webp"><img src="docs/screenshots/05-sos.webp" width="132" alt="Emergency SOS"></a><br><sub>Emergency SOS</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/01-today.webp"><img src="docs/screenshots/01-today.webp" width="140" alt="Today: live vitals from the band"></a><br><sub>Today: live vitals from the band</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/02-alert.webp"><img src="docs/screenshots/02-alert.webp" width="140" alt="An alert in plain words, and a way to answer"></a><br><sub>An alert in plain words, and a way to answer</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/03-why-alert.webp"><img src="docs/screenshots/03-why-alert.webp" width="140" alt="Why this alert: how AdaptAlert decided"></a><br><sub>Why this alert: how AdaptAlert decided</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/04-assistant.webp"><img src="docs/screenshots/04-assistant.webp" width="140" alt="The assistant cites your own records"></a><br><sub>The assistant cites your own records</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/05-sos.webp"><img src="docs/screenshots/05-sos.webp" width="140" alt="Emergency SOS"></a><br><sub>Emergency SOS</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top"><a href="docs/screenshots/06-ward.webp"><img src="docs/screenshots/06-ward.webp" width="132" alt="Ward: beds sorted by risk"></a><br><sub>Ward: beds sorted by risk</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/07-doctor-chat.webp"><img src="docs/screenshots/07-doctor-chat.webp" width="132" alt="Doctor chat: &quot;Is this sepsis?&quot;, with sources"></a><br><sub>Doctor chat: &quot;Is this sepsis?&quot;, with sources</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/08-nurse-shift.webp"><img src="docs/screenshots/08-nurse-shift.webp" width="132" alt="Nurse's shift: tasks and handover"></a><br><sub>Nurse's shift: tasks and handover</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/09-study.webp"><img src="docs/screenshots/09-study.webp" width="132" alt="The 30-day simulated study"></a><br><sub>The 30-day simulated study</sub></td>
-<td align="center" valign="top"><a href="docs/screenshots/10-hindi.webp"><img src="docs/screenshots/10-hindi.webp" width="132" alt="Every screen in Hindi"></a><br><sub>Every screen in Hindi</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/06-ward.webp"><img src="docs/screenshots/06-ward.webp" width="140" alt="Ward: beds sorted by risk"></a><br><sub>Ward: beds sorted by risk</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/07-doctor-chat.webp"><img src="docs/screenshots/07-doctor-chat.webp" width="140" alt="Doctor chat: &quot;Is this sepsis?&quot;, with sources"></a><br><sub>Doctor chat: &quot;Is this sepsis?&quot;, with sources</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/08-nurse-shift.webp"><img src="docs/screenshots/08-nurse-shift.webp" width="140" alt="Nurse's shift: tasks and handover"></a><br><sub>Nurse's shift: tasks and handover</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/09-study.webp"><img src="docs/screenshots/09-study.webp" width="140" alt="The 30-day simulated study"></a><br><sub>The 30-day simulated study</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/10-hindi.webp"><img src="docs/screenshots/10-hindi.webp" width="140" alt="Every screen in Hindi"></a><br><sub>Every screen in Hindi</sub></td>
 </tr>
 </table>
 
