@@ -18,75 +18,22 @@ AdaptAlert does three things differently. It learns what is normal for *you*, no
 
 ## Screenshots
 
-Everything below runs in **Demo Mode**, which needs no account. On the welcome page, tap *Patient*, *Doctor* or *Nurse* under "Just looking? Try without an account".
-
-### For patients
+Everything here runs in **Demo Mode**, which needs no account. On the welcome page, tap *Patient*, *Doctor* or *Nurse* under "Just looking? Try without an account". The top row is the patient app. The bottom row is the doctor and nurse app, the study behind the numbers, and Hindi. Tap a picture to see it full size.
 
 <table>
 <tr>
-<td align="center"><img src="docs/screenshots/01-welcome.webp" width="230"><br><sub>Welcome, in English or Hindi</sub></td>
-<td align="center"><img src="docs/screenshots/02-today.webp" width="230"><br><sub>Today: live vitals from the band</sub></td>
-<td align="center"><img src="docs/screenshots/03-simulate.webp" width="230"><br><sub>Simulator: pick what happens next</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/01-today.webp"><img src="docs/screenshots/01-today.webp" width="140" alt="Today: live vitals from the band"></a><br><sub>Today: live vitals from the band</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/02-alert.webp"><img src="docs/screenshots/02-alert.webp" width="140" alt="An alert in plain words, and a way to answer"></a><br><sub>An alert in plain words, and a way to answer</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/03-why-alert.webp"><img src="docs/screenshots/03-why-alert.webp" width="140" alt="Why this alert: how AdaptAlert decided"></a><br><sub>Why this alert: how AdaptAlert decided</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/04-assistant.webp"><img src="docs/screenshots/04-assistant.webp" width="140" alt="The assistant cites your own records"></a><br><sub>The assistant cites your own records</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/05-sos.webp"><img src="docs/screenshots/05-sos.webp" width="140" alt="Emergency SOS"></a><br><sub>Emergency SOS</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/screenshots/04-alerts.webp" width="230"><br><sub>Alerts: fixed monitor vs AdaptAlert</sub></td>
-<td align="center"><img src="docs/screenshots/05-alert-card.webp" width="230"><br><sub>Tell it what was happening</sub></td>
-<td align="center"><img src="docs/screenshots/06-why-alert.webp" width="230"><br><sub>Why this alert: what the band saw</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/07-signals.webp" width="230"><br><sub>Which signals drove it</sub></td>
-<td align="center"><img src="docs/screenshots/08-insights.webp" width="230"><br><sub>Insights: trends and your normal range</sub></td>
-<td align="center"><img src="docs/screenshots/09-pipeline.webp" width="230"><br><sub>The live seven-stage engine</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/10-study.webp" width="230"><br><sub>30-day simulated study</sub></td>
-<td align="center"><img src="docs/screenshots/11-care.webp" width="230"><br><sub>Care: appointments and doctors</sub></td>
-<td align="center"><img src="docs/screenshots/12-me.webp" width="230"><br><sub>Me: records, insurance, family</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/13-assistant.webp" width="230"><br><sub>AI Health Assistant with help topics</sub></td>
-<td align="center"><img src="docs/screenshots/14-chat-answer.webp" width="230"><br><sub>An answer that cites your records</sub></td>
-<td align="center"><img src="docs/screenshots/15-sos.webp" width="230"><br><sub>Emergency SOS</sub></td>
-</tr>
-</table>
-
-### For doctors and nurses
-
-<table>
-<tr>
-<td align="center"><img src="docs/screenshots/20-doctor-today.webp" width="230"><br><sub>Doctor's Today: who needs you now</sub></td>
-<td align="center"><img src="docs/screenshots/21-ward.webp" width="230"><br><sub>Ward: beds sorted by NEWS2 risk</sub></td>
-<td align="center"><img src="docs/screenshots/24-bed.webp" width="230"><br><sub>A bed, with NEWS2 points per vital</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/25-bed-ask.webp" width="230"><br><sub>Acknowledge, resolve, label, ask</sub></td>
-<td align="center"><img src="docs/screenshots/26-staff-ask.webp" width="230"><br><sub>"Is this sepsis?" answered from the bed's data</sub></td>
-<td align="center"><img src="docs/screenshots/28-doctor-ask.webp" width="230"><br><sub>Ask across every patient you can see</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/22-patients.webp" width="230"><br><sub>Patients</sub></td>
-<td align="center"><img src="docs/screenshots/27-patient-record.webp" width="230"><br><sub>A patient record with live vitals</sub></td>
-<td align="center"><img src="docs/screenshots/23-schedule.webp" width="230"><br><sub>Schedule, including patient bookings</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/29-nurse-shift.webp" width="230"><br><sub>Nurse's shift: timed tasks and handover</sub></td>
-<td align="center"><img src="docs/screenshots/30-research-lab.webp" width="230"><br><sub>Research Lab: rerun the experiments</sub></td>
-<td align="center"></td>
-</tr>
-</table>
-
-### Languages, dark mode and accessibility
-
-<table>
-<tr>
-<td align="center"><img src="docs/screenshots/16-today-hi.webp" width="230"><br><sub>Every screen in Hindi</sub></td>
-<td align="center"><img src="docs/screenshots/17-chat-hi.webp" width="230"><br><sub>The chat answers in Hindi too</sub></td>
-<td align="center"><img src="docs/screenshots/18-today-dark.webp" width="230"><br><sub>Dark mode</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/19-accessibility.webp" width="230"><br><sub>Larger text, spoken and flashing alerts</sub></td>
-<td align="center"></td>
-<td align="center"></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/06-ward.webp"><img src="docs/screenshots/06-ward.webp" width="140" alt="Ward: beds sorted by risk"></a><br><sub>Ward: beds sorted by risk</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/07-doctor-chat.webp"><img src="docs/screenshots/07-doctor-chat.webp" width="140" alt="Doctor chat: &quot;Is this sepsis?&quot;, with sources"></a><br><sub>Doctor chat: &quot;Is this sepsis?&quot;, with sources</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/08-nurse-shift.webp"><img src="docs/screenshots/08-nurse-shift.webp" width="140" alt="Nurse's shift: tasks and handover"></a><br><sub>Nurse's shift: tasks and handover</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/09-study.webp"><img src="docs/screenshots/09-study.webp" width="140" alt="The 30-day simulated study"></a><br><sub>The 30-day simulated study</sub></td>
+<td align="center" valign="top" width="20%"><a href="docs/screenshots/10-hindi.webp"><img src="docs/screenshots/10-hindi.webp" width="140" alt="Every screen in Hindi"></a><br><sub>Every screen in Hindi</sub></td>
 </tr>
 </table>
 
