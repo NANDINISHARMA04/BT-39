@@ -154,11 +154,17 @@ class _ApptCard extends StatelessWidget {
                   child: CupertinoButton.filled(
                     sizeStyle: CupertinoButtonSize.small,
                     onPressed: () => toast(context, tr('Video call'), tr('The call opens 10 minutes before the start time. Demo only.')),
-                    child: Text(tr('Join call')),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Join call'), maxLines: 1)),
                   ),
                 ),
               if (a.mode == ApptMode.video) const SizedBox(width: 8),
-              Expanded(child: CupertinoButton.tinted(sizeStyle: CupertinoButtonSize.small, onPressed: () => _edit(context), child: Text(tr('Reschedule')))),
+              Expanded(
+                child: CupertinoButton.tinted(
+                  sizeStyle: CupertinoButtonSize.small,
+                  onPressed: () => _edit(context),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Reschedule'), maxLines: 1)),
+                ),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: CupertinoButton.tinted(
@@ -170,7 +176,7 @@ class _ApptCard extends StatelessWidget {
                       if (context.mounted) toast(context, tr('Appointment cancelled'));
                     }
                   },
-                  child: Text(tr('Cancel'), style: TextStyle(color: c.red)),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: Text(tr('Cancel'), maxLines: 1, style: TextStyle(color: c.red))),
                 ),
               ),
             ]),
